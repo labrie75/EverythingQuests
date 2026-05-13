@@ -1,0 +1,40 @@
+name: Package and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:  # allow manual runs from the Actions tab
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Required so GITHUB_TOKEN can create the GitHub Release and upload
+    # the zip artifact. Without this, the token defaults to read-only
+    # and the packager exits with code 1 when it tries to POST the release.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0  # full history so the packager can read all tags
+
+      - name: Package and release
+        uses: BigWigsMods/packager@v2
+        env:
+          # GITHUB_TOKEN is provided automatically by GitHub Actions.
+          # The packager uses it to create the GitHub Release and attach
+          # the zip artifact (e.g. EverythingQuests-v0.1.0.zip) and the
+          # generated release.json file.
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+          # CurseForge upload — CF_API_KEY must be added to repository
+          # Settings → Secrets → Actions as CF_API_KEY.
+          # The CurseForge project ID is read from pkgmeta (curse-id:).
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+
+          # Uncomment if you publish to WoWInterface or Wago in the future:
+          # WOWI_API_KEY: ${{ secrets.WOWI_API_KEY }}
+          # WAGO_API_KEY: ${{ secrets.WAGO_API_KEY }}

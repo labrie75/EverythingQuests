@@ -1,0 +1,98 @@
+## Interface: 120001, 120005, 120000
+## Title: Everything Quests
+## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
+## Author: Wheelbarrel00
+## Version: 0.1.0
+## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache
+## SavedVariablesPerCharacter: EverythingQuestsCharDB
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## OptionalDeps: TitanClassic, ChocolateBar, ElvUI
+## X-Curse-Project-ID:
+## X-Wago-ID:
+
+# ─── Libraries ─────────────────────────────────────────────────────────
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceEvent-3.0\AceEvent-3.0.xml
+Libs\AceTimer-3.0\AceTimer-3.0.xml
+Libs\LibSharedMedia-3.0\lib.xml
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\LibMapPinHandler\LibMapPinHandler.lua
+
+# ─── Locales ───────────────────────────────────────────────────────────
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\esES.lua
+Locales\esMX.lua
+Locales\frFR.lua
+Locales\itIT.lua
+Locales\koKR.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+
+# ─── Core (defines RegisterSubsystem; must load before any module) ─────
+Core\Init.lua
+Core\DB.lua
+Core\Events.lua
+Core\Cache.lua
+Core\Util.lua
+Core\Media.lua
+
+# ─── Modules (subsystems must exist before Data/* registers into them) ─
+Modules\Minimap\Minimap.lua
+
+Modules\Tracker\Frame.lua
+Modules\Tracker\Blocks.lua
+Modules\Tracker\Filters.lua
+Modules\Tracker\Sort.lua
+Modules\Tracker\DragDrop.lua
+Modules\Tracker\AutoComplete.lua
+Modules\Tracker\Scenario.lua
+Modules\Tracker\Profession.lua
+Modules\Tracker\Endeavors.lua
+Modules\Tracker\Events.lua
+Modules\Tracker\QuestSound.lua
+Modules\Tracker\Visibility.lua
+
+Modules\WorldQuests\Rewards.lua
+Modules\WorldQuests\Tooltip.lua
+Modules\WorldQuests\Pin.lua
+Modules\WorldQuests\Pin.xml
+Modules\WorldQuests\WatchPersist.lua
+Modules\WorldQuests\WorldMap.lua
+Modules\WorldQuests\ZoneMap.lua
+Modules\WorldQuests\Summary.lua
+Modules\WorldQuests\Tab.lua
+
+Modules\ChainGuide\Frame.lua
+Modules\ChainGuide\Database.lua
+Modules\ChainGuide\QuestLineSource.lua
+Modules\ChainGuide\ChainView.lua
+Modules\ChainGuide\Characters.lua
+Modules\ChainGuide\History.lua
+
+Modules\MapPOI\Pin.lua
+Modules\MapPOI\Pin.xml
+Modules\MapPOI\Provider.lua
+
+# ─── Data (registers chain definitions into ChainGuideDatabase) ────────
+Data\RewardIcons.lua
+Data\QuestChains\_Index.lua
+Data\QuestChains\_QuestLineRouting.lua
+Data\QuestChains\EversongWoods.lua
+Data\QuestChains\Zulaman.lua
+Data\QuestChains\Harandar.lua
+Data\QuestChains\Voidstorm.lua
+Data\QuestChains\Arator.lua
+
+# ─── Options (Frame.lua must load before Tab*.lua) ─────────────────────
+Options\Frame.lua
+Options\TabGeneral.lua
+Options\TabTracker.lua
+Options\TabWorldQuests.lua
+Options\TabChainGuide.lua
+Options\TabAppearance.lua

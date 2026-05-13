@@ -1,0 +1,22 @@
+package-as: EverythingQuests
+
+# Replace with your actual CurseForge project ID after creating the project
+curse-id:
+
+enable-nolib-creation: no
+
+changelog-title: Everything Quests
+changelog-file: CHANGELOG.md
+
+ignore:
+  - .pkgmeta
+  - .github
+  - .gitignore
+  - README.md
+  - CHANGELOG.md
+  - .vscode
+  - screenshots
+  - LICENSE
+  - claude.md
+  - .claude
+  - .luarc.json

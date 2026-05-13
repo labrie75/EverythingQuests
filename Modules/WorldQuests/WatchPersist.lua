@@ -1,0 +1,124 @@
+-- Modules/WorldQuests/WatchPersist.lua
+-- Persistent per-character watch state for world quests. Blizzard's manual
+-- watches (Enum.QuestWatchType.Manual) survive zone changes and map closes
+-- but NOT logout/reload — Blizzard tears down its watch list each session.
+-- We keep our own questID list in saved vars and re-add the watches on
+-- PLAYER_ENTERING_WORLD so the player's tracked WQs persist across sessions.
+--
+-- Pattern adapted from WorldQuestTracker's db.profile.quests_tracked, but
+-- scoped per-character (db.char) since WQ availability is character-specific.
+
+local _, ns = ...
+
+local W = ns:RegisterSubsystem("WQWatchPersist", {})
+
+local MANUAL = (Enum and Enum.QuestWatchType and Enum.QuestWatchType.Manual) or 1
+
+local function getList()
+    local DB = ns:GetSubsystem("DB")
+    if not (DB and DB.char) then return nil end
+    DB.char.trackedWorldQuests = DB.char.trackedWorldQuests or {}
+    return DB.char.trackedWorldQuests
+end
+
+local function blizzardIsWatched(questID)
+    return C_QuestLog and C_QuestLog.GetQuestWatchType
+           and C_QuestLog.GetQuestWatchType(questID) ~= nil
+end
+
+local function questStillActive(questID)
+    if C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes then
+        local t = C_TaskQuest.GetQuestTimeLeftMinutes(questID)
+        if t and t > 0 then return true end
+    end
+    if C_QuestLog and C_QuestLog.IsWorldQuest and C_QuestLog.IsWorldQuest(questID) then
+        return true
+    end
+    return false
+end
+
+local function notifyTracker()
+    local Tracker = ns:GetSubsystem("Tracker")
+    if Tracker and Tracker.Refresh then Tracker:Refresh() end
+end
+
+local function restore()
+    local list = getList()
+    if not list then return end
+    for questID in pairs(list) do
+        if not questStillActive(questID) then
+            list[questID] = nil
+        elseif not blizzardIsWatched(questID) then
+            if C_QuestLog and C_QuestLog.AddWorldQuestWatch then
+                C_QuestLog.AddWorldQuestWatch(questID, MANUAL)
+            end
+        end
+    end
+    notifyTracker()
+end
+
+function W:Track(questID)
+    if not questID then return end
+    local list = getList()
+    if list then list[questID] = true end
+    if C_QuestLog and C_QuestLog.AddWorldQuestWatch then
+        C_QuestLog.AddWorldQuestWatch(questID, MANUAL)
+    end
+    notifyTracker()
+end
+
+function W:Untrack(questID)
+    if not questID then return end
+    local list = getList()
+    if list then list[questID] = nil end
+    if C_QuestLog and C_QuestLog.RemoveWorldQuestWatch then
+        C_QuestLog.RemoveWorldQuestWatch(questID)
+    end
+    notifyTracker()
+end
+
+function W:IsTracked(questID)
+    local list = getList()
+    return list and list[questID] == true
+end
+
+-- Used by the Events tracker section so it sees both Blizzard's runtime
+-- watch list AND any of our persistent ones that haven't been re-added yet
+-- (e.g., during the first second after login).
+function W:GetTrackedQuests()
+    local out = {}
+    local seen = {}
+    if C_QuestLog and C_QuestLog.GetNumWorldQuestWatches then
+        local n = C_QuestLog.GetNumWorldQuestWatches() or 0
+        for i = 1, n do
+            local qid = C_QuestLog.GetQuestIDForWorldQuestWatchIndex(i)
+            if qid and not seen[qid] then
+                seen[qid] = true
+                out[#out + 1] = qid
+            end
+        end
+    end
+    local list = getList()
+    if list then
+        for qid in pairs(list) do
+            if not seen[qid] then
+                seen[qid] = true
+                out[#out + 1] = qid
+            end
+        end
+    end
+    return out
+end
+
+function W:OnEnable()
+    local Events = ns:GetSubsystem("Events")
+    Events:On("PLAYER_ENTERING_WORLD", function()
+        -- WQ data takes a beat to populate after login. Two-second delay is
+        -- the same buffer KT/WQT use for similar restore loops.
+        C_Timer.After(2, restore)
+    end)
+    Events:On("QUEST_TURNED_IN", function(_, questID)
+        local list = getList()
+        if list and questID then list[questID] = nil end
+    end)
+end

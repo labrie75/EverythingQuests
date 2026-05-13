@@ -1,0 +1,200 @@
+-- Options/TabGeneral.lua
+-- Top-level toggles: tracker behavior, minimap button, slash commands,
+-- profile management, reset button.
+
+local _, ns = ...
+
+ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
+    local Options = ns:GetSubsystem("Options")
+
+    local function generalSetting(key)
+        return
+            function()
+                local DB = ns:GetSubsystem("DB")
+                return DB and DB.db.profile.general[key]
+            end,
+            function(value)
+                local DB = ns:GetSubsystem("DB")
+                if DB then DB.db.profile.general[key] = value end
+                local V = ns:GetSubsystem("TrackerVisibility")
+                if V and V.Apply then V:Apply() end
+            end
+    end
+
+    -- ─── LEFT COLUMN: behavior toggles ───────────────────────────────────
+    local h = Options:CreateSectionHeader(content, "General")
+    h:SetPoint("TOPLEFT", 8, -8)
+
+    local lockGet, lockSet = generalSetting("lockTracker")
+    local lock = Options:CreateCheckbox(content,
+        "Lock tracker position  |cffaaaaaa(disable drag-to-move)|r",
+        lockGet, lockSet)
+    lock:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
+
+    local combatGet, combatSet = generalSetting("hideInCombat")
+    local combat = Options:CreateCheckbox(content,
+        "Hide tracker in combat",
+        combatGet, combatSet)
+    combat:SetPoint("TOPLEFT", lock, "BOTTOMLEFT", 0, -2)
+
+    local instGet, instSet = generalSetting("hideInInstances")
+    local inst = Options:CreateCheckbox(content,
+        "Hide tracker in instances  |cffaaaaaa(raids, dungeons, delves)|r",
+        instGet, instSet)
+    inst:SetPoint("TOPLEFT", combat, "BOTTOMLEFT", 0, -2)
+
+    local mapGet, mapSet = generalSetting("hideOnMapOpen")
+    local mapHide = Options:CreateCheckbox(content,
+        "Hide tracker when world map is open",
+        mapGet, mapSet)
+    mapHide:SetPoint("TOPLEFT", inst, "BOTTOMLEFT", 0, -2)
+
+    local autoGet, autoSet = generalSetting("autoTrackAccepted")
+    local auto = Options:CreateCheckbox(content,
+        "Auto-track accepted quests  |cffaaaaaa(matches Blizzard's default)|r",
+        autoGet, autoSet)
+    auto:SetPoint("TOPLEFT", mapHide, "BOTTOMLEFT", 0, -2)
+
+    -- Minimap button — uses LibDBIcon's hide flag stored in db.char.minimap.
+    local function mmGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and not DB.char.minimap.hide
+    end
+    local function mmSet(value)
+        local DB = ns:GetSubsystem("DB")
+        if not DB then return end
+        DB.char.minimap.hide = not value
+        local LDBI = LibStub and LibStub("LibDBIcon-1.0", true)
+        if LDBI then
+            if value then LDBI:Show("EverythingQuests") else LDBI:Hide("EverythingQuests") end
+        end
+    end
+    local mm = Options:CreateCheckbox(content, "Show minimap button", mmGet, mmSet)
+    mm:SetPoint("TOPLEFT", auto, "BOTTOMLEFT", 0, -2)
+
+    -- ─── Reset profile button ───────────────────────────────────────────
+    local reset = Options:CreateYellowButton(content, "Reset all settings", function()
+        StaticPopupDialogs = StaticPopupDialogs or {}
+        StaticPopupDialogs.EQ_RESET_PROFILE = StaticPopupDialogs.EQ_RESET_PROFILE or {
+            text         = "Reset every Everything Quests setting to defaults?",
+            button1      = "Reset",
+            button2      = "Cancel",
+            timeout      = 0,
+            whileDead    = true,
+            hideOnEscape = true,
+            OnAccept = function()
+                local DB = ns:GetSubsystem("DB")
+                if DB and DB.db and DB.db.ResetProfile then DB.db:ResetProfile() end
+                ReloadUI()
+            end,
+        }
+        if StaticPopup_Show then StaticPopup_Show("EQ_RESET_PROFILE") end
+    end)
+    reset:SetSize(160, 24)
+    reset:SetPoint("TOPLEFT", mm, "BOTTOMLEFT", 0, -16)
+
+    -- ─── RIGHT COLUMN: profiles + slash command list ────────────────────
+    local profilesHeader = Options:CreateSectionHeader(content, "Profiles")
+    profilesHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
+
+    -- profileList is passed as a function (not a static table) so the
+    -- dropdown re-fetches each time it opens — newly created profiles
+    -- show up without rebuilding the widget.
+    local function profileList()
+        local DB = ns:GetSubsystem("DB")
+        local out = {}
+        if not (DB and DB.db and DB.db.GetProfiles) then return out end
+        for _, name in ipairs(DB.db:GetProfiles()) do
+            out[#out + 1] = { value = name, label = name }
+        end
+        return out
+    end
+    local function currentProfile()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db and DB.db:GetCurrentProfile() or "Default"
+    end
+    local function setProfile(name)
+        local DB = ns:GetSubsystem("DB")
+        if DB and DB.db and DB.db.SetProfile then
+            DB.db:SetProfile(name)
+            ReloadUI()
+        end
+    end
+
+    -- Create a new profile that carries the current profile's settings
+    -- over instead of starting from defaults — matches the user expectation
+    -- of "make a copy of what I have under a new name".
+    local function createProfileCopiedFromCurrent(name)
+        local DB = ns:GetSubsystem("DB")
+        if not (DB and DB.db) then return end
+        local source = DB.db:GetCurrentProfile()
+        DB.db:SetProfile(name)                  -- creates + switches to the new profile
+        if source and source ~= name and DB.db.CopyProfile then
+            DB.db:CopyProfile(source, true)     -- silent = true: no confirmation popup
+        end
+        ReloadUI()
+    end
+    local profDD = Options:CreateDropdown(content, "Active profile",
+        profileList, currentProfile, setProfile)
+    profDD:SetPoint("TOPLEFT", profilesHeader, "BOTTOMLEFT", 0, -16)
+    profDD:SetWidth(280)
+
+    -- New Profile button — AceDB's SetProfile creates the profile on
+    -- demand if it doesn't already exist, so we just need a name from
+    -- the user. Empty input is rejected; existing name is treated as
+    -- "switch to that profile".
+    local function promptNewProfile()
+        StaticPopupDialogs = StaticPopupDialogs or {}
+        StaticPopupDialogs.EQ_NEW_PROFILE = StaticPopupDialogs.EQ_NEW_PROFILE or {
+            text         = "Profile name:",
+            button1      = "Create",
+            button2      = "Cancel",
+            hasEditBox   = true,
+            maxLetters   = 32,
+            timeout      = 0,
+            whileDead    = true,
+            hideOnEscape = true,
+            -- Modern WoW exposes the popup's edit box as `self.EditBox`
+            -- (PascalCase) and its buttons as `self.Buttons[1..n]`. The
+            -- old `editBox` / `button1` field names are still aliased on
+            -- some popups but unreliable on this build — use the new ones.
+            OnShow = function(self)
+                if self.EditBox then self.EditBox:SetFocus() end
+            end,
+            OnAccept = function(self)
+                local edit = self.EditBox
+                if not edit then return end
+                local name = edit:GetText():gsub("^%s+", ""):gsub("%s+$", "")
+                if name == "" then return end
+                createProfileCopiedFromCurrent(name)
+            end,
+            EditBoxOnEnterPressed = function(editBox)
+                local popup = editBox:GetParent()
+                if popup and popup.Buttons and popup.Buttons[1] then
+                    popup.Buttons[1]:Click()
+                end
+            end,
+            EditBoxOnEscapePressed = function(editBox) editBox:GetParent():Hide() end,
+        }
+        if StaticPopup_Show then StaticPopup_Show("EQ_NEW_PROFILE") end
+    end
+    local newProfileBtn = Options:CreateYellowButton(content, "New Profile", promptNewProfile)
+    newProfileBtn:SetSize(120, 22)
+    newProfileBtn:SetPoint("LEFT", profDD.button, "RIGHT", 6, 0)
+
+    local profHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    profHint:SetPoint("TOPLEFT", profDD, "BOTTOMLEFT", 0, -4)
+    profHint:SetWidth(380)
+    profHint:SetJustifyH("LEFT")
+    profHint:SetTextColor(0.65, 0.65, 0.65)
+    profHint:SetText("Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot.")
+
+    local slashHeader = Options:CreateSectionHeader(content, "Slash commands")
+    slashHeader:SetPoint("TOPLEFT", profHint, "BOTTOMLEFT", 0, -24)
+
+    local slashText = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    slashText:SetPoint("TOPLEFT", slashHeader, "BOTTOMLEFT", 0, -8)
+    slashText:SetJustifyH("LEFT")
+    slashText:SetTextColor(0.92, 0.72, 0.02)
+    slashText:SetText("/eq\n/everythingquests\n\n|cff999999Both open this options window.|r")
+end)

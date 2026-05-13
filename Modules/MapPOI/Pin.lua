@@ -1,0 +1,118 @@
+-- Modules/MapPOI/Pin.lua
+-- Pin mixin used by Pin.xml template "EQLQuestPinTemplate".
+-- Extends Blizzard's MapCanvasPinMixin so the WorldMap canvas handles
+-- positioning, frame-level layering, and pooling for free.
+--
+-- Visual: a 22×22 button with a quest icon. Ready-to-turn-in quests get
+-- the gossip "?" icon; in-progress quests get the standard quest dot.
+-- Hover -> tooltip with title + remaining objectives. Click -> super-track.
+
+local _, ns = ...
+
+EQLQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
+local Pin = EQLQuestPinMixin
+
+local ICON_QUEST_AVAILABLE = "Interface\\GossipFrame\\AvailableQuestIcon"
+local ICON_QUEST_TURNIN    = "Interface\\GossipFrame\\ActiveQuestIcon"
+
+function Pin:OnLoad()
+    -- PIN_FRAME_LEVEL_QUEST_PING is the highest standard pin tier (used by
+    -- the player's own active-quest pings). Sits above Blizzard's quest POI
+    -- pins so ours receive the click. PIN_FRAME_LEVEL_AREA_POI was below
+    -- their pins which made ours invisible to mouse events.
+    self:UseFrameLevelType("PIN_FRAME_LEVEL_QUEST_PING")
+    self:SetScalingLimits(1, 0.6, 1.4)
+    self:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+end
+
+-- Called by MapCanvasMixin:AcquirePin(template, ...). The trailing args are
+-- whatever Provider.lua passes after the template name.
+function Pin:OnAcquired(questID, x, y, isComplete)
+    self.questID    = questID
+    self.isComplete = isComplete
+    self:SetPosition(x, y)
+
+    -- Permanent visual: EQ-red ring (matches the addon-suite brand color
+    -- #6D0501) wrapped around the standard quest `!`/`?` icon. The ring makes
+    -- ours readable as quest pins while clearly distinguishing them from
+    -- Blizzard's plain yellow icons even when stacked at the same coords.
+    -- Pattern adapted from BtWQuestsGuideDataProvider.xml (worldquest-emissary-ring
+    -- background + center texture).
+    if self.ring then
+        self.ring:SetAtlas("worldquest-emissary-ring")
+        self.ring:SetVertexColor(0.43, 0.02, 0.0, 1)             -- #6D0501
+    end
+    self.icon:SetTexture(isComplete and ICON_QUEST_TURNIN or ICON_QUEST_AVAILABLE)
+    self.icon:SetVertexColor(1, 1, 1, 1)
+    self.numberText:SetText("")
+
+    -- The XML template is hidden="true" so leftover/unacquired pins don't
+    -- render as stray frames. AcquirePin doesn't auto-Show — the provider
+    -- owns visibility.
+    self:Show()
+end
+
+function Pin:OnReleased()
+    self.questID, self.isComplete = nil, nil
+    self.icon:SetTexture(nil)
+    self.numberText:SetText("")
+end
+
+-- The canvas auto-wires script "OnEnter" to method "OnMouseEnter" if defined.
+function Pin:OnMouseEnter()
+    if not self.questID then return end
+    local Cache = ns:GetSubsystem("Cache")
+    local q = Cache:Get(self.questID)
+    if not q then return end
+
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(q.title or ("Quest #" .. tostring(self.questID)),
+                        1.0, 0.82, 0.0, 1, true)
+    if q.zone   then GameTooltip:AddLine(q.zone, 0.7, 0.7, 0.7) end
+    if q.isComplete then
+        GameTooltip:AddLine("Ready to turn in", 0.4, 0.85, 0.4)
+    else
+        local objs = q.objectives
+        if objs then
+            for i = 1, #objs do
+                local o = objs[i]
+                if not o.finished then
+                    GameTooltip:AddLine("- " .. (o.text or ""), 0.95, 0.95, 0.95, true)
+                end
+            end
+        end
+    end
+    GameTooltip:Show()
+end
+
+function Pin:OnMouseLeave()
+    GameTooltip:Hide()
+end
+
+-- Required empty stub. Newer MapCanvas calls this on every pin during
+-- iteration; if the method is missing the canvas asserts at
+-- Blizzard_MapCanvas.lua:280. Pattern verified in BtWQuests' QuestPin
+-- (BtWQuestsQuestDataProvider.lua:89-90). Don't remove this even though it
+-- looks pointless — the assertion comes back the moment you do.
+function Pin:CheckMouseButtonPassthrough()
+end
+
+function Pin:OnClick(button)
+    if not self.questID then return end
+    if button == "RightButton" then
+        -- Right-click: open Blizzard's quest map frame to this quest.
+        if C_AddOns and C_AddOns.LoadAddOn then
+            C_AddOns.LoadAddOn("Blizzard_QuestLog")
+        end
+        if QuestMapFrame_OpenToQuestDetails then
+            QuestMapFrame_OpenToQuestDetails(self.questID)
+        elseif ToggleQuestLog then
+            ToggleQuestLog()
+        end
+    else
+        -- Left-click: super-track
+        if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+            C_SuperTrack.SetSuperTrackedQuestID(self.questID)
+        end
+    end
+end

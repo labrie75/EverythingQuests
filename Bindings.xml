@@ -1,0 +1,10 @@
+<Bindings>
+    <Binding name="EVERYTHINGQUESTS_TOGGLE_OPTIONS" header="EVERYTHINGQUESTS" category="EVERYTHINGQUESTS">
+        local O = EverythingQuests and EverythingQuests:GetSubsystem("Options")
+        if O then O:Toggle() end
+    </Binding>
+    <Binding name="EVERYTHINGQUESTS_TOGGLE_CHAINGUIDE">
+        local C = EverythingQuests and EverythingQuests:GetSubsystem("ChainGuide")
+        if C then C:Toggle() end
+    </Binding>
+</Bindings>
