@@ -44,20 +44,27 @@ function Options:Build()
     f:SetScript("OnDragStop",  f.StopMovingOrSizing)
     f:Hide()
 
-    local bg = f:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(unpack(FRAME_BG))
+    -- Flat near-black fill + thin 1px red (#6D0501) border, matching the
+    -- Everything-suite frame style (see EverythingDelves UI/MainFrame.lua).
+    f:SetBackdrop({
+        bgFile   = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    f:SetBackdropColor(unpack(FRAME_BG))
+    f:SetBackdropBorderColor(0.427, 0.020, 0.004, 1.0)   -- #6D0501
 
     -- Title
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("TOP", 0, -14)
     f.title:SetText("Everything Quests")
     f.title:SetTextColor(unpack(HEADER_RED))
+    f.title:SetFont(f.title:GetFont(), 25, "OUTLINE")   -- match sibling addon titles
 
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.0.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.0.1"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -442,18 +449,18 @@ function Options:CreateFontDropdown(parent, label, options, getter, setter)
             end)
             row:Show()
         end
-        scrollChild:SetSize(1, math.max(1, #options * ROW_H))
+        scrollChild:SetSize(math.max(1, scroll:GetWidth()), math.max(1, #options * ROW_H))
     end
 
     btn:SetScript("OnClick", function()
         if popup:IsShown() then popup:Hide(); return end
-        rebuildRows()
         popup:ClearAllPoints()
         popup:SetPoint("TOPLEFT",  btn, "BOTTOMLEFT",  0, -2)
         popup:SetPoint("TOPRIGHT", btn, "BOTTOMRIGHT", 0, -2)
         local visible = math.min(#options, MAX_VISIBLE)
         popup:SetHeight(visible * ROW_H + 8)
         popup:Show()
+        rebuildRows()
     end)
 
     -- Click-outside closes the popup. Hooked via a global on UIParent so
@@ -611,7 +618,7 @@ end
 -- section consults, so we can tell which API a missing quest *is* in
 -- (and route the new bug fix at it).
 function Options:DumpWorldQuestSources()
-    local function info(line) print("|cffEBB706EQL WQ:|r " .. line) end
+    local function info(line) print("|cffEBB706EQ WQ:|r " .. line) end
     local function quest(qid, suffix)
         local title = (C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID
                        and C_TaskQuest.GetQuestInfoByQuestID(qid))

@@ -264,12 +264,12 @@ end
 function QLS:PrintCurrentZone(hint)
     local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
     if not mapID then
-        print("|cffEBB706EQL|r: could not resolve player's map.")
+        print("|cffEBB706EQ|r: could not resolve player's map.")
         return
     end
     local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
     local zoneName = info and info.name or "?"
-    print(("|cffEBB706EQL|r: |cffffffff%s|r — uiMapID |cff66ccff%d|r"):format(zoneName, mapID))
+    print(("|cffEBB706EQ|r: |cffffffff%s|r — uiMapID |cff66ccff%d|r"):format(zoneName, mapID))
 
     local catID
     if hint and hint ~= "" then

@@ -147,7 +147,7 @@ function Z:Build()
     if self.frame then return end
     if not WorldMapFrame then return end
 
-    local f = CreateFrame("Frame", "EQLZoneQuestList", WorldMapFrame, "BackdropTemplate")
+    local f = CreateFrame("Frame", "EQZoneQuestList", WorldMapFrame, "BackdropTemplate")
     f:SetSize(PANEL_W, 80)
 
     local Summary = ns:GetSubsystem("WQSummary")

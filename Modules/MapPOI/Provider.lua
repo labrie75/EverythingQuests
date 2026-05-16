@@ -20,7 +20,7 @@ local _, ns = ...
 
 local M = ns:RegisterSubsystem("MapPOIProvider", {})
 
-local PIN_TEMPLATE = "EQLQuestPinTemplate"
+local PIN_TEMPLATE = "EQQuestPinTemplate"
 
 -- ─── Data provider mixin ──────────────────────────────────────────────
 local providerMixin = CreateFromMixins(MapCanvasDataProviderMixin)

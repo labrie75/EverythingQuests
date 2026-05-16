@@ -35,17 +35,28 @@ local SOUNDS = {
     { name = "EQ: Worgen (F)",      file = 542028 },
 }
 
+-- Bundled fonts. Files live in Media/Fonts/ and ship with the addon so the
+-- default typeface works with zero external dependencies. The registered
+-- name must match the DB default (Core/DB.lua tracker.font) exactly — LSM
+-- lookups are case- and space-sensitive.
+local FONTS = {
+    { name = "GothamNarrow Black", file = [[Interface\AddOns\EverythingQuests\Media\Fonts\GothamNarrow-Black.ttf]] },
+}
+
 function Media:OnInitialize()
     local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
     if not LSM then return end
     for _, s in ipairs(SOUNDS) do
         LSM:Register("sound", s.name, s.file)
     end
+    for _, f in ipairs(FONTS) do
+        LSM:Register("font", f.name, f.file)
+    end
     self.LSM = LSM
 end
 
 function Media:GetSoundList()
-    local out = {}
+    local out = { { value = "NONE", label = "None" } }
     for _, s in ipairs(SOUNDS) do
         out[#out + 1] = { value = s.name, label = s.name:gsub("^EQ: ", "") }
     end
@@ -53,6 +64,7 @@ function Media:GetSoundList()
 end
 
 function Media:GetSoundFile(name)
+    if name == "NONE" then return nil end
     local LSM = self.LSM
     if LSM then
         local f = LSM:Fetch("sound", name)

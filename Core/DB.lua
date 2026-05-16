@@ -33,13 +33,12 @@ DB.defaults = {
             showOnlyWatched = true,
             showBackground = false,
             backgroundColor = { r = 0, g = 0, b = 0, a = 0.6 },
-            -- Default font. If LibSharedMedia doesn't know "GothamXNarrow"
-            -- (the user hasn't installed a font pack that ships it),
-            -- Media:GetFontFile falls back to STANDARD_TEXT_FONT — the
-            -- tracker still renders cleanly, just in Blizzard's default
-            -- typeface until the user picks something else.
-            font = "GothamXNarrow",
-            fontSize = 12,
+            -- Default font. Bundled with the addon and registered with
+            -- LibSharedMedia in Core/Media.lua, so this resolves for every
+            -- user with no external dependency. Must match the LSM-
+            -- registered name exactly (see Media.lua FONTS).
+            font = "GothamNarrow Black",
+            fontSize = 15,
             -- Font outline flags passed to FontString:SetFont. "OUTLINE"
             -- gives a thin black stroke that keeps the tracker text
             -- readable over bright/busy in-world backdrops. WoW accepts
@@ -51,12 +50,12 @@ DB.defaults = {
             questCompleteSound = "EQ: Work Complete",
             -- Phase 2 additions
             showLevelInTracker   = false,
-            showZoneTag          = true,
+            showZoneTag          = false,
             showObjectiveNumbers = true,
             showQuestID          = false,
             titleColorOverride   = nil,                                          -- {r,g,b,a} when set; nil = use difficulty/yellow
             headerColor          = { r = 0.93, g = 0.32, b = 0.10, a = 1 },     -- section header text color
-            blockSpacing         = 4,                                            -- vertical gap between blocks
+            blockSpacing         = 2,                                            -- vertical gap between blocks
             -- Type-by-type visibility filters. All on by default — the user
             -- opts INTO hiding categories rather than opting in to seeing them.
             filters = {

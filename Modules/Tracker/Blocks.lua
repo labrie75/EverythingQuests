@@ -19,7 +19,7 @@ local Blocks = ns:RegisterSubsystem("TrackerBlocks", {})
 Blocks.pool = {}
 Blocks.active = {}
 
-local PAD_X, PAD_Y       = 6, 4
+local PAD_X, PAD_Y       = 6, 2
 local TITLE_TO_CAT_GAP   = 1     -- title → category subtitle
 local CAT_TO_SUB_GAP     = 2     -- category → first objective
 local TITLE_TO_SUB_GAP   = 2     -- title → objectives when no category present
@@ -150,10 +150,10 @@ local function buildSubText(questData, simplifyMode)
     if simplifyMode then
         for i = 1, #objs do
             if not objs[i].finished then
-                return colorizeProgress(objs[i].text or "")
+                return "- " .. colorizeProgress(objs[i].text or "")
             end
         end
-        return "|cff44ff44" .. (objs[#objs].text or "") .. "|r"
+        return "|A:common-icon-checkmark:12:12|a |cff44ff44" .. (objs[#objs].text or "") .. "|r"
     end
 
     local lines, count = {}, 0
@@ -161,9 +161,9 @@ local function buildSubText(questData, simplifyMode)
         local o = objs[i]
         local txt = o.text or ""
         if o.finished then
-            txt = "|cff44ff44" .. txt .. "|r"
+            txt = "|A:common-icon-checkmark:12:12|a |cff44ff44" .. txt .. "|r"
         else
-            txt = colorizeProgress(txt)
+            txt = "- " .. colorizeProgress(txt)
         end
         count = count + 1
         lines[count] = txt
@@ -203,6 +203,28 @@ local function buildBlock()
     b.subText:SetJustifyH("LEFT")
     b.subText:SetWordWrap(true)
     b.subText:SetTextColor(0.85, 0.85, 0.85)
+
+    -- Hidden by default; RenderQuest shows when C_LFGList.GetActivityIDForQuestID
+    -- returns a non-nil activity (Blizzard's signal that the quest is group-eligible).
+    b.groupFinder = CreateFrame("Button", nil, b)
+    b.groupFinder:SetSize(16, 16)
+    b.groupFinder.icon = b.groupFinder:CreateTexture(nil, "ARTWORK")
+    b.groupFinder.icon:SetAllPoints()
+    b.groupFinder.icon:SetAtlas("groupfinder-eye-single")
+    b.groupFinder:Hide()
+    b.groupFinder:SetScript("OnClick", function(self)
+        local qid = self:GetParent().questID
+        if qid and LFGListUtil_FindQuestGroup then
+            LFGListUtil_FindQuestGroup(qid)
+        end
+    end)
+    b.groupFinder:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetText("Find Group", 1, 1, 1)
+        GameTooltip:AddLine("Open the Premade Group Finder for this quest.", 0.7, 0.7, 0.7, true)
+        GameTooltip:Show()
+    end)
+    b.groupFinder:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     b:EnableMouse(true)
     b:SetScript("OnMouseUp", function(self, button)
@@ -269,6 +291,9 @@ function Blocks:Acquire(parent)
     b.category:SetPoint("TOPLEFT",  b.title, "BOTTOMLEFT",  0, -TITLE_TO_CAT_GAP)
     b.category:SetPoint("TOPRIGHT", b.title, "BOTTOMRIGHT", 0, -TITLE_TO_CAT_GAP)
 
+    b.groupFinder:ClearAllPoints()
+    b.groupFinder:SetPoint("TOPRIGHT", b, "TOPRIGHT", -PAD_X, -PAD_Y)
+
     b:Show()
     self.active[#self.active + 1] = b
     return b
@@ -321,6 +346,13 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         block.title:SetTextColor(0.92, 0.72, 0.02)               -- #EBB706 yellow
     end
 
+    if C_LFGList and C_LFGList.GetActivityIDForQuestID
+       and C_LFGList.GetActivityIDForQuestID(questData.questID) then
+        block.groupFinder:Show()
+    else
+        block.groupFinder:Hide()
+    end
+
     -- Apply user-chosen font + size from the Options panel.
     if DB then
         local Media = ns:GetSubsystem("Media")
@@ -368,7 +400,8 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     -- on the first render after width changes, causing blocks to overlap.
     local blockW = block:GetWidth()
     if blockW and blockW > 0 then
-        local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2)
+        local rightReserve = block.groupFinder:IsShown() and 20 or 0
+        local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2) - rightReserve
         local subTextW = titleW
         if titleW > 0 then
             block.title:SetWidth(titleW)

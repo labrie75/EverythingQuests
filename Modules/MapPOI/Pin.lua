@@ -1,5 +1,5 @@
 -- Modules/MapPOI/Pin.lua
--- Pin mixin used by Pin.xml template "EQLQuestPinTemplate".
+-- Pin mixin used by Pin.xml template "EQQuestPinTemplate".
 -- Extends Blizzard's MapCanvasPinMixin so the WorldMap canvas handles
 -- positioning, frame-level layering, and pooling for free.
 --
@@ -9,8 +9,8 @@
 
 local _, ns = ...
 
-EQLQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
-local Pin = EQLQuestPinMixin
+EQQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
+local Pin = EQQuestPinMixin
 
 local ICON_QUEST_AVAILABLE = "Interface\\GossipFrame\\AvailableQuestIcon"
 local ICON_QUEST_TURNIN    = "Interface\\GossipFrame\\ActiveQuestIcon"

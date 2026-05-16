@@ -2,7 +2,7 @@ local _, ns = ...
 
 local V = ns:RegisterSubsystem("TrackerEvents", {})
 
-local HEADER_H     = 30        -- bumped to fit the icon-with-glow visual
+local HEADER_H     = 24        -- compact WQ title row (Blizzard-tight)
 local LINE_H       = 14
 local ROW_GAP      = 2
 local ICON_SIZE    = 26        -- match Blocks.lua so WQ rows visually align
@@ -47,7 +47,7 @@ local function buildHeader(parent)
     r.iconGlow:SetBlendMode("ADD")
 
     r.icon = r.iconHolder:CreateTexture(nil, "ARTWORK")
-    r.icon:SetSize(ICON_SIZE, ICON_SIZE)
+    r.icon:SetSize(20, 20)   -- fits inside the compact HEADER_H row
     r.icon:SetPoint("CENTER")
 
     r.title = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -56,6 +56,29 @@ local function buildHeader(parent)
     r.title:SetJustifyH("LEFT")
     r.title:SetWordWrap(false)
     r.title:SetTextColor(1.0, 0.82, 0.0)
+
+    -- Hidden by default; V:Render shows when C_LFGList.GetActivityIDForQuestID
+    -- returns a non-nil activity (Blizzard's signal that the WQ is group-eligible).
+    r.groupFinder = CreateFrame("Button", nil, r)
+    r.groupFinder:SetSize(16, 16)
+    r.groupFinder:SetPoint("RIGHT", r, "RIGHT", -4, 0)
+    r.groupFinder.icon = r.groupFinder:CreateTexture(nil, "ARTWORK")
+    r.groupFinder.icon:SetAllPoints()
+    r.groupFinder.icon:SetAtlas("groupfinder-eye-single")
+    r.groupFinder:Hide()
+    r.groupFinder:SetScript("OnClick", function(self)
+        local qid = self:GetParent().questID
+        if qid and LFGListUtil_FindQuestGroup then
+            LFGListUtil_FindQuestGroup(qid)
+        end
+    end)
+    r.groupFinder:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetText("Find Group", 1, 1, 1)
+        GameTooltip:AddLine("Open the Premade Group Finder for this quest.", 0.7, 0.7, 0.7, true)
+        GameTooltip:Show()
+    end)
+    r.groupFinder:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     r:SetScript("OnEnter", function(self)
         if not self.questID then return end
@@ -281,8 +304,15 @@ local _activeDirty    = true
 local function rebuildActiveWorldQuests()
     wipe(_activeCache)
     wipe(_activeSeen)
+    -- A quest already shown in the Quests section (i.e. present in the
+    -- Cache the Quests section reads from) must not render here too.
+    -- Centralized so it applies to ALL sources below — previously only
+    -- getInZoneActiveTaskQuests filtered, so a watched/quest-log task
+    -- quest like "Nulling Nullaeus" rendered in both sections.
+    local Cache = ns:GetSubsystem("Cache")
     local function push(qid)
-        if qid and not _activeSeen[qid] then
+        if qid and not _activeSeen[qid]
+           and not (Cache and Cache.Get and Cache:Get(qid) ~= nil) then
             _activeSeen[qid] = true
             _activeCache[#_activeCache + 1] = qid
         end
@@ -348,12 +378,24 @@ function V:Render(content, contentWidth, yStart, collapsed)
         -- Always render iconless: clean Blizzard-style row that's just
         -- title + objectives. Reset the icon stack so a pooled row that
         -- previously held a glow doesn't leak its texture state.
-        if row.icon     then row.icon:SetTexture(nil) end
-        if row.iconGlow then row.iconGlow:SetTexture(nil); row.iconGlow:SetVertexColor(1, 1, 1) end
-        row.iconHolder:Hide()
+        row.iconGlow:SetTexture(nil)
+        row.iconGlow:SetVertexColor(1, 1, 1)
         row.title:ClearAllPoints()
-        row.title:SetPoint("LEFT",  row, "LEFT",  ICON_PAD, 0)
-        row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+        local hasLFG = C_LFGList and C_LFGList.GetActivityIDForQuestID
+                       and C_LFGList.GetActivityIDForQuestID(qid)
+        if hasLFG then
+            row.icon:SetAtlas("worldquest-icon-elite")
+            row.iconHolder:Show()
+            row.groupFinder:Show()
+            row.title:SetPoint("LEFT",  row.iconHolder, "RIGHT", LABEL_PAD, 0)
+            row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
+        else
+            row.icon:SetTexture(nil)
+            row.iconHolder:Hide()
+            row.groupFinder:Hide()
+            row.title:SetPoint("LEFT",  row, "LEFT",  ICON_PAD, 0)
+            row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+        end
         row.title:SetText(questTitle(qid))
         if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(row.title, 0) end
         y = y + HEADER_H + ROW_GAP
@@ -393,7 +435,7 @@ function V:Render(content, contentWidth, yStart, collapsed)
                     -- own anchored frame.
                     txt = "|A:common-icon-checkmark:12:12|a |cff44ff44" .. txt .. "|r"
                 else
-                    txt = colorizeProgress(txt)
+                    txt = "- " .. colorizeProgress(txt)
                 end
                 lr.text:SetText(txt)
                 if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(lr.text, -2) end

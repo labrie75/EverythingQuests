@@ -5,7 +5,7 @@ local _, ns = ...
 
 local Util = ns:RegisterSubsystem("Util", {})
 
--- Style tokens (options-UI palette). Reference: project_eql_style memory.
+-- Style tokens (options-UI palette). Reference: project_eq_style memory.
 Util.color = {
     optionsBg     = { 0.00, 0.00, 0.00, 0.95 },
     tabActive     = { 0.43, 0.02, 0.00, 1.00 },                         -- #6D0501

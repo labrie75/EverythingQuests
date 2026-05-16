@@ -181,8 +181,9 @@ Options:AddTab("tracker", "Tracker", function(content)
     local soundList = (Media and Media.GetSoundList and Media:GetSoundList()) or {}
     local sndChoiceGet, sndChoiceSet = trackerSetting("questCompleteSound")
     local function playSound(value)
-        if Media and Media.GetSoundFile and PlaySoundFile then
-            PlaySoundFile(Media:GetSoundFile(value), "Master")
+        local f = Media and Media.GetSoundFile and Media:GetSoundFile(value)
+        if f and PlaySoundFile then
+            PlaySoundFile(f, "Master")
         end
     end
     local soundDD = Options:CreateDropdown(content, "Quest Complete Sound", soundList, sndChoiceGet, function(value)

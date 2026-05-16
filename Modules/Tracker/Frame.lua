@@ -1,7 +1,7 @@
 -- Modules/Tracker/Frame.lua
 -- On-screen quest tracker. Replaces Blizzard's ObjectiveTrackerFrame.
 -- Renders a scrollable list of quest blocks pulled from Core/Cache.
--- Visual style: native Blizzard (per project_eql_style memory).
+-- Visual style: native Blizzard (per project_eq_style memory).
 
 local _, ns = ...
 
@@ -105,7 +105,7 @@ function Tracker:BuildFrame()
     local DB = ns:GetSubsystem("DB")
     local cfg = DB.db.profile.tracker
 
-    local f = CreateFrame("Frame", "EQLTrackerFrame", UIParent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "EQTrackerFrame", UIParent, "BackdropTemplate")
     f:SetSize(cfg.width, cfg.maxHeight)
     f:SetScale(cfg.scale)
     self.frame = f
