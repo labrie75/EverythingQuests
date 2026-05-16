@@ -59,6 +59,14 @@ local _seenQids = {}
 function providerMixin:_DoRefresh()
     self:RemoveAllData()
 
+    -- User toggle (General tab): hide EQ's red quest pins entirely.
+    -- RemoveAllData() above already cleared any live pins, so simply
+    -- returning here leaves the world map clean.
+    local DB = ns:GetSubsystem("DB")
+    if DB and DB.db.profile.map and DB.db.profile.map.showQuestPins == false then
+        return
+    end
+
     -- Early-out when the world map isn't visible. Without this, every
     -- QUEST_LOG_UPDATE while the map is closed still ran the full walk
     -- and discarded the result — meaningful waste during active play.

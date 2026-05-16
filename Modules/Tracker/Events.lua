@@ -57,8 +57,10 @@ local function buildHeader(parent)
     r.title:SetWordWrap(false)
     r.title:SetTextColor(1.0, 0.82, 0.0)
 
-    -- Hidden by default; V:Render shows when C_LFGList.GetActivityIDForQuestID
-    -- returns a non-nil activity (Blizzard's signal that the WQ is group-eligible).
+    -- Hidden by default. V:Render shows this only for ELITE world quests
+    -- (Rare Elite / World Boss style) that are also group-listable — not
+    -- every WQ with an LFG activity, since Blizzard exposes premade groups
+    -- for many ordinary world quests too.
     r.groupFinder = CreateFrame("Button", nil, r)
     r.groupFinder:SetSize(16, 16)
     r.groupFinder:SetPoint("RIGHT", r, "RIGHT", -4, 0)
@@ -381,14 +383,28 @@ function V:Render(content, contentWidth, yStart, collapsed)
         row.iconGlow:SetTexture(nil)
         row.iconGlow:SetVertexColor(1, 1, 1)
         row.title:ClearAllPoints()
-        local hasLFG = C_LFGList and C_LFGList.GetActivityIDForQuestID
-                       and C_LFGList.GetActivityIDForQuestID(qid)
-        if hasLFG then
+        -- Elite world quests only (Rare Elite / World Boss style — the
+        -- gold-rosette ones). isElite is Blizzard's own flag for these;
+        -- C_LFGList returns an activity for many *ordinary* WQs too, so
+        -- gating on it alone put the eye + elite icon on non-group quests.
+        local tagInfo = C_QuestLog and C_QuestLog.GetQuestTagInfo
+                        and C_QuestLog.GetQuestTagInfo(qid)
+        local isElite = (tagInfo and tagInfo.isElite) and true or false
+        local hasLFG  = C_LFGList and C_LFGList.GetActivityIDForQuestID
+                        and C_LFGList.GetActivityIDForQuestID(qid) and true or false
+        if isElite then
             row.icon:SetAtlas("worldquest-icon-elite")
             row.iconHolder:Show()
-            row.groupFinder:Show()
-            row.title:SetPoint("LEFT",  row.iconHolder, "RIGHT", LABEL_PAD, 0)
-            row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
+            row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)
+            -- Eye only when the elite WQ is actually group-listable, so a
+            -- click does something.
+            if hasLFG then
+                row.groupFinder:Show()
+                row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
+            else
+                row.groupFinder:Hide()
+                row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+            end
         else
             row.icon:SetTexture(nil)
             row.iconHolder:Hide()

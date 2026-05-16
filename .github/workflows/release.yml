@@ -6,14 +6,12 @@ on:
       - "v*"
   workflow_dispatch:  # allow manual runs from the Actions tab
 
+permissions:
+  contents: write   # allow the packager to create the GitHub Release for the tag
+
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Required so GITHUB_TOKEN can create the GitHub Release and upload
-    # the zip artifact. Without this, the token defaults to read-only
-    # and the packager exits with code 1 when it tries to POST the release.
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
@@ -21,20 +19,35 @@ jobs:
         with:
           fetch-depth: 0  # full history so the packager can read all tags
 
+      - name: Verify required secrets
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+        run: |
+          if [ -z "$CF_API_KEY" ]; then
+            echo "::error::CF_API_KEY secret is not set on this repository."
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "CF_API_KEY is present (length: ${#CF_API_KEY})."
+
+      - name: Show tag info
+        run: |
+          echo "Ref: $GITHUB_REF"
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "Tag: $TAG"
+          TYPE=$(git cat-file -t "$TAG" || echo "unknown")
+          echo "Tag object type: $TYPE  (should be 'tag' for an annotated release)"
+          if [ "$TYPE" != "tag" ]; then
+            echo "::warning::Lightweight tag detected. The packager will treat this as an alpha build."
+            echo "For a stable CurseForge release use: git tag -a $TAG -m \"$TAG\" && git push origin $TAG"
+          fi
+
       - name: Package and release
         uses: BigWigsMods/packager@v2
         env:
-          # GITHUB_TOKEN is provided automatically by GitHub Actions.
-          # The packager uses it to create the GitHub Release and attach
-          # the zip artifact (e.g. EverythingQuests-v0.1.0.zip) and the
-          # generated release.json file.
-          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
-
-          # CurseForge upload — CF_API_KEY must be added to repository
-          # Settings → Secrets → Actions as CF_API_KEY.
-          # The CurseForge project ID is read from pkgmeta (curse-id:).
+          # The CurseForge project ID is read from the TOC file:
+          #   ## X-Curse-Project-ID: <id>
+          # NOT from .pkgmeta. If that TOC field is blank the packager
+          # silently skips CurseForge and only creates the GitHub release.
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
-
-          # Uncomment if you publish to WoWInterface or Wago in the future:
-          # WOWI_API_KEY: ${{ secrets.WOWI_API_KEY }}
-          # WAGO_API_KEY: ${{ secrets.WAGO_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}

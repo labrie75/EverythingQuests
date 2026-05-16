@@ -53,6 +53,12 @@ DB.defaults = {
             showZoneTag          = false,
             showObjectiveNumbers = true,
             showQuestID          = false,
+            -- Quests & Campaign section headers show "shown / total of
+            -- that category" (e.g. 3/9) instead of just the count. On by
+            -- default; toggled on the Tracker options tab. Other sections
+            -- have no meaningful per-category total, so they keep a plain
+            -- count (still recolored to match the header).
+            showQuestTotal       = true,
             titleColorOverride   = nil,                                          -- {r,g,b,a} when set; nil = use difficulty/yellow
             headerColor          = { r = 0.93, g = 0.32, b = 0.10, a = 1 },     -- section header text color
             blockSpacing         = 2,                                            -- vertical gap between blocks
@@ -75,8 +81,22 @@ DB.defaults = {
             -- toggled because some players never use them.
             showProfessionSection = true,
             showWorldQuestsSection = true,
+            -- World Quests are pinned to the bottom of the tracker and
+            -- always visible; this caps that region at a fraction of the
+            -- tracker's inner height so a big WQ load can't swallow the
+            -- whole tracker (it scrolls internally past the cap).
+            worldQuestsPinnedMaxFraction = 0.40,
         },
         worldQuests = {
+            -- Master switch for the World Quests MAP features (everything
+            -- the World Quests options tab governs). When false, EQ draws
+            -- no WQ world-map pins, no WQ summary box, and no WQ zone
+            -- list — for players who want the tracker but none of the WQ
+            -- map overlays. Does NOT touch the tracker's own World Quests
+            -- section (that stays controlled by tracker.showWorldQuests-
+            -- Section). Overrides the WQ map options below (they still
+            -- save, just inert until this is re-enabled).
+            enabled = true,
             showOnWorldMap = true,
             showOnZoneMap = true,
             filters = {
@@ -86,6 +106,13 @@ DB.defaults = {
             factionFilters = {},        -- [factionID] = false to hide; absent = show
             zoneListSort = "time",      -- "time" | "type" | "faction" | "alpha"
             pinScale     = 1.0,
+        },
+        -- Non-WQ map overlays EQ draws on the world map.
+        map = {
+            -- The EQ-red ringed quest pins (the "red circles": "!" for
+            -- available / "?" for turn-in) drawn from the player's quest
+            -- log. false = EQ draws none of them on the world map.
+            showQuestPins = true,
         },
         chainGuide = {
             scale = 1.0,

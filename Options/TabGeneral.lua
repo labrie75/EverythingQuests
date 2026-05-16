@@ -25,11 +25,41 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     local h = Options:CreateSectionHeader(content, "General")
     h:SetPoint("TOPLEFT", 8, -8)
 
+    -- Top-level toggle for EQ's own world-map quest pins (the red rings).
+    -- Lives in db.profile.map.showQuestPins; refresh the live provider so
+    -- the change shows immediately if the world map is open.
+    local function questPinsGet()
+        local DB = ns:GetSubsystem("DB")
+        return not DB or not DB.db.profile.map
+               or DB.db.profile.map.showQuestPins ~= false
+    end
+    local function questPinsSet(v)
+        local DB = ns:GetSubsystem("DB")
+        if DB then
+            DB.db.profile.map = DB.db.profile.map or {}
+            DB.db.profile.map.showQuestPins = v and true or false
+        end
+        local P = ns:GetSubsystem("MapPOIProvider")
+        if P and P.provider and P.provider.RefreshAllData then
+            P.provider:RefreshAllData()
+        end
+    end
+    local qpins = Options:CreateCheckbox(content,
+        "Show quest pins on the world map  |cffaaaaaa(EQ's red \"!\" / \"?\" rings)|r",
+        questPinsGet, questPinsSet)
+    qpins:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
+
+    local qpinsHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    qpinsHint:SetPoint("TOPLEFT", qpins, "BOTTOMLEFT", 0, -2)
+    qpinsHint:SetWidth(430)
+    qpinsHint:SetJustifyH("LEFT")
+    qpinsHint:SetText("EQ's own quest markers on the world map: a red ring with \"!\" (pick up) or \"?\" (turn in). Off = EQ draws none of them. Blizzard's default map markers are not affected.")
+
     local lockGet, lockSet = generalSetting("lockTracker")
     local lock = Options:CreateCheckbox(content,
         "Lock tracker position  |cffaaaaaa(disable drag-to-move)|r",
         lockGet, lockSet)
-    lock:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
+    lock:SetPoint("TOPLEFT", qpinsHint, "BOTTOMLEFT", 0, -12)
 
     local combatGet, combatSet = generalSetting("hideInCombat")
     local combat = Options:CreateCheckbox(content,

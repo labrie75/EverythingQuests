@@ -24,9 +24,13 @@ local GRIP_SIZE        = 14   -- bottom-right resize grip
 -- pass, plus the GC work to reclaim them.
 local _popupSet = {}
 local _visible  = {}
+local _popups   = {}
 local SECTION_H        = 26   -- "Quests" section header band (fits the larger header text)
 local HEADER_FONT_DELTA = 4   -- section headers render this many points larger
                               -- than quest titles so the hierarchy reads right
+local WQ_PIN_FRACTION  = 0.40 -- fallback cap for the pinned World Quests
+                              -- region (DB worldQuestsPinnedMaxFraction
+                              -- overrides once loaded)
 local MIN_W, MIN_H     = 200, 100
 local MAX_W, MAX_H     = 600, 1000
 
@@ -186,10 +190,61 @@ function Tracker:BuildFrame()
     scenarioContainer:SetPoint("TOPRIGHT", -CONTENT_PAD, -DRAG_HANDLE_H)
     scenarioContainer:SetHeight(1)
     f.scenarioContainer = scenarioContainer
+    -- The scenario banner grows/shrinks without firing a quest event, so
+    -- the pinned-WQ height cap (computed from available space in Render)
+    -- would go stale. A throttled Refresh on its resize keeps it correct.
+    scenarioContainer:SetScript("OnSizeChanged", function() self:Refresh() end)
+
+    -- World Quests region: the always-visible "World Quests" header plus
+    -- its own internally-scrolling list. Its TOP anchors flush to the
+    -- BOTTOM of the main scroll (set after `scroll` is created below), so
+    -- it sits directly beneath the quest content and slides down as
+    -- quests populate — no dead gap. The main scroll is sized to its
+    -- content (capped) in Render(); once quests overflow, the scroll hits
+    -- its cap and this region lands at the bottom with quests scrolling
+    -- above. Height set every frame by _RenderPinnedEvents (1 + Hidden
+    -- when there are none).
+    local eventsRegion = CreateFrame("Frame", "EQTrackerEventsRegion", f)
+    eventsRegion:SetHeight(1)
+    eventsRegion:Hide()
+    f.eventsRegion = eventsRegion
+
+    local eventsScroll = CreateFrame("ScrollFrame", "EQTrackerEventsScroll", eventsRegion, "UIPanelScrollFrameTemplate")
+    -- Below the pinned header (SECTION_H + 2, matching the header gap the
+    -- main loop uses); fills the rest of the region.
+    eventsScroll:SetPoint("TOPLEFT",     eventsRegion, "TOPLEFT",  0, -(SECTION_H + 2))
+    eventsScroll:SetPoint("BOTTOMRIGHT", eventsRegion, "BOTTOMRIGHT", 0, 0)
+    local eventsContent = CreateFrame("Frame", nil, eventsScroll)
+    eventsContent:SetSize(cfg.width - 26, 1)
+    eventsScroll:SetScrollChild(eventsContent)
+    f.eventsScroll  = eventsScroll
+    f.eventsContent = eventsContent
+
+    -- Scroll-bar background for the events list, mirroring f.scrollBarBG.
+    local eBg = f:CreateTexture(nil, "BORDER")
+    local eBar = eventsScroll.ScrollBar or eventsScroll.scrollBar
+    if eBar then
+        eBg:SetPoint("TOPLEFT",     eBar, "TOPLEFT",    -1, 0)
+        eBg:SetPoint("BOTTOMRIGHT", eBar, "BOTTOMRIGHT", 1, 0)
+    else
+        eBg:SetPoint("TOPLEFT",     eventsScroll, "TOPRIGHT",    0, 1)
+        eBg:SetPoint("BOTTOMRIGHT", eventsRegion, "BOTTOMRIGHT", -2, 0)
+    end
+    eBg:Hide()
+    f.eventsScrollBarBG = eBg
 
     local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT",     scenarioContainer, "BOTTOMLEFT",  0, -2)
-    scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -22, GRIP_SIZE + 2)
+    -- Only the TOP edge is anchored (under the scenario banner). Width +
+    -- height are set every frame in Render(): height = the quest content
+    -- height, capped so the pinned WQ region still fits. This is what
+    -- makes the scroll grow downward with the quests instead of always
+    -- filling the whole frame and leaving a dead gap above World Quests.
+    scroll:SetPoint("TOPLEFT", scenarioContainer, "BOTTOMLEFT", 0, -2)
+
+    -- WQ region sits flush against the scroll's bottom edge, so it tracks
+    -- the quest content. (Deferred here because it needs `scroll`.)
+    eventsRegion:SetPoint("TOPLEFT",  scroll, "BOTTOMLEFT",  0, -2)
+    eventsRegion:SetPoint("TOPRIGHT", scroll, "BOTTOMRIGHT", 0, -2)
 
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(cfg.width - 26, 1)
@@ -273,6 +328,10 @@ function Tracker:BuildSectionHeaders(content)
     self.sectionFrames = {}
 
     local sections = {
+        -- Campaign quests are split out of "Quests" into their own section
+        -- (Blizzard surfaces the campaign prominently too). Same header
+        -- style/code path as every other section — see _RenderQuestGroup.
+        { id = "campaign",   title = "Campaign" },
         { id = "quests",     title = "Quests" },
         { id = "profession", title = "Profession" },
         { id = "endeavors",  title = "Endeavors" },
@@ -289,6 +348,19 @@ function Tracker:BuildSectionHeaders(content)
             self:ToggleSectionCollapsed(sid)
         end)
         self.sectionFrames[sid] = h
+    end
+
+    -- The World Quests ("events") section is pinned to the bottom of the
+    -- tracker in its own region rather than scrolling inline. Reparent its
+    -- header into that region so it stays visible above the (internally
+    -- scrolling) WQ list. Same header object & style as every other
+    -- section — only the parent/anchor changes.
+    local eh = self.sectionFrames["events"]
+    if eh and self.frame and self.frame.eventsRegion then
+        eh:SetParent(self.frame.eventsRegion)
+        eh:ClearAllPoints()
+        eh:SetPoint("TOPLEFT",  self.frame.eventsRegion, "TOPLEFT",  0, 0)
+        eh:SetPoint("TOPRIGHT", self.frame.eventsRegion, "TOPRIGHT", 0, 0)
     end
 end
 
@@ -350,7 +422,15 @@ function Tracker:ToggleHidden(questID)
     end
 end
 
-function Tracker:_RenderQuestsSection(content, contentWidth, yStart, collapsed)
+-- Shared renderer for the Campaign + general Quests sections. They are the
+-- same surface, split only by campaign membership, so they go through ONE
+-- code path — identical block/popup rendering and identical formatting by
+-- construction. `wantCampaign` selects which group this call renders.
+--
+-- The Blocks/AC pools are reset ONCE per frame in Render() (not here):
+-- Campaign renders before Quests, so releasing inside the Quests pass
+-- would clobber the Campaign group's live blocks.
+function Tracker:_RenderQuestGroup(content, contentWidth, yStart, collapsed, wantCampaign)
     local DB      = ns:GetSubsystem("DB")
     local Cache   = ns:GetSubsystem("Cache")
     local Filters = ns:GetSubsystem("TrackerFilters")
@@ -361,23 +441,39 @@ function Tracker:_RenderQuestsSection(content, contentWidth, yStart, collapsed)
     local profile = DB.db.profile.tracker
     local quests  = Cache:All()
 
-    local popups = (AC and AC:GetActivePopups()) or {}
+    -- Active "click to complete" popups. Build the FULL questID set so the
+    -- block loop in BOTH groups excludes a quest that's showing as a popup,
+    -- but only this group's matching popups get rendered/counted here.
+    local allPopups = (AC and AC:GetActivePopups()) or {}
     wipe(_popupSet)
-    for i = 1, #popups do _popupSet[popups[i].questID] = true end
+    for i = 1, #allPopups do _popupSet[allPopups[i].questID] = true end
 
-    wipe(_visible)
-    local visible, count = _visible, 0
-    for questID, q in pairs(quests) do
-        if not _popupSet[questID] and Filters:Visible(questID, q) then
-            count = count + 1
-            visible[count] = q
+    wipe(_popups)
+    local popups, pcount = _popups, 0
+    for i = 1, #allPopups do
+        local pq = quests[allPopups[i].questID]
+        local pIsCampaign = (pq and pq.isCampaign) and true or false
+        if pIsCampaign == wantCampaign then
+            pcount = pcount + 1
+            popups[pcount] = allPopups[i]
         end
     end
 
-    Blocks:ReleaseAll()
-    if AC then AC:ReleaseAll() end
+    wipe(_visible)
+    local visible, count, total = _visible, 0, 0
+    for questID, q in pairs(quests) do
+        if (q.isCampaign and true or false) == wantCampaign then
+            -- total = every quest of THIS category in the log (tracked
+            -- or not); count = the ones actually shown in the section.
+            total = total + 1
+            if not _popupSet[questID] and Filters:Visible(questID, q) then
+                count = count + 1
+                visible[count] = q
+            end
+        end
+    end
 
-    if collapsed then return 0, count + #popups end
+    if collapsed then return 0, count + pcount, total end
 
     table.sort(visible, Sort.For(profile.sortMode, profile.manualOrder))
 
@@ -385,7 +481,7 @@ function Tracker:_RenderQuestsSection(content, contentWidth, yStart, collapsed)
 
     local gap = getBlockGap()
     if AC then
-        for i = 1, #popups do
+        for i = 1, pcount do
             local p = AC:Acquire(content)
             p:SetWidth(contentWidth)
             p:ClearAllPoints()
@@ -405,7 +501,20 @@ function Tracker:_RenderQuestsSection(content, contentWidth, yStart, collapsed)
         y = y + b:GetHeight() + gap
     end
 
-    return y - yStart, count + #popups
+    return y - yStart, count + pcount, total
+end
+
+-- Campaign quests only (q.isCampaign — set in Core/Cache.lua from the
+-- quest's campaignID). Header auto-hides when the player has none, via
+-- the zero-count branch in Render().
+function Tracker:_RenderCampaignSection(content, contentWidth, yStart, collapsed)
+    return self:_RenderQuestGroup(content, contentWidth, yStart, collapsed, true)
+end
+
+-- Everything that is NOT a campaign quest (campaign quests now live in
+-- their own section above).
+function Tracker:_RenderQuestsSection(content, contentWidth, yStart, collapsed)
+    return self:_RenderQuestGroup(content, contentWidth, yStart, collapsed, false)
 end
 
 function Tracker:_RenderProfessionSection(content, contentWidth, yStart, collapsed)
@@ -427,6 +536,7 @@ function Tracker:_RenderEventsSection(content, contentWidth, yStart, collapsed)
 end
 
 local SECTION_RENDERERS = {
+    campaign   = "_RenderCampaignSection",
     quests     = "_RenderQuestsSection",
     profession = "_RenderProfessionSection",
     endeavors  = "_RenderEndeavorsSection",
@@ -438,6 +548,15 @@ function Tracker:Render()
     if not f then return end
     local content = f.content
     if not content then return end
+
+    -- Reset the shared Blocks/AC pools ONCE per frame, before any section
+    -- renders. The Campaign and Quests sections both draw from these pools
+    -- and Campaign renders first — releasing inside the Quests renderer
+    -- (where this used to live) would wipe the Campaign group's live rows.
+    local _Blocks = ns:GetSubsystem("TrackerBlocks")
+    if _Blocks and _Blocks.ReleaseAll then _Blocks:ReleaseAll() end
+    local _AC = ns:GetSubsystem("TrackerAutoComplete")
+    if _AC and _AC.ReleaseAll then _AC:ReleaseAll() end
 
     local DB = ns:GetSubsystem("DB")
     if DB and f.background then
@@ -478,13 +597,29 @@ function Tracker:Render()
     local DB = ns:GetSubsystem("DB")
     local cfg = DB and DB.db.profile.tracker
     local sectionVisible = {
+        campaign   = true,
         quests     = true,
         endeavors  = true,
         profession = not cfg or cfg.showProfessionSection  ~= false,
         events     = not cfg or cfg.showWorldQuestsSection ~= false,
     }
 
+    -- Max on-screen height for the pinned World Quests region. Available
+    -- inner height = frame height minus the top drag strip, the live
+    -- scenario banner, the main scroll's -2 top gap, and the bottom grip
+    -- reservation. The region is capped at a fraction of that.
+    local scenarioH = (f.scenarioContainer and f.scenarioContainer:GetHeight()) or 1
+    local available = (f:GetHeight() or 0) - DRAG_HANDLE_H - scenarioH - 2 - (GRIP_SIZE + 2)
+    if available < 1 then available = 1 end
+    local fraction  = (cfg and cfg.worldQuestsPinnedMaxFraction) or WQ_PIN_FRACTION
+    local eventsCap = math.floor(available * fraction)
+
     for _, def in ipairs(sections) do
+      -- "events" (World Quests) is pinned to the bottom of the tracker in
+      -- its own capped, internally-scrolling region; it is rendered after
+      -- this loop by _RenderPinnedEvents instead of inline in the main
+      -- scroll, so skip it here.
+      if def.id ~= "events" then
         local headerFrame = self.sectionFrames[def.id]
         if headerFrame and not sectionVisible[def.id] then
             -- Hidden section: still call the renderer with collapsed=true
@@ -502,9 +637,9 @@ function Tracker:Render()
             local sectionCollapsed = self:IsSectionCollapsed(def.id)
 
             local probeY = y + SECTION_H + 2
-            local sectionHeight, sectionCount = 0, 0
+            local sectionHeight, sectionCount, sectionTotal = 0, 0, nil
             if rendererName and self[rendererName] then
-                sectionHeight, sectionCount = self[rendererName](self, content, contentWidth, probeY, sectionCollapsed)
+                sectionHeight, sectionCount, sectionTotal = self[rendererName](self, content, contentWidth, probeY, sectionCollapsed)
             end
 
             if sectionCount and sectionCount > 0 then
@@ -512,7 +647,26 @@ function Tracker:Render()
                 headerFrame:ClearAllPoints()
                 headerFrame:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
                 headerFrame:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
-                headerFrame.count:SetText(tostring(sectionCount))
+                -- Count display. Campaign & Quests show "shown / total of
+                -- that category" (e.g. 3/9) when the toggle is on —
+                -- sectionTotal is the per-category total returned by
+                -- _RenderQuestGroup. Sections with no meaningful
+                -- per-category total (Profession/Endeavors) show the plain
+                -- count. Every count renders in the section-header color
+                -- at the quest-description font size for one consistent
+                -- look.
+                local _M = ns:GetSubsystem("Media")
+                if (def.id == "campaign" or def.id == "quests")
+                   and type(sectionTotal) == "number"
+                   and (not cfg or cfg.showQuestTotal ~= false) then
+                    headerFrame.count:SetText(sectionCount .. "/" .. sectionTotal)
+                else
+                    headerFrame.count:SetText(tostring(sectionCount))
+                end
+                if _M and _M.ApplyTrackerFont then
+                    _M:ApplyTrackerFont(headerFrame.count, -2)   -- = subText size
+                end
+                headerFrame.count:SetTextColor(hr, hg, hb)       -- match header
                 headerFrame.collapse:SetText(sectionCollapsed and "+" or "–")
                 -- Live-update header font + colors from the user's chosen
                 -- font/size/headerColor (Appearance tab). Headers render in
@@ -532,9 +686,149 @@ function Tracker:Render()
                 headerFrame:Hide()
             end
         end
+      end
     end
 
-    content:SetHeight(math.max(1, y))
+    local questContentH = y
+    content:SetHeight(math.max(1, questContentH))
+
+    -- Render the WQ region; it returns its own height so we can size the
+    -- main scroll to the quest content but no taller than the room left
+    -- above the WQ region. Net effect: WQ sits flush under the quests
+    -- (no gap) until the quests would overflow, then the scroll caps and
+    -- the quests scroll above a bottom-resting WQ region.
+    local wqRegionH = self:_RenderPinnedEvents(eventsCap) or 0
+
+    if f.scroll then
+        local scrollW = math.max(1, (f:GetWidth() or 0) - 26)
+        local scrollH = math.min(questContentH, available - wqRegionH)
+        if scrollH < 1 then scrollH = 1 end
+        f.scroll:SetSize(scrollW, scrollH)
+        if f.scroll.UpdateScrollChildRect then f.scroll:UpdateScrollChildRect() end
+    end
+end
+
+-- Render the always-visible World Quests region pinned at the bottom of
+-- the tracker. The "World Quests" header is fixed at the top of the
+-- region (never scrolls away); the WQ rows live in an internal scroll
+-- frame capped at `eventsCap` px, so a heavy WQ load scrolls in place
+-- instead of swallowing the tracker. When there are none / the section
+-- is toggled off, the region collapses to 1px + Hide and the main scroll
+-- reclaims the space automatically (its bottom is anchored to this
+-- region's TOP).
+function Tracker:_RenderPinnedEvents(eventsCap)
+    local f = self.frame
+    if not f then return 0 end
+    local region   = f.eventsRegion
+    local escroll   = f.eventsScroll
+    local econtent = f.eventsContent
+    local header   = self.sectionFrames and self.sectionFrames["events"]
+    if not (region and escroll and econtent) then return 0 end
+
+    local DB  = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db.profile.tracker
+    local sectionOn = not cfg or cfg.showWorldQuestsSection ~= false
+    local collapsed = self:IsSectionCollapsed("events")
+    local Events    = ns:GetSubsystem("TrackerEvents")
+
+    -- WQ row width tracks the events scroll (mirrors how the main path
+    -- uses content:GetWidth()), so rows reflow on resize.
+    econtent:SetWidth(math.max(1, escroll:GetWidth()))
+    local ewidth = econtent:GetWidth()
+    if ewidth <= 0 then ewidth = 280 end
+
+    local function collapseRegion()
+        if header then header:Hide() end
+        escroll:Hide()
+        if f.eventsScrollBarBG then f.eventsScrollBarBG:Hide() end
+        region:SetHeight(1)
+        region:Hide()
+    end
+
+    -- Section toggled off: release any pooled WQ rows (parity with the
+    -- main loop's hidden-section path) and collapse the region.
+    if not sectionOn then
+        if Events and Events.Render then Events:Render(econtent, ewidth, 0, true) end
+        collapseRegion()
+        return 0
+    end
+
+    local heightUsed, count = 0, 0
+    if Events and Events.Render then
+        heightUsed, count = Events:Render(econtent, ewidth, 0, collapsed)
+    end
+
+    if not count or count == 0 then
+        collapseRegion()
+        return 0
+    end
+
+    region:Show()
+
+    -- Pinned header — same frame/style as every other section header,
+    -- only the parent (eventsRegion) differs. Font/color refreshed each
+    -- frame exactly like the main loop does.
+    if header then
+        header:Show()
+        header:ClearAllPoints()
+        header:SetPoint("TOPLEFT",  region, "TOPLEFT",  0, 0)
+        header:SetPoint("TOPRIGHT", region, "TOPRIGHT", 0, 0)
+        header.count:SetText(tostring(count))
+        header.collapse:SetText(collapsed and "+" or "–")
+        local hr, hg, hb = getHeaderColor()
+        local Media = ns:GetSubsystem("Media")
+        if header.text then
+            if Media and Media.ApplyTrackerFont then
+                Media:ApplyTrackerFont(header.text, HEADER_FONT_DELTA)
+            end
+            header.text:SetTextColor(hr, hg, hb)
+        end
+        if header.collapse then header.collapse:SetTextColor(hr, hg, hb) end
+        -- World Quests has no meaningful per-category total, so it stays
+        -- a plain count — but match the header color + description font
+        -- so every section's count reads consistently.
+        if header.count then
+            if Media and Media.ApplyTrackerFont then
+                Media:ApplyTrackerFont(header.count, -2)
+            end
+            header.count:SetTextColor(hr, hg, hb)
+        end
+    end
+
+    if collapsed then
+        escroll:Hide()
+        if f.eventsScrollBarBG then f.eventsScrollBarBG:Hide() end
+        region:SetHeight(SECTION_H + 2)   -- header band only
+        return SECTION_H + 2
+    end
+
+    escroll:Show()
+    econtent:SetHeight(math.max(1, heightUsed))
+
+    -- Viewport = WQ content height, capped. Always allow ~one row so a
+    -- short tracker still shows something scrollable.
+    local capViewport = (eventsCap or 0) - (SECTION_H + 2)
+    if capViewport < 30 then capViewport = 30 end
+    local viewport = math.min(heightUsed, capViewport)
+    if viewport < 1 then viewport = 1 end
+    region:SetHeight(SECTION_H + 2 + viewport)
+
+    if escroll.UpdateScrollChildRect then escroll:UpdateScrollChildRect() end
+
+    -- Scroll-bar background strip, only when the list actually overflows
+    -- the cap (mirrors the main scrollBarBG color/visibility logic).
+    if f.eventsScrollBarBG then
+        local needsBar = heightUsed > viewport + 0.5
+        if needsBar and (not cfg or cfg.scrollBarBg ~= false) then
+            local s = (cfg and cfg.scrollBarBgColor) or { r = 0.60, g = 0.60, b = 0.65, a = 0.25 }
+            f.eventsScrollBarBG:SetColorTexture(s.r or 0.60, s.g or 0.60, s.b or 0.65, s.a or 0.25)
+            f.eventsScrollBarBG:Show()
+        else
+            f.eventsScrollBarBG:Hide()
+        end
+    end
+
+    return SECTION_H + 2 + viewport
 end
 
 -- Canonical Blizzard sequence to abandon a quest from an addon. Routes

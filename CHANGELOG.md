@@ -5,6 +5,25 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-16
+
+### New Features
+
+- **Campaign section** — Campaign quests now have their own "Campaign" header, split out of the general "Quests" section (same header style and behavior). It only appears when you have campaign quests.
+- **World Quests pinned to the bottom** — The World Quests section is now fixed at the bottom of the tracker and always visible, with its own height cap and internal scroll, while everything above it scrolls. It sits flush beneath your quests (no dead gap) until they grow enough to need scrolling.
+- **Hide quest map pins** — New General-tab option to turn off EQ's red `!`/`?` quest pins on the world map (Blizzard's own pins are unaffected).
+- **Disable World Quest map features** — New World Quests-tab master switch that turns off all WQ map overlays (world-map pins, summary box, zone list) without affecting the tracker — for players who only want the tracker and Chain Guide.
+- **Tracked / total counts** — The Quests and Campaign headers can show "shown / category total" (e.g. `3/9`), toggleable on the Tracker tab (on by default).
+
+### Improvements
+
+- **Left-click focuses a quest** — Left-clicking a tracked quest now super-tracks it (waypoint/arrow) instead of opening the quest log; the quest log / details moved to right-click.
+- **Group Finder accuracy** — The Find Group eye and elite rosette now show only on elite world quests, not on the many ordinary WQs that merely had a premade-group activity.
+- **Softer icon glow** — The classification glow behind quest icons is now ~50% lighter.
+- **Consistent header counts** — Every section's count renders in the Section Header Color at the quest-description font size.
+- **World Quests options layout** — Reorganized so the pin-scale slider and sort options no longer run off the window.
+- **Interface versions** — TOC updated to include the upcoming patch build for forward compatibility.
+
 ## [1.1.3] - 2026-05-16
 
 ### Fixed

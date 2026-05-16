@@ -150,7 +150,9 @@ function S:Refresh()
     if not self.frame then return end
 
     local DB = ns:GetSubsystem("DB")
-    if not (DB and DB.db.profile.worldQuests.showOnWorldMap) then
+    -- Master WQ switch off, or the world-map toggle off → no summary box.
+    if not (DB and DB.db.profile.worldQuests.enabled ~= false
+            and DB.db.profile.worldQuests.showOnWorldMap) then
         self.frame:Hide()
         return
     end

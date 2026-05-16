@@ -189,7 +189,9 @@ function Z:Refresh()
     if not self.frame then return end
 
     local DB = ns:GetSubsystem("DB")
-    if not (DB and DB.db.profile.worldQuests.showOnZoneMap) then
+    -- Master WQ switch off, or the zone-map toggle off → no zone list.
+    if not (DB and DB.db.profile.worldQuests.enabled ~= false
+            and DB.db.profile.worldQuests.showOnZoneMap) then
         self.frame:Hide()
         return
     end

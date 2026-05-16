@@ -181,6 +181,11 @@ local function buildBlock()
     b.iconGlow:SetSize(50, 50)
     b.iconGlow:SetPoint("CENTER")
     b.iconGlow:SetBlendMode("ADD")
+    -- Keep the classification glow but at half strength. ADD blend means
+    -- alpha scales the added light, so 0.5 = ~50% less glow. Set once
+    -- here; applyQuestIcon only touches the atlas + vertex color, never
+    -- alpha, so this persists across pooled-block reuse.
+    b.iconGlow:SetAlpha(0.5)
 
     b.icon = b.iconHolder:CreateTexture(nil, "ARTWORK", nil, 0)
     b.icon:SetSize(32, 32)
@@ -228,16 +233,15 @@ local function buildBlock()
                 return
             end
 
-            -- Open Blizzard's quest map frame to this quest's details.
-            -- Blizzard_QuestLog is on-demand-loaded, so make sure it's
-            -- live before calling QuestMapFrame_OpenToQuestDetails.
-            if C_AddOns and C_AddOns.LoadAddOn then
-                C_AddOns.LoadAddOn("Blizzard_QuestLog")
-            end
-            if QuestMapFrame_OpenToQuestDetails then
-                QuestMapFrame_OpenToQuestDetails(self.questID)
-            elseif ToggleQuestLog then
-                ToggleQuestLog()
+            -- Plain left-click "focuses" the quest: super-track it so it
+            -- gets the on-screen waypoint/arrow and the SuperTracked icon.
+            -- Opening the quest log / details now lives on the right-click
+            -- context menu (handled above); shift-left-click still toggles
+            -- watch (Blizzard's QUESTWATCHTOGGLE, handled above).
+            if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+                C_SuperTrack.SetSuperTrackedQuestID(self.questID)
+                local Tracker = ns:GetSubsystem("Tracker")
+                if Tracker and Tracker.Refresh then Tracker:Refresh() end
             end
         end
     end)

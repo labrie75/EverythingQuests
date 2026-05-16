@@ -170,13 +170,19 @@ Options:AddTab("tracker", "Tracker", function(content)
         qidGet, qidSet)
     qidCheck:SetPoint("TOPLEFT", objCheck, "BOTTOMLEFT", 0, -2)
 
+    local qtotalGet, qtotalSet = trackerSetting("showQuestTotal")
+    local qtotalCheck = Options:CreateCheckbox(content,
+        "Show tracked / total on the Quests & Campaign headers  |cffaaaaaa(e.g. 3/9)|r",
+        qtotalGet, qtotalSet)
+    qtotalCheck:SetPoint("TOPLEFT", qidCheck, "BOTTOMLEFT", 0, -2)
+
     local Media = ns:GetSubsystem("Media")
     local soundGet, soundSet = trackerSetting("questSoundEnabled")
     local soundCheck = Options:CreateCheckbox(
         content,
         "Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r",
         soundGet, soundSet)
-    soundCheck:SetPoint("TOPLEFT", qidCheck, "BOTTOMLEFT", 0, -8)
+    soundCheck:SetPoint("TOPLEFT", qtotalCheck, "BOTTOMLEFT", 0, -8)
 
     local soundList = (Media and Media.GetSoundList and Media:GetSoundList()) or {}
     local sndChoiceGet, sndChoiceSet = trackerSetting("questCompleteSound")

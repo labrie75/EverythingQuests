@@ -84,7 +84,9 @@ function providerMixin:_DoRefresh()
     if not mapID then return end
 
     local DB = ns:GetSubsystem("DB")
-    if not (DB and DB.db.profile.worldQuests.showOnWorldMap) then return end
+    -- Master WQ switch off, or the world-map toggle off → no WQ pins.
+    if not (DB and DB.db.profile.worldQuests.enabled ~= false
+            and DB.db.profile.worldQuests.showOnWorldMap) then return end
 
     local quests = getWorldQuests(mapID)
     if not quests then return end

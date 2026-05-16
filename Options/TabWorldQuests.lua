@@ -131,11 +131,36 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     local header = Options:CreateSectionHeader(content, "World Quests")
     header:SetPoint("TOPLEFT", 8, -8)
 
+    -- Master switch for the World Quests MAP features (everything this
+    -- tab governs), first in the list. Off = no WQ world-map pins, no
+    -- summary box, no zone list. Refreshes only the WQ map surfaces —
+    -- the tracker's own World Quests section is intentionally NOT
+    -- affected (that lives on the Tracker tab).
+    local function wqMasterGet()
+        local DB = ns:GetSubsystem("DB")
+        return not DB or DB.db.profile.worldQuests.enabled ~= false
+    end
+    local function wqMasterSet(v)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.worldQuests.enabled = v and true or false end
+        refreshWQ()
+    end
+    local wqMaster = Options:CreateCheckbox(content,
+        "Enable World Quests map features  |cffaaaaaa(pins, summary, zone list)|r",
+        wqMasterGet, wqMasterSet)
+    wqMaster:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -16)
+
+    local wqMasterHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    wqMasterHint:SetPoint("TOPLEFT", wqMaster, "BOTTOMLEFT", 0, -2)
+    wqMasterHint:SetWidth(430)
+    wqMasterHint:SetJustifyH("LEFT")
+    wqMasterHint:SetText("Off: EQ stops drawing World Quests on the map — no world-map pins, no summary box, no zone quest list. Everything below has no effect while this is unchecked. Your tracker's World Quests section is separate (Tracker tab) and is NOT affected by this.")
+
     local showWMGet, showWMSet = wqSetting("showOnWorldMap")
     local showWM = Options:CreateCheckbox(
         content, "Show world quest pins on the world map",
         showWMGet, showWMSet)
-    showWM:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -16)
+    showWM:SetPoint("TOPLEFT", wqMasterHint, "BOTTOMLEFT", 0, -12)
 
     local showZMGet, showZMSet = wqSetting("showOnZoneMap")
     local showZM = Options:CreateCheckbox(
@@ -198,7 +223,11 @@ Options:AddTab("worldQuests", "World Quests", function(content)
 
     local scroll = CreateFrame("ScrollFrame", nil, content, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", factionHelp, "BOTTOMLEFT", 0, -8)
-    scroll:SetSize(380, 440)
+    -- 380x260 (was 440): the list scrolls, so a shorter viewport is
+    -- harmless and leaves room for the "Display" group (Sort + Pin
+    -- scale) below it — that group moved here from the left column,
+    -- which overflowed once the master toggle was added at the top.
+    scroll:SetSize(380, 260)
 
     local list = CreateFrame("Frame", nil, scroll)
     list:SetSize(360, 1)
@@ -260,7 +289,10 @@ Options:AddTab("worldQuests", "World Quests", function(content)
 
     -- ─── Display section (left column, below filters) ───────────────────
     local displayHeader = Options:CreateSectionHeader(content, "Display")
-    displayHeader:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -24)
+    -- Right column, under the faction list (not the left column — that
+    -- stack overflowed the 510px tab once the master toggle was added).
+    -- sortRadio / pinSlider / hint are chained to this, so they follow.
+    displayHeader:SetPoint("TOPLEFT", scroll, "BOTTOMLEFT", 0, -16)
 
     local SORT_OPTIONS = {
         { value = "time",    label = "Time left" },
