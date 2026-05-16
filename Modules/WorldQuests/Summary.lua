@@ -36,7 +36,7 @@ local CATEGORY_DISPLAY = {
     profession = { label = "Professions",     icon = "Interface\\Icons\\Trade_Engineering" },
     pvp        = { label = "PvP",             icon = "Interface\\Icons\\Achievement_Bg_TopDmg" },
     pet        = { label = "Pet Battles",     icon = "Interface\\Icons\\INV_Pet_Achievement_CaptureAPet" },
-    other      = { label = "Other",           icon = "Interface\\Icons\\INV_Misc_QuestionMark" },
+    other      = { label = "Other",           icon = "Interface\\Icons\\INV_Misc_Gift_01" },
 }
 
 -- Display order — most "actionable" first. Within categories that share an

@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.0.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.1.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -573,7 +573,17 @@ function Options:CreateColorPicker(parent, label, getter, setter)
                 r, g, b, a = restore.r, restore.g, restore.b, restore.a
             elseif ColorPickerFrame and ColorPickerFrame.GetColorRGB then
                 r, g, b = ColorPickerFrame:GetColorRGB()
-                a = 1 - (OpacitySliderFrame and OpacitySliderFrame:GetValue() or 0)
+                -- Modern ColorPickerFrame (10.0+) exposes alpha directly via
+                -- GetColorAlpha (1 = opaque). OpacitySliderFrame was removed
+                -- in 10.0 — without this the alpha read was always 1, so the
+                -- fade slider never took effect live.
+                if ColorPickerFrame.GetColorAlpha then
+                    a = ColorPickerFrame:GetColorAlpha()
+                elseif OpacitySliderFrame then
+                    a = 1 - OpacitySliderFrame:GetValue()
+                else
+                    a = c.a or 1
+                end
             else
                 r, g, b, a = c.r, c.g, c.b, c.a
             end
@@ -583,7 +593,7 @@ function Options:CreateColorPicker(parent, label, getter, setter)
         if ColorPickerFrame and ColorPickerFrame.SetupColorPickerAndShow then
             ColorPickerFrame:SetupColorPickerAndShow({
                 r = c.r or 0, g = c.g or 0, b = c.b or 0,
-                opacity = 1 - (c.a or 1), hasOpacity = true,
+                opacity = c.a or 1, hasOpacity = true,
                 swatchFunc = function() applyColor() end,
                 opacityFunc = function() applyColor() end,
                 cancelFunc  = function(prev) applyColor(prev) end,

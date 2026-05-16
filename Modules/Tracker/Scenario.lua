@@ -2,7 +2,8 @@ local _, ns = ...
 
 local S = ns:RegisterSubsystem("TrackerScenario", {})
 
-local SUBHEADER_H      = 22
+local SUBHEADER_H      = 26   -- matches Frame.lua SECTION_H so the Delves
+                              -- header band sizes like the other sections
 local BANNER_GAP       = 6
 local CRITERIA_LINE_GAP = 4
 local BAR_H            = 16
@@ -38,7 +39,12 @@ local function pickAtlases(textureKit)
 end
 
 local function categoryLabel(scenarioType, textureKit)
-    if textureKit and textureKit:find("delves") then return "Delves" end
+    -- scenarioType 8 = Delves. Verified live via C_Scenario.GetInfo /
+    -- C_ScenarioInfo.GetScenarioInfo inside a Midnight delve; the legacy
+    -- textureKit return is nil there, which is why a kit-name check alone
+    -- always fell through to the generic "Scenario" label.
+    if scenarioType == 8 then return "Delves" end
+    if textureKit and textureKit:lower():find("delve") then return "Delves" end
     if scenarioType == 1 then return "Mythic+" end
     if scenarioType == 5 then return "Dungeon" end
     if scenarioType == 7 then return "Warfront" end
@@ -115,10 +121,6 @@ function S:Build()
     subHeader:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     subHeader:SetPoint("TOPRIGHT", container, "TOPRIGHT", 0, 0)
 
-    local sbg = subHeader:CreateTexture(nil, "BACKGROUND")
-    sbg:SetAllPoints()
-    sbg:SetColorTexture(0, 0, 0, 0.55)
-
     subHeader.text = subHeader:CreateFontString(nil, "OVERLAY", "ObjectiveTrackerHeaderFont")
     if not subHeader.text:GetFont() then subHeader.text:SetFontObject("GameFontNormalLarge") end
     subHeader.text:SetPoint("LEFT", 8, 0)
@@ -183,6 +185,12 @@ function S:Refresh()
 
     subHeader:Show()
     subHeader.text:SetText(categoryLabel(scenarioType, textureKit))
+    -- Match the other section headers: user font, +4 over quest titles
+    -- (mirrors Frame.lua HEADER_FONT_DELTA so "Delves" sizes like "Quests").
+    local Media = ns:GetSubsystem("Media")
+    if Media and Media.ApplyTrackerFont then
+        Media:ApplyTrackerFont(subHeader.text, 4)
+    end
     banner:Show()
 
     local stageName, numCriteria, widgetSetID

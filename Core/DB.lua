@@ -37,7 +37,7 @@ DB.defaults = {
             -- LibSharedMedia in Core/Media.lua, so this resolves for every
             -- user with no external dependency. Must match the LSM-
             -- registered name exactly (see Media.lua FONTS).
-            font = "GothamNarrow Black",
+            font = "GothamXNarrow Black",
             fontSize = 15,
             -- Font outline flags passed to FontString:SetFont. "OUTLINE"
             -- gives a thin black stroke that keeps the tracker text

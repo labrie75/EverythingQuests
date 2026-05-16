@@ -25,6 +25,30 @@ local function getWorldQuests(mapID)
     return nil
 end
 
+-- An expired world quest can't be accepted, completed, or turned in, so it
+-- has no value to surface. It only lingers because it's still momentarily in
+-- GetQuestsOnMap (or a stale watch entry). C_TaskQuest.IsActive is the
+-- canonical "still up" check; the time guard catches the window where the
+-- timer has drained but the quest hasn't been culled yet.
+local function isExpiredWQ(questID)
+    if not C_TaskQuest then return false end
+    if C_TaskQuest.IsActive and not C_TaskQuest.IsActive(questID) then
+        return true
+    end
+    -- A live world quest ALWAYS has positive time remaining. nil (the API no
+    -- longer tracks it — stale watch entry / drained) or <= 0 both mean it
+    -- can't be completed, so it has no value to show. Seconds, not minutes:
+    -- a WQ with <60s left reports 0 minutes and would be culled wrongly.
+    if C_TaskQuest.GetQuestTimeLeftSeconds then
+        local s = C_TaskQuest.GetQuestTimeLeftSeconds(questID)
+        if not s or s <= 0 then return true end
+    elseif C_TaskQuest.GetQuestTimeLeftMinutes then
+        local m = C_TaskQuest.GetQuestTimeLeftMinutes(questID)
+        if not m or m <= 0 then return true end
+    end
+    return false
+end
+
 local providerMixin = CreateFromMixins(MapCanvasDataProviderMixin)
 
 function providerMixin:OnAdded(mapCanvas)
@@ -72,7 +96,7 @@ function providerMixin:_DoRefresh()
     for i = 1, #quests do
         local info = quests[i]
         local questID = info and (info.questID or info.questId)
-        if questID then
+        if questID and not isExpiredWQ(questID) then
             -- Pre-flight: when reward data isn't loaded, count this quest as
             -- pending and request a preload. Pins still render (with FALLBACK
             -- visuals) so the user sees the quest exists; the retry below
@@ -95,7 +119,7 @@ function providerMixin:_DoRefresh()
                 local factionAllowed  = true
                 if categoryAllowed then
                     -- Resolve the WQ's faction. Global GetQuestInfoByQuestID
-                    -- (the one WQT uses, not the C_TaskQuest variant) returns
+                    -- (the global, not the C_TaskQuest variant) returns
                     -- (title, factionID, ...) and works for un-accepted world
                     -- quests where C_QuestLog.GetQuestFactionID returns 0/nil.
                     local fid

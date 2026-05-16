@@ -36,8 +36,8 @@ function Pin:OnAcquired(questID, x, y, isComplete)
     -- #6D0501) wrapped around the standard quest `!`/`?` icon. The ring makes
     -- ours readable as quest pins while clearly distinguishing them from
     -- Blizzard's plain yellow icons even when stacked at the same coords.
-    -- Pattern adapted from BtWQuestsGuideDataProvider.xml (worldquest-emissary-ring
-    -- background + center texture).
+    -- Uses the worldquest-emissary-ring atlas as the ring background with a
+    -- standard quest icon centered on top.
     if self.ring then
         self.ring:SetAtlas("worldquest-emissary-ring")
         self.ring:SetVertexColor(0.43, 0.02, 0.0, 1)             -- #6D0501
@@ -91,9 +91,8 @@ end
 
 -- Required empty stub. Newer MapCanvas calls this on every pin during
 -- iteration; if the method is missing the canvas asserts at
--- Blizzard_MapCanvas.lua:280. Pattern verified in BtWQuests' QuestPin
--- (BtWQuestsQuestDataProvider.lua:89-90). Don't remove this even though it
--- looks pointless — the assertion comes back the moment you do.
+-- Blizzard_MapCanvas.lua:280. Don't remove this even though it looks
+-- pointless — the assertion comes back the moment you do.
 function Pin:CheckMouseButtonPassthrough()
 end
 

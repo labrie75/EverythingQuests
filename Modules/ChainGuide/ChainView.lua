@@ -208,10 +208,9 @@ local function buildQuestTooltip(item, statusKey)
     GameTooltip:Show()
 end
 
-local function onNodeClickQuest(item)
-    -- Shift-click → chat link if we know the title. Plain click → open the
-    -- Blizzard quest details popup when the quest is in the log; if not, the
-    -- tooltip is the most we can offer (no API to peek at quest text by ID).
+local function onNodeClickQuest(item, chain)
+    -- Shift-click → chat link if we know the title. Plain click → drop a
+    -- waypoint at the quest and open the map (Modules/ChainGuide/Waypoint).
     if IsShiftKeyDown and IsShiftKeyDown() and ChatEdit_InsertLink then
         local title = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(item.id)
         if title then
@@ -219,12 +218,8 @@ local function onNodeClickQuest(item)
             return
         end
     end
-    if C_QuestLog and C_QuestLog.GetLogIndexForQuestID then
-        local idx = C_QuestLog.GetLogIndexForQuestID(item.id)
-        if idx and QuestMapFrame_OpenToQuestDetails then
-            QuestMapFrame_OpenToQuestDetails(item.id)
-        end
-    end
+    local WP = ns:GetSubsystem("ChainGuideWaypoint")
+    if WP and WP.GoTo then WP:GoTo(item.id, chain) end
 end
 
 local function onNodeClickChain(item)
@@ -397,7 +392,7 @@ function CV:Render(pane, chain)
         else
             node:SetScript("OnEnter", function() buildQuestTooltip(itemRef, statusRef) end)
             node:SetScript("OnLeave", function() GameTooltip:Hide() end)
-            node:SetScript("OnClick", function() onNodeClickQuest(itemRef) end)
+            node:SetScript("OnClick", function() onNodeClickQuest(itemRef, chain) end)
         end
 
         nodes[i] = node

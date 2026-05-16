@@ -5,8 +5,7 @@
 -- We keep our own questID list in saved vars and re-add the watches on
 -- PLAYER_ENTERING_WORLD so the player's tracked WQs persist across sessions.
 --
--- Pattern adapted from WorldQuestTracker's db.profile.quests_tracked, but
--- scoped per-character (db.char) since WQ availability is character-specific.
+-- Scoped per-character (db.char) since WQ availability is character-specific.
 
 local _, ns = ...
 
@@ -113,8 +112,8 @@ end
 function W:OnEnable()
     local Events = ns:GetSubsystem("Events")
     Events:On("PLAYER_ENTERING_WORLD", function()
-        -- WQ data takes a beat to populate after login. Two-second delay is
-        -- the same buffer KT/WQT use for similar restore loops.
+        -- WQ data takes a beat to populate after login. Two-second delay
+        -- gives the API time before we restore.
         C_Timer.After(2, restore)
     end)
     Events:On("QUEST_TURNED_IN", function(_, questID)

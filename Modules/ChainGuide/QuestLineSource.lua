@@ -48,7 +48,7 @@ local function showUnrouted()
     local DB = ns:GetSubsystem("DB")
     local cg = DB and DB.db and DB.db.profile and DB.db.profile.chainGuide
     if cg and cg.showUnroutedChains ~= nil then return cg.showUnroutedChains end
-    return false                  -- default: clean BtWQuests-like list
+    return false                  -- default: clean, routed-only list
 end
 
 -- Routing entries are { cat = categoryID, name = "..." }. Older callers

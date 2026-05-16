@@ -24,7 +24,9 @@ local GRIP_SIZE        = 14   -- bottom-right resize grip
 -- pass, plus the GC work to reclaim them.
 local _popupSet = {}
 local _visible  = {}
-local SECTION_H        = 22   -- "Quests" section header band
+local SECTION_H        = 26   -- "Quests" section header band (fits the larger header text)
+local HEADER_FONT_DELTA = 4   -- section headers render this many points larger
+                              -- than quest titles so the hierarchy reads right
 local MIN_W, MIN_H     = 200, 100
 local MAX_W, MAX_H     = 600, 1000
 
@@ -133,8 +135,25 @@ function Tracker:BuildFrame()
     local dragHint = drag:CreateTexture(nil, "OVERLAY")
     dragHint:SetAllPoints()
     dragHint:SetColorTexture(1, 1, 1, 0)
-    drag:SetScript("OnEnter",     function() dragHint:SetColorTexture(1, 1, 1, 0.06) end)
-    drag:SetScript("OnLeave",     function() dragHint:SetColorTexture(1, 1, 1, 0)     end)
+    drag:SetScript("OnEnter", function()
+        dragHint:SetColorTexture(1, 1, 1, 0.15)
+        local DBs = ns:GetSubsystem("DB")
+        local locked = DBs and DBs.db.profile.general and DBs.db.profile.general.lockTracker
+        GameTooltip:SetOwner(drag, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Everything Quests", 0.92, 0.72, 0.02)
+        if locked then
+            GameTooltip:AddLine("Position locked", 1, 0.3, 0.3)
+            GameTooltip:AddLine('Uncheck "Lock tracker position" in /eq \226\134\146 General.', 0.8, 0.8, 0.8, true)
+        else
+            GameTooltip:AddLine("Drag to move the tracker", 1, 1, 1)
+            GameTooltip:AddLine("/eq for options", 0.8, 0.8, 0.8)
+        end
+        GameTooltip:Show()
+    end)
+    drag:SetScript("OnLeave", function()
+        dragHint:SetColorTexture(1, 1, 1, 0)
+        GameTooltip:Hide()
+    end)
     drag:SetScript("OnDragStart", function()
         local DBs = ns:GetSubsystem("DB")
         if DBs and DBs.db.profile.general and DBs.db.profile.general.lockTracker then return end
@@ -188,9 +207,6 @@ function Tracker:BuildFrame()
     self:BuildSectionHeaders(content)
 end
 
-local MASTER_H = 24
-local MASTER_GAP = 4
-
 -- Tracker headers: flat text with a single hairline beneath, no boxed
 -- backgrounds. Modeled on ElvUI's clean tracker look. Icons + per-quest
 -- block rendering live in Blocks.lua and stay untouched.
@@ -208,27 +224,6 @@ local function buildHairline(parent)
     line:SetPoint("BOTTOMLEFT", 0, 0)
     line:SetPoint("BOTTOMRIGHT", 0, 0)
     return line
-end
-
-local function makeMasterHeader(parent, onToggle)
-    local h = CreateFrame("Button", nil, parent)
-    h:SetHeight(MASTER_H)
-    h:RegisterForClicks("LeftButtonUp")
-
-    buildHairline(h)
-
-    h.text = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    h.text:SetPoint("LEFT", 4, 0)
-    h.text:SetText("All Objectives")
-    h.text:SetTextColor(0.92, 0.72, 0.02)
-
-    -- Collapse marker is a plain FontString — no boxed background.
-    h.collapse = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    h.collapse:SetPoint("RIGHT", -4, 0)
-    h.collapse:SetTextColor(0.92, 0.72, 0.02)
-
-    h:SetScript("OnClick", onToggle)
-    return h
 end
 
 local function makeSectionHeader(parent, id, title, onToggle)
@@ -260,10 +255,6 @@ end
 function Tracker:BuildSectionHeaders(content)
     self.sectionFrames = {}
 
-    self.masterHeader = makeMasterHeader(content, function()
-        self:ToggleAllCollapsed()
-    end)
-
     local sections = {
         { id = "quests",     title = "Quests" },
         { id = "profession", title = "Profession" },
@@ -282,19 +273,6 @@ function Tracker:BuildSectionHeaders(content)
         end)
         self.sectionFrames[sid] = h
     end
-end
-
-function Tracker:IsAllCollapsed()
-    local DB = ns:GetSubsystem("DB")
-    if not DB then return false end
-    return DB.char.allCollapsed == true
-end
-
-function Tracker:ToggleAllCollapsed()
-    local DB = ns:GetSubsystem("DB")
-    if not DB then return end
-    DB.char.allCollapsed = not self:IsAllCollapsed()
-    self:Render()
 end
 
 function Tracker:IsSectionCollapsed(id)
@@ -467,16 +445,6 @@ function Tracker:Render()
 
     local y = 0
     local sections = self.sectionList or {}
-    local allCollapsed = self:IsAllCollapsed()
-
-    if self.masterHeader then
-        self.masterHeader:Show()
-        self.masterHeader:ClearAllPoints()
-        self.masterHeader:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
-        self.masterHeader:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
-        self.masterHeader.collapse:SetText(allCollapsed and "+" or "–")
-        y = y + MASTER_H + MASTER_GAP
-    end
 
     -- Per-section visibility toggles. The user can hide entire sections
     -- (Profession, World Quests) if they don't use those features. When a
@@ -505,7 +473,7 @@ function Tracker:Render()
         end
         if headerFrame then
             local rendererName = SECTION_RENDERERS[def.id]
-            local sectionCollapsed = allCollapsed or self:IsSectionCollapsed(def.id)
+            local sectionCollapsed = self:IsSectionCollapsed(def.id)
 
             local probeY = y + SECTION_H + 2
             local sectionHeight, sectionCount = 0, 0
@@ -513,18 +481,25 @@ function Tracker:Render()
                 sectionHeight, sectionCount = self[rendererName](self, content, contentWidth, probeY, sectionCollapsed)
             end
 
-            if allCollapsed then
-                headerFrame:Hide()
-            elseif sectionCount and sectionCount > 0 then
+            if sectionCount and sectionCount > 0 then
                 headerFrame:Show()
                 headerFrame:ClearAllPoints()
                 headerFrame:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
                 headerFrame:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
                 headerFrame.count:SetText(tostring(sectionCount))
                 headerFrame.collapse:SetText(sectionCollapsed and "+" or "–")
-                -- Live-update header text colors from the user's chosen
-                -- headerColor (Appearance tab). Cheap to redo every frame.
-                if headerFrame.text     then headerFrame.text:SetTextColor(hr, hg, hb)     end
+                -- Live-update header font + colors from the user's chosen
+                -- font/size/headerColor (Appearance tab). Headers render in
+                -- the user's font HEADER_FONT_DELTA points larger than quest
+                -- titles so the section hierarchy reads correctly. Cheap to
+                -- redo every frame.
+                local Media = ns:GetSubsystem("Media")
+                if headerFrame.text then
+                    if Media and Media.ApplyTrackerFont then
+                        Media:ApplyTrackerFont(headerFrame.text, HEADER_FONT_DELTA)
+                    end
+                    headerFrame.text:SetTextColor(hr, hg, hb)
+                end
                 if headerFrame.collapse then headerFrame.collapse:SetTextColor(hr, hg, hb) end
                 y = y + SECTION_H + 2 + sectionHeight + gap
             else
@@ -735,6 +710,19 @@ function Tracker:OnInitialize()
     self:BuildFrame()
 end
 
+-- One-time onboarding popup: the drag strip is invisible by design, so a
+-- first-run dialog tells the player how to move the tracker. preferredIndex 3
+-- is the standard guard against tainting the default StaticPopup slot.
+StaticPopupDialogs["EVERYTHINGQUESTS_MOVE_HINT"] = {
+    text = "|cffEBB706Everything Quests|r\n\nDrag the top edge of the tracker to move it.\n\nType |cffEBB706/eq|r for options.",
+    button1 = OKAY,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    showAlert = true,
+    preferredIndex = 3,
+}
+
 function Tracker:OnEnable()
     local Events = ns:GetSubsystem("Events")
     local function refresh() self:Refresh() end
@@ -748,4 +736,18 @@ function Tracker:OnEnable()
     Events:On("ZONE_CHANGED_NEW_AREA",    refresh)
     Events:On("PLAYER_ENTERING_WORLD",    refresh)
     self:Refresh()
+
+    -- One-time discovery popup. The flag lives in the account-wide chain
+    -- cache (a plain saved table that reliably persists — AceDB's .global
+    -- scope is never created for this DB, so the previous attempt silently
+    -- no-op'd). Set immediately so it never shows twice; deferred so it
+    -- clears the loading screen first.
+    local DBs   = ns:GetSubsystem("DB")
+    local cache = DBs and DBs.chainCache
+    if cache and not cache._shownMoveHint then
+        cache._shownMoveHint = true
+        C_Timer.After(4, function()
+            if StaticPopup_Show then StaticPopup_Show("EVERYTHINGQUESTS_MOVE_HINT") end
+        end)
+    end
 end

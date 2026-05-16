@@ -65,8 +65,8 @@ local function fullRebuild()
                     -- Modern classification enum drives the per-quest icon
                     -- (Recurring/Campaign/Calling/Meta/Important/Questline/etc).
                     -- The canonical API in Midnight retail is
-                    -- C_QuestInfoSystem.GetQuestClassification — that's what
-                    -- KalielsTracker uses (Quest.lua:16). C_QuestLog also has
+                    -- C_QuestInfoSystem.GetQuestClassification — the
+                    -- canonical source. C_QuestLog also has
                     -- a similarly-named function on some builds, kept here as
                     -- a fallback in case the InfoSystem one isn't shipped.
                     classification = (C_QuestInfoSystem

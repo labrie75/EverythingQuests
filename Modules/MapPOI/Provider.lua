@@ -14,7 +14,7 @@
 --
 -- We register on PLAYER_ENTERING_WORLD rather than PLAYER_LOGIN because
 -- WorldMapFrame isn't always fully initialized at PLAYER_LOGIN, and the
--- canonical pattern (BtWQuests.lua:987-993) uses PEW.
+-- canonical pattern uses PEW.
 
 local _, ns = ...
 
@@ -144,7 +144,7 @@ function M:OnEnable()
     local Events = ns:GetSubsystem("Events")
 
     -- Lazy attachment: PLAYER_ENTERING_WORLD fires after PLAYER_LOGIN once the
-    -- world is fully loaded. This is the canonical timing per BtWQuests; trying
+    -- world is fully loaded. This is the canonical timing; trying
     -- to attach at PLAYER_LOGIN can race against WorldMapFrame initialization.
     Events:On("PLAYER_ENTERING_WORLD", function() attach(self) end)
 

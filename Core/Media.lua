@@ -2,9 +2,9 @@ local _, ns = ...
 
 local Media = ns:RegisterSubsystem("Media", {})
 
--- Quest-complete sound roster — IDs sourced from KalielsTracker's Media.lua
--- so the user gets the same options they're used to. Default ("Work Complete")
--- is the peon "Work complete" voice line.
+-- Quest-complete sound roster — standard WoW voice/UI sound file IDs so the
+-- options are familiar. Default ("Work Complete") is the peon "Work
+-- complete" voice line.
 local SOUNDS = {
     { name = "EQ: Work Complete",   file = 558132 },   -- PeonBuildingComplete1.ogg
     { name = "EQ: BloodElf (M)",    file = 539400 },
@@ -35,12 +35,56 @@ local SOUNDS = {
     { name = "EQ: Worgen (F)",      file = 542028 },
 }
 
--- Bundled fonts. Files live in Media/Fonts/ and ship with the addon so the
--- default typeface works with zero external dependencies. The registered
--- name must match the DB default (Core/DB.lua tracker.font) exactly — LSM
+-- Bundled fonts. Files live in Media/Fonts/ (alongside their OFL / Ubuntu
+-- licence .txt files) and ship with the addon so every user gets the full
+-- selection with zero external dependencies. Registered names are what the
+-- user sees in the Appearance font dropdown. The first entry is the DB
+-- default (Core/DB.lua tracker.font) and must match it exactly — LSM
 -- lookups are case- and space-sensitive.
+local FONT_PATH = [[Interface\AddOns\EverythingQuests\Media\Fonts\]]
 local FONTS = {
-    { name = "GothamNarrow Black", file = [[Interface\AddOns\EverythingQuests\Media\Fonts\GothamNarrow-Black.ttf]] },
+    { name = "GothamXNarrow Black",      file = FONT_PATH .. "GothamXNarrow-Black.ttf" },  -- DB default
+    { name = "Avquest",                  file = FONT_PATH .. "Avquest.ttf" },
+    { name = "Barlow Condensed",         file = FONT_PATH .. "BarlowCondensed-Regular.ttf" },
+    { name = "Barlow Condensed Medium",  file = FONT_PATH .. "BarlowCondensed-Medium.ttf" },
+    { name = "Barlow Condensed SemiBold",file = FONT_PATH .. "BarlowCondensed-SemiBold.ttf" },
+    { name = "Barlow Condensed Bold",    file = FONT_PATH .. "BarlowCondensed-Bold.ttf" },
+    { name = "Beep",                     file = FONT_PATH .. "Beep-Regular.otf" },
+    { name = "Beep Medium",              file = FONT_PATH .. "Beep-Medium.otf" },
+    { name = "Beep Bold",                file = FONT_PATH .. "Beep-Bold.otf" },
+    { name = "Exo 2 ExtraBold",          file = FONT_PATH .. "Exo2-ExtraBold.ttf" },
+    { name = "GoodBrush",                file = FONT_PATH .. "GoodBrush.ttf" },
+    { name = "Gotham Narrow Black",      file = FONT_PATH .. "GothamNarrowBlack.ttf" },
+    { name = "Inter",                    file = FONT_PATH .. "Inter-Regular.ttf" },
+    { name = "Inter SemiBold",           file = FONT_PATH .. "Inter-SemiBold.ttf" },
+    { name = "Inter Bold",               file = FONT_PATH .. "Inter-Bold.ttf" },
+    { name = "Josefin Sans Bold",        file = FONT_PATH .. "JosefinSans-Bold.ttf" },
+    { name = "Kimberley",                file = FONT_PATH .. "Kimberley.ttf" },
+    { name = "Lemon",                    file = FONT_PATH .. "Lemon-Regular.ttf" },
+    { name = "Metal Lord",               file = FONT_PATH .. "Metal-Lord.ttf" },
+    { name = "Montserrat",               file = FONT_PATH .. "Montserrat-Regular.ttf" },
+    { name = "Montserrat Medium",        file = FONT_PATH .. "Montserrat-Medium.ttf" },
+    { name = "Montserrat SemiBold",      file = FONT_PATH .. "Montserrat-SemiBold.ttf" },
+    { name = "Montserrat Bold",          file = FONT_PATH .. "Montserrat-Bold.ttf" },
+    { name = "Neuropol X",               file = FONT_PATH .. "neuropolxrg.ttf" },
+    { name = "Noto Sans",                file = FONT_PATH .. "NotoSans-Regular.ttf" },
+    { name = "Noto Sans SemiBold",       file = FONT_PATH .. "NotoSans-SemiBold.ttf" },
+    { name = "Noto Sans Bold",           file = FONT_PATH .. "NotoSans-Bold.ttf" },
+    { name = "Optimus Princeps",         file = FONT_PATH .. "OptimusPrinceps.ttf" },
+    { name = "Oswald Light",             file = FONT_PATH .. "Oswald-Light.ttf" },
+    { name = "Oswald",                   file = FONT_PATH .. "Oswald-Regular.ttf" },
+    { name = "Oswald Bold",              file = FONT_PATH .. "Oswald-Bold.ttf" },
+    { name = "Pepsi",                    file = FONT_PATH .. "Pepsi-Cyr-Lat.ttf" },
+    { name = "Pricedown",                file = FONT_PATH .. "pricedown.ttf" },
+    { name = "Reckoner",                 file = FONT_PATH .. "Reckoner.ttf" },
+    { name = "Reckoner Bold",            file = FONT_PATH .. "Reckoner_Bold.ttf" },
+    { name = "RingLink Medium",          file = FONT_PATH .. "RingLink-Medium.otf" },
+    { name = "RingLink Bold",            file = FONT_PATH .. "RingLink-Bold.otf" },
+    { name = "Roboto Bold",              file = FONT_PATH .. "Roboto-Bold.ttf" },
+    { name = "Simply Sans",              file = FONT_PATH .. "SimplySans-Book.ttf" },
+    { name = "Simply Sans Bold",         file = FONT_PATH .. "SimplySans-Bold.ttf" },
+    { name = "Ubuntu Medium",            file = FONT_PATH .. "Ubuntu-Medium.ttf" },
+    { name = "Ubuntu Bold",              file = FONT_PATH .. "Ubuntu-Bold.ttf" },
 }
 
 function Media:OnInitialize()

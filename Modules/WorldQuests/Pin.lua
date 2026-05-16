@@ -31,7 +31,7 @@ local function fmtTime(mins)
     return math.floor(mins / 1440) .. "d"
 end
 
--- Color the time-left text by urgency. Same buckets as WorldQuestTracker:
+-- Color the time-left text by urgency:
 -- > 4h = green, 1-4h = white, 30-60m = yellow, < 30m = red.
 local function timeColor(mins)
     if not mins then return 1, 1, 1 end

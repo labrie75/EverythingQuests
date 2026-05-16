@@ -1,8 +1,7 @@
 -- Modules/WorldQuests/Tooltip.lua
 -- Rich tooltip for world quest pins and tracker rows: title, faction,
 -- objectives, every reward (money / items / currencies / XP), time-left.
--- Pattern adapted from WorldQuestTracker_Tooltip.lua but built on standard
--- GameTooltip APIs only — no third-party tooltip lib.
+-- Built on standard GameTooltip APIs only — no third-party tooltip lib.
 
 local _, ns = ...
 

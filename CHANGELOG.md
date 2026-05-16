@@ -5,6 +5,27 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-05-16
+
+### New Features
+
+- **Chain Guide waypoints** — Clicking any quest in a chain now drops a waypoint (TomTom if installed, otherwise Blizzard's user waypoint + super-track) and opens the world map to it. Ships with quest-giver coordinates for the Midnight chains, with a live questline-API lookup and passive harvesting as fallbacks so coverage keeps improving as you play.
+- **Bundled font selection** — A large set of fonts now ships with the addon and is registered with LibSharedMedia, so every user has the full font list in Appearance with no external addon required. Default is GothamXNarrow Black.
+- **Move-the-tracker discovery** — A one-time popup on first load explains how to reposition the tracker, and the (previously invisible) top drag strip now highlights and shows a tooltip on hover, with a lock-aware message.
+
+### Bug Fixes
+
+- **"Find Group" eye on solo quests** — The group-finder eye no longer appears on regular quests; it is shown only on elite/group world quests, matching Blizzard's tracker.
+- **Expired world quests** — Expired WQs (no time remaining / no longer active) are now filtered out of the world-quest list, summary, and pins instead of lingering as stale "Expired" rows.
+- **Delve section labeled "Scenario"** — The tracker now correctly labels Delves as "Delves" (detected via scenario type, since the legacy texture-kit signal is absent in Midnight).
+- **Background opacity slider** — Dragging the tracker background fade now updates live; it previously relied on a UI global removed in 10.0, so the alpha was always read as fully opaque.
+
+### Improvements
+
+- **World-quest reward classification** — Rewritten to a tag → money → item → currency pipeline: far fewer rewards fall to "Other", artifact power / trade goods / equipment are distinguished, and the "Other" summary icon is no longer a question mark.
+- **Section header hierarchy** — Section headers now render in the user's font a few points larger than quest titles (and live-update with the Appearance settings), so the layout reads correctly.
+- **Cleaner tracker** — Removed the "All Objectives" master header (each section has its own) and the boxed background behind the Delves header.
+
 ## [1.0.1] - 2026-05-15
 
 ### Bug Fixes

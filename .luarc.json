@@ -35,6 +35,7 @@
         "MapCanvasMixin", "MapCanvasPinMixin", "MapCanvasDataProviderMixin", "WorldMap_WorldQuestDataProviderMixin",
         "EQQuestPinMixin", "EQWorldQuestPinMixin", "PIN_FRAME_LEVEL_AREA_POI", "PIN_FRAME_LEVEL_QUEST_PING", "secureexecuterange",
         "LFGListUtil_FindQuestGroup",
+        "UiMapPoint", "OpenWorldMap", "TomTom", "GetQuestID", "ShowUIPanel", "ChatEdit_InsertLink", "OKAY",
         "GameFontWhiteSmall",
         "Mixin", "CreateFromMixins", "CallbackRegistryMixin", "CallbackRegistryBaseMixin",
         "LibStub", "Settings", "EditModeManagerFrame", "MenuUtil", "Menu",

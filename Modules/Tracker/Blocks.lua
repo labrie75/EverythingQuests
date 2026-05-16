@@ -10,7 +10,7 @@
 -- Visual conventions match Blizzard's modern tracker as closely as we can
 -- without shipping art assets: atlas icons per quest type (with safe
 -- texture-path fallbacks), difficulty-colored title, in-line color escapes
--- on the X/Y progress prefix (KT pattern — one FontString, mixed colors).
+-- on the X/Y progress prefix (one FontString, mixed inline colors).
 
 local _, ns = ...
 
@@ -23,9 +23,9 @@ local PAD_X, PAD_Y       = 6, 2
 local TITLE_TO_CAT_GAP   = 1     -- title → category subtitle
 local CAT_TO_SUB_GAP     = 2     -- category → first objective
 local TITLE_TO_SUB_GAP   = 2     -- title → objectives when no category present
-local ICON_SIZE          = 26    -- matches KT's POI button visual (31×31 frame, ~24-26 actual icon)
+local ICON_SIZE          = 26    -- reads like a Blizzard POI button (~24-26 actual icon)
 local ICON_TITLE_GAP     = 4
-local CATEGORY_COLOR     = { 0.42, 0.69, 1.00 }   -- KT-style light blue zone subtitle
+local CATEGORY_COLOR     = { 0.42, 0.69, 1.00 }   -- light blue zone subtitle
 
 -- Try an atlas first; if the client doesn't ship it, fall back to the given
 -- texture path. Some atlases (Campaign-QuestLog-LoreBook, QuestDaily, etc.)
@@ -45,8 +45,8 @@ local function safeSetAtlas(tex, atlas, fallbackTexture, fallbackTexCoord)
     return false
 end
 
--- Resolve quest classification → POI icon atlas. KT (per their POIButton.lua)
--- uses Blizzard's native UI-QuestPoi-* atlas family, NOT the small
+-- Resolve quest classification → POI icon atlas. Use Blizzard's native
+-- UI-QuestPoi-* atlas family, NOT the small
 -- "QuestNormal" / "QuestDaily" atlases (those are minimap pin sizes; rendered
 -- at 26px they look like tiny rectangles). The OuterGlow atlas family
 -- contains the round colored rings + center symbols the player recognizes
@@ -204,28 +204,6 @@ local function buildBlock()
     b.subText:SetWordWrap(true)
     b.subText:SetTextColor(0.85, 0.85, 0.85)
 
-    -- Hidden by default; RenderQuest shows when C_LFGList.GetActivityIDForQuestID
-    -- returns a non-nil activity (Blizzard's signal that the quest is group-eligible).
-    b.groupFinder = CreateFrame("Button", nil, b)
-    b.groupFinder:SetSize(16, 16)
-    b.groupFinder.icon = b.groupFinder:CreateTexture(nil, "ARTWORK")
-    b.groupFinder.icon:SetAllPoints()
-    b.groupFinder.icon:SetAtlas("groupfinder-eye-single")
-    b.groupFinder:Hide()
-    b.groupFinder:SetScript("OnClick", function(self)
-        local qid = self:GetParent().questID
-        if qid and LFGListUtil_FindQuestGroup then
-            LFGListUtil_FindQuestGroup(qid)
-        end
-    end)
-    b.groupFinder:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:SetText("Find Group", 1, 1, 1)
-        GameTooltip:AddLine("Open the Premade Group Finder for this quest.", 0.7, 0.7, 0.7, true)
-        GameTooltip:Show()
-    end)
-    b.groupFinder:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
     b:EnableMouse(true)
     b:SetScript("OnMouseUp", function(self, button)
         local wasDragging = self._wasDragging
@@ -291,9 +269,6 @@ function Blocks:Acquire(parent)
     b.category:SetPoint("TOPLEFT",  b.title, "BOTTOMLEFT",  0, -TITLE_TO_CAT_GAP)
     b.category:SetPoint("TOPRIGHT", b.title, "BOTTOMRIGHT", 0, -TITLE_TO_CAT_GAP)
 
-    b.groupFinder:ClearAllPoints()
-    b.groupFinder:SetPoint("TOPRIGHT", b, "TOPRIGHT", -PAD_X, -PAD_Y)
-
     b:Show()
     self.active[#self.active + 1] = b
     return b
@@ -346,13 +321,6 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         block.title:SetTextColor(0.92, 0.72, 0.02)               -- #EBB706 yellow
     end
 
-    if C_LFGList and C_LFGList.GetActivityIDForQuestID
-       and C_LFGList.GetActivityIDForQuestID(questData.questID) then
-        block.groupFinder:Show()
-    else
-        block.groupFinder:Hide()
-    end
-
     -- Apply user-chosen font + size from the Options panel.
     if DB then
         local Media = ns:GetSubsystem("Media")
@@ -388,7 +356,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     local subText = buildSubText(questData, simplifyMode)
     -- Strip the "X/Y " progress-number prefix when showObjectiveNumbers is
     -- off. We match the colorized prefix our buildSubText emits and remove
-    -- it leaving just the description, mirroring KT's hide-numbers option.
+    -- it leaving just the description, a standard hide-numbers option.
     if cfg.showObjectiveNumbers == false and subText then
         subText = subText:gsub("|c%x%x%x%x%x%x%x%x(%d+)/(%d+)|r%s*", "")
         subText = subText:gsub("(%d+)/(%d+)%s+", "")
@@ -400,8 +368,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     -- on the first render after width changes, causing blocks to overlap.
     local blockW = block:GetWidth()
     if blockW and blockW > 0 then
-        local rightReserve = block.groupFinder:IsShown() and 20 or 0
-        local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2) - rightReserve
+        local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2)
         local subTextW = titleW
         if titleW > 0 then
             block.title:SetWidth(titleW)

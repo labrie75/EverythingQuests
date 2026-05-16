@@ -11,7 +11,7 @@
 --   nothing the provider's own code does will fix it because the taint is in
 --   the table membership itself.
 --
--- The pattern (originally shipped by BtWQuests' library of the same name):
+-- The pattern:
 --   We build a parallel "shadow canvas" — an object that mimics the bits of
 --   MapCanvasMixin a data provider needs (AcquirePin, SetPinTemplateType,
 --   pinPools, etc.) but maintains its OWN dataProviders list. We then hook
@@ -25,8 +25,8 @@
 --   shadow:AddDataProvider(myProvider)              -- same calling pattern
 --   -- inside myProvider, self:GetMap() returns the shadow; AcquirePin works.
 --
--- Bracket access (Lib[WorldMapFrame]) is also supported for parity with the
--- BtWQuests API so muscle memory carries.
+-- Bracket access (Lib[WorldMapFrame]) is also supported as an alternate
+-- access pattern.
 
 local MAJOR, MINOR = "LibMapPinHandler-1.0", 2
 local Lib = LibStub:NewLibrary(MAJOR, MINOR)
