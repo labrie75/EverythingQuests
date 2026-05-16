@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.1.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.1.2"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -602,29 +602,46 @@ function Options:CreateColorPicker(parent, label, getter, setter)
     end)
 
     container.button = btn
+    container.label  = labelFS
     container.paint  = paint
     return container
 end
 
--- Slash to open
-SLASH_EQ1 = "/eq"
-SLASH_EQ2 = "/everythingquests"
-SlashCmdList["EQ"] = function(msg)
+-- Slash handler. Options:Toggle() is pcall-guarded so a failure surfaces a
+-- one-line error in chat instead of silently doing nothing; success is
+-- silent (the window appearing is the feedback).
+local function eqSlashHandler(msg)
     msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     if msg == "chain" then
         local CG = ns:GetSubsystem("ChainGuide"); if CG then CG:Toggle() end
+        return
     elseif msg:match("^discover") then
         local hint = msg:match("^discover%s+(.+)$")
         local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
         if QLS and QLS.PrintCurrentZone then QLS:PrintCurrentZone(hint) end
+        return
     elseif msg == "wqdebug" then
         Options:DumpWorldQuestSources()
-    else
-        Options:Toggle()
+        return
+    end
+    local ok, err = pcall(function() Options:Toggle() end)
+    if not ok then
+        print("|cffEBB706Everything Quests|r: couldn't open Options \226\128\148 " .. tostring(err))
     end
 end
 
--- /eq wqdebug — surfaces every data source the World Quests tracker
+-- Slash commands. The short alias is "/eqs", NOT "/eq": IsSecureCmd("/EQ")
+-- is true because "/eq" is Blizzard's built-in *secure* shorthand for
+-- "/equip" (equip an item by name). WoW's chat parser dispatches secure
+-- commands before it ever consults SlashCmdList, so a "/eq" handler is
+-- unreachable, and overriding Blizzard's secure command would break
+-- equipping items and risk taint. "/eqs" and the full "/everythingquests"
+-- are not secure, so both route here through the normal slash path.
+SLASH_EVERYTHINGQUESTS1 = "/eqs"
+SLASH_EVERYTHINGQUESTS2 = "/everythingquests"
+SlashCmdList["EVERYTHINGQUESTS"] = eqSlashHandler
+
+-- /eqs wqdebug — surfaces every data source the World Quests tracker
 -- section consults, so we can tell which API a missing quest *is* in
 -- (and route the new bug fix at it).
 function Options:DumpWorldQuestSources()

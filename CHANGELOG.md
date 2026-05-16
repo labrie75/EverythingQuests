@@ -5,6 +5,18 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-05-16
+
+### Bug Fixes
+
+- **`/eq` did nothing** — `/eq` is Blizzard's own built-in command for equipping items, so the game intercepted it before the addon ever received it. The short command to open Options is now **`/eqs`**; `/everythingquests` still works as before. All in-game hints, tooltips, the move-the-tracker popup, and the README were updated to match.
+- **Scroll bar background misaligned** — The scroll-bar backdrop sat to the left of the scroll bar instead of directly behind it. It is now anchored to the bar itself, so it always lines up.
+
+### Improvements
+
+- **Subtler scroll bar background** — The default backdrop is now a faint, barely-there grey that just hints the bar is present (still fully adjustable in Appearance), and the same backdrop was added to the World Quests options tab.
+- **Options layout** — The Scroll Bar Color picker now lines up in the same column as the Background Color picker.
+
 ## [1.1.0] - 2026-05-16
 
 ### New Features

@@ -1,7 +1,7 @@
 package-as: EverythingQuests
 
-# Replace with your actual CurseForge project ID after creating the project
-curse-id:
+# CurseForge project ID (https://www.curseforge.com/wow/addons/everythingquests)
+curse-id: 1544648
 
 enable-nolib-creation: no
 

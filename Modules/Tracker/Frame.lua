@@ -143,10 +143,10 @@ function Tracker:BuildFrame()
         GameTooltip:SetText("Everything Quests", 0.92, 0.72, 0.02)
         if locked then
             GameTooltip:AddLine("Position locked", 1, 0.3, 0.3)
-            GameTooltip:AddLine('Uncheck "Lock tracker position" in /eq \226\134\146 General.', 0.8, 0.8, 0.8, true)
+            GameTooltip:AddLine('Uncheck "Lock tracker position" in /eqs \226\134\146 General.', 0.8, 0.8, 0.8, true)
         else
             GameTooltip:AddLine("Drag to move the tracker", 1, 1, 1)
-            GameTooltip:AddLine("/eq for options", 0.8, 0.8, 0.8)
+            GameTooltip:AddLine("/eqs for options", 0.8, 0.8, 0.8)
         end
         GameTooltip:Show()
     end)
@@ -197,6 +197,23 @@ function Tracker:BuildFrame()
 
     -- Content width should track the frame as it resizes so blocks reflow.
     f:SetScript("OnSizeChanged", function() self:Refresh() end)
+
+    -- Background strip directly behind the scroll bar so the low-contrast
+    -- bar is easy to see. Anchored to the bar widget itself (not the gutter
+    -- geometry) so it always sits *under* the bar instead of beside it. On
+    -- `f` at BORDER layer so the bar — a child of `scroll` — renders on top.
+    -- Colour/visibility applied in Render().
+    local sbBG = f:CreateTexture(nil, "BORDER")
+    local sBar = scroll.ScrollBar or scroll.scrollBar
+    if sBar then
+        sbBG:SetPoint("TOPLEFT",     sBar, "TOPLEFT",    -1, 0)
+        sbBG:SetPoint("BOTTOMRIGHT", sBar, "BOTTOMRIGHT", 1, 0)
+    else
+        sbBG:SetPoint("TOPLEFT",     scroll, "TOPRIGHT",    0, 1)
+        sbBG:SetPoint("BOTTOMRIGHT", f,      "BOTTOMRIGHT", -2, GRIP_SIZE + 2)
+    end
+    sbBG:Hide()
+    f.scrollBarBG = sbBG
 
     f.scroll = scroll
     f.content = content
@@ -431,6 +448,15 @@ function Tracker:Render()
             f.background:Show()
         else
             f.background:Hide()
+        end
+        if f.scrollBarBG then
+            if cfg.scrollBarBg ~= false then
+                local s = cfg.scrollBarBgColor or { r = 0.60, g = 0.60, b = 0.65, a = 0.25 }
+                f.scrollBarBG:SetColorTexture(s.r or 0.60, s.g or 0.60, s.b or 0.65, s.a or 0.25)
+                f.scrollBarBG:Show()
+            else
+                f.scrollBarBG:Hide()
+            end
         end
         if cfg.scale and cfg.scale > 0 and f:GetScale() ~= cfg.scale then
             f:SetScale(cfg.scale)
@@ -714,7 +740,7 @@ end
 -- first-run dialog tells the player how to move the tracker. preferredIndex 3
 -- is the standard guard against tainting the default StaticPopup slot.
 StaticPopupDialogs["EVERYTHINGQUESTS_MOVE_HINT"] = {
-    text = "|cffEBB706Everything Quests|r\n\nDrag the top edge of the tracker to move it.\n\nType |cffEBB706/eq|r for options.",
+    text = "|cffEBB706Everything Quests|r\n\nDrag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options.",
     button1 = OKAY,
     timeout = 0,
     whileDead = true,

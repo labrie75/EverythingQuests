@@ -88,12 +88,12 @@ end
 -- and we have no dedicated category for them.
 local function tagCategory(questID)
     local info = C_QuestLog and C_QuestLog.GetQuestTagInfo and C_QuestLog.GetQuestTagInfo(questID)
-    local wqt  = info and info.worldQuestType
-    local T    = Enum and Enum.QuestTagType
-    if not (wqt and T) then return nil end
-    if wqt == T.PvP        then return R.FILTER.PVP end
-    if wqt == T.PetBattle  then return R.FILTER.PET_BATTLE end
-    if wqt == T.Profession then return R.FILTER.PROFESSION end
+    local wqType = info and info.worldQuestType
+    local T      = Enum and Enum.QuestTagType
+    if not (wqType and T) then return nil end
+    if wqType == T.PvP        then return R.FILTER.PVP end
+    if wqType == T.PetBattle  then return R.FILTER.PET_BATTLE end
+    if wqType == T.Profession then return R.FILTER.PROFESSION end
     return nil
 end
 

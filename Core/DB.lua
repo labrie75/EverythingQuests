@@ -56,6 +56,8 @@ DB.defaults = {
             titleColorOverride   = nil,                                          -- {r,g,b,a} when set; nil = use difficulty/yellow
             headerColor          = { r = 0.93, g = 0.32, b = 0.10, a = 1 },     -- section header text color
             blockSpacing         = 2,                                            -- vertical gap between blocks
+            scrollBarBg          = true,                                         -- background strip behind the scroll bar
+            scrollBarBgColor     = { r = 0.60, g = 0.60, b = 0.65, a = 0.25 },    -- pale grey, low alpha: barely visible but hints the bar is there
             -- Type-by-type visibility filters. All on by default — the user
             -- opts INTO hiding categories rather than opting in to seeing them.
             filters = {
@@ -88,7 +90,7 @@ DB.defaults = {
         chainGuide = {
             scale = 1.0,
             showOnLogin = false,
-            -- Per-category uiMapID overrides discovered at runtime via /eq
+            -- Per-category uiMapID overrides discovered at runtime via /eqs
             -- discover. These take priority over the seeds in _Index.lua so
             -- patch-revamped zones don't require editing the data file.
             zoneMapIDs = {},

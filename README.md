@@ -3,7 +3,9 @@
   <strong>A unified replacement for the Blizzard quest experience — tracker, world map overlays, and a Midnight chain guide.</strong>
 </p>
 <p align="center">
-  <a href="https://github.com/wheelbarrel00/EverythingQuests/releases"><img src="https://img.shields.io/github/v/release/wheelbarrel00/EverythingQuests?color=6D0501&label=Version" alt="Version" /></a>
+  <a href="https://ko-fi.com/wheelbarrel00"><img src="https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=flat-square&logo=ko-fi" alt="Support on Ko-fi" /></a>
+  <a href="https://www.paypal.biz/wheelbarrel00"><img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=flat-square&logo=paypal" alt="Donate with PayPal" /></a>
+  <a href="https://github.com/wheelbarrel00/EverythingQuests/releases"><img src="https://img.shields.io/github/v/release/wheelbarrel00/EverythingQuests?color=6D0501&label=Version&style=flat-square" alt="Version" /></a>
   <img src="https://img.shields.io/badge/WoW-Midnight%2012.0-8B0000?style=flat-square" alt="WoW Version" />
   <img src="https://img.shields.io/badge/Interface-120005-333333?style=flat-square" alt="Interface" />
   <a href="LICENSE"><img src="https://img.shields.io/github/license/wheelbarrel00/EverythingQuests?style=flat-square&color=333333" alt="License" /></a>
@@ -20,7 +22,7 @@ Everything Quests is a complete replacement for Blizzard's quest tracking and qu
 3. A standalone **Chain Guide** window for browsing Midnight quest chains
 4. Branded **Quest POI** overlays on zone maps
 
-Open Options with **`/eq`** or the minimap button. Right-click the minimap button to jump straight to Options.
+Open Options with **`/eqs`** or the minimap button. Right-click the minimap button to jump straight to Options.
 
 ---
 
@@ -57,6 +59,7 @@ A standalone three-pane window for browsing hand-authored quest chains.
 - **Browser navigation** — Back / Forward buttons with full history
 - **Hand-authored data** — Prerequisite branching overrides Blizzard's API chains where the API is incomplete
 - **Cross-character completion** — Tracks completion of every chain across every character on your account
+- **Click-to-waypoint** — Click any quest in a chain to drop a map waypoint and open the world map to it. Uses [TomTom](https://www.curseforge.com/wow/addons/tomtom)'s arrow when installed (recommended), otherwise falls back to Blizzard's built-in waypoint
 - **Lazy-built** — The window is constructed on first toggle to keep load times minimal
 
 Currently covers the Midnight expansion: **Eversong Woods**, **Zul'Aman**, **Harandar**, **Voidstorm**, **Arator**, plus the Midnight campaign storyline.
@@ -80,7 +83,7 @@ LibDataBroker-powered launcher compatible with Titan Panel, ChocolateBar, ElvUI'
 
 | Command | Action |
 |---|---|
-| `/eq` | Toggle Options |
+| `/eqs` | Toggle Options |
 | `/everythingquests` | Toggle Options (alias) |
 
 ---
@@ -130,6 +133,7 @@ Bindable from **Esc → Options → Key Bindings → AddOns → Everything Quest
 **Required:** None — Everything Quests is fully standalone. All libraries are bundled.
 
 **Optional:**
+- **[TomTom](https://www.curseforge.com/wow/addons/tomtom)** — recommended for the Chain Guide: clicking a quest uses TomTom's on-screen arrow. Without it, Chain Guide waypoints fall back to Blizzard's built-in waypoint system
 - [TitanClassic](https://www.curseforge.com/wow/addons/titan-panel-classic), [ChocolateBar](https://www.curseforge.com/wow/addons/chocolatebar), or [ElvUI](https://www.tukui.org/) — display the minimap button on a data-broker bar instead of around the minimap
 
 ### Bundled Libraries

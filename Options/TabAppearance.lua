@@ -73,6 +73,36 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     local bgPicker = Options:CreateColorPicker(content, "Background Color", bgColorGet, bgColorSet)
     bgPicker:SetPoint("LEFT", bgCheck, "RIGHT", 120, 0)
 
+    -- Scroll bar background: a strip behind the tracker's scroll bar so the
+    -- low-contrast bar is easy to see. Toggle + colour.
+    local sbGet, sbSet = trackerSetting("scrollBarBg")
+    local sbCheck = Options:CreateCheckbox(content, "Scroll Bar Background", sbGet, sbSet)
+    sbCheck:SetPoint("TOPLEFT", bgCheck, "BOTTOMLEFT", 0, -10)
+
+    local function sbColorGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.scrollBarBgColor or { r = 0.60, g = 0.60, b = 0.65, a = 0.25 }
+    end
+    local function sbColorSet(c)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.scrollBarBgColor = c end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    -- Align the Scroll Bar Color *box* directly under the Background Color
+    -- box. The picker positions its swatch relative to its own label, and
+    -- "Scroll Bar Color" is a different width than "Background Color", so
+    -- anchoring the containers alone leaves the boxes a few px out of line.
+    -- Re-anchor the swatch to bgPicker's swatch (shared X column, own row)
+    -- and tuck this picker's label to the swatch's left.
+    local sbPicker = Options:CreateColorPicker(content, "Scroll Bar Color", sbColorGet, sbColorSet)
+    sbPicker:SetPoint("TOPLEFT", bgPicker, "BOTTOMLEFT", 0, -8)
+    sbPicker.button:ClearAllPoints()
+    sbPicker.button:SetPoint("TOP",  sbPicker, "TOP", 0, -1)
+    sbPicker.button:SetPoint("LEFT", bgPicker.button, "LEFT", 0, 0)
+    sbPicker.label:ClearAllPoints()
+    sbPicker.label:SetPoint("RIGHT", sbPicker.button, "LEFT", -8, 0)
+
     -- ─── RIGHT COLUMN: colors + dimensions ──────────────────────────────
     local colorsHeader = Options:CreateSectionHeader(content, "Colors & Dimensions")
     colorsHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)

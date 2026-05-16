@@ -204,6 +204,23 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     list:SetSize(360, 1)
     scroll:SetScrollChild(list)
 
+    -- Background strip behind this list's scroll bar, matching the in-world
+    -- tracker treatment so the low-contrast bar reads here too. Honours the
+    -- shared Appearance toggle/colour; resolved at build time (the tab is
+    -- rebuilt when reopened, so a later toggle takes effect on next open).
+    do
+        local DB = ns:GetSubsystem("DB")
+        local cfg = DB and DB.db.profile.tracker
+        local sBar = scroll.ScrollBar or scroll.scrollBar
+        if sBar and (not cfg or cfg.scrollBarBg ~= false) then
+            local s = (cfg and cfg.scrollBarBgColor) or { r = 0.60, g = 0.60, b = 0.65, a = 0.25 }
+            local sbBG = content:CreateTexture(nil, "BORDER")
+            sbBG:SetPoint("TOPLEFT",     sBar, "TOPLEFT",    -1, 0)
+            sbBG:SetPoint("BOTTOMRIGHT", sBar, "BOTTOMRIGHT", 1, 0)
+            sbBG:SetColorTexture(s.r or 0.60, s.g or 0.60, s.b or 0.65, s.a or 0.25)
+        end
+    end
+
     local groups = listFactionsByExpansion()
     if #groups == 0 then
         local empty = list:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")

@@ -6,7 +6,7 @@
 -- The `mapID` on each category is the uiMapID used by
 -- C_QuestLine.GetAvailableQuestLines to discover chains live from Blizzard's
 -- own questline database. uiMapIDs change between expansions and revamps;
--- run "/eq discover" while standing in a zone to print the active uiMapID
+-- run "/eqs discover" while standing in a zone to print the active uiMapID
 -- and update the values below.
 --
 -- Loaded BEFORE the per-zone data files so registration order is deterministic.
@@ -35,7 +35,7 @@ ns.CAT = {
 
 -- A category may pull questlines from multiple uiMapIDs (a zone + its city,
 -- a continent + its sub-zones, etc.). Seeds are best-effort; runtime
--- /eq discover appends to a per-character override list that takes
+-- /eqs discover appends to a per-character override list that takes
 -- priority and persists across sessions.
 --
 -- The CAMPAIGN category has no mapIDs of its own — its chains are

@@ -12,7 +12,7 @@
 --      A hand-authored chain with `questlineID = N` suppresses the API's
 --      duplicate of N for the same category.
 --   2. Saved-variable overrides in db.profile.chainGuide.zoneMapIDs.
---      Built up at runtime by /eq discover.
+--      Built up at runtime by /eqs discover.
 --   3. Seed mapIDs in Data/QuestChains/_Index.lua (cat.mapIDs / cat.mapID).
 
 local _, ns = ...
@@ -24,7 +24,7 @@ QLS._populated      = {}        -- [chainID]   = true
 QLS._registered     = {}        -- [questLineID] = true (cross-category dedup)
 QLS._retryScheduled = {}        -- [chainID]   = true (item-load retry inflight)
 
--- Scratch tables for /eq discover printout dedup. Reused across invocations
+-- Scratch tables for /eqs discover printout dedup. Reused across invocations
 -- instead of being allocated fresh — minor but consistent with the rest of
 -- the addon's allocation discipline.
 local _discoverSeen   = {}
@@ -257,10 +257,10 @@ function QLS:EnsureChainItems(chain)
     self._populated[chain.id] = true
 end
 
--- /eq discover [<hint>]
+-- /eqs discover [<hint>]
 --   No hint: auto-match the player's current zone name to a category.
 --   With hint: assign current mapID to whichever category fuzzy-matches the
---   hint (e.g. "/eq discover eversong" while in Silvermoon City).
+--   hint (e.g. "/eqs discover eversong" while in Silvermoon City).
 function QLS:PrintCurrentZone(hint)
     local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
     if not mapID then
@@ -280,7 +280,7 @@ function QLS:PrintCurrentZone(hint)
     else
         catID = matchCategoryByName(zoneName)
         if not catID then
-            print("  No category name match. Use |cffEBB706/eq discover <category>|r to assign manually (e.g. \"/eq discover eversong\").")
+            print("  No category name match. Use |cffEBB706/eqs discover <category>|r to assign manually (e.g. \"/eqs discover eversong\").")
         end
     end
 
