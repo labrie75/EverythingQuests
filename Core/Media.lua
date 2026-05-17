@@ -122,17 +122,8 @@ end
 
 function Media:GetFontList()
     local out = {}
-    local LSM = self.LSM
-    if not LSM then
-        out[#out + 1] = { value = "Friz Quadrata TT", label = "Friz Quadrata TT" }
-        return out
-    end
-    local fonts = LSM:HashTable("font")
-    local names = {}
-    for k in pairs(fonts) do names[#names + 1] = k end
-    table.sort(names)
-    for _, name in ipairs(names) do
-        out[#out + 1] = { value = name, label = name }
+    for _, f in ipairs(FONTS) do
+        out[#out + 1] = { value = f.name, label = f.name }
     end
     return out
 end

@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.3.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.3.1"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -441,7 +441,10 @@ function Options:CreateFontDropdown(parent, label, options, getter, setter)
             row.text:SetText(opt.label)
             row.text:SetTextColor(unpack(YELLOW))
             local file = Media and Media.GetFontFile and Media:GetFontFile(opt.value)
-            if file then row.text:SetFont(file, 13, "") end
+            if file then
+                local ok = pcall(row.text.SetFont, row.text, file, 13, "")
+                if not ok then row.text:SetFont(STANDARD_TEXT_FONT, 13, "") end
+            end
             row:SetScript("OnClick", function()
                 if setter then setter(opt.value) end
                 popup:Hide()

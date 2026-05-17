@@ -5,6 +5,17 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-05-17
+
+### Bug Fixes
+
+- **Font picker could spam errors** — Opening the Appearance font dropdown could throw a stream of "Invalid font file asset" errors when another addon had registered a font whose file was missing or mispathed (e.g. a media pack with absent files). The picker now lists only the fonts bundled with Everything Quests, so every entry is guaranteed valid, and font previews fall back to the default font instead of erroring.
+- **Internal developer text showed in scenario steps** — On some scenarios (notably Void Incursion), a step could display a raw Blizzard placeholder string such as "12.0.5 Void Assaults - Eversong - Major Attack - Scenario 01 - Step 02 Completion (JTL)" where its description should be. These build-marker strings are now detected and hidden, leaving just the clean progress bar and stage banner.
+
+### Improvements
+
+- **Void Incursion label** — Void Incursion events now show "Void Incursion" as the scenario tracker's section header instead of the generic "Scenario". Other scenario types are unaffected.
+
 ## [1.3.0] - 2026-05-16
 
 ### New Features

@@ -38,7 +38,7 @@ local function pickAtlases(textureKit)
     return normal, final, kit
 end
 
-local function categoryLabel(scenarioType, textureKit)
+local function categoryLabel(scenarioType, textureKit, scenarioName)
     -- scenarioType 8 = Delves. Verified live via C_Scenario.GetInfo /
     -- C_ScenarioInfo.GetScenarioInfo inside a Midnight delve; the legacy
     -- textureKit return is nil there, which is why a kit-name check alone
@@ -49,7 +49,30 @@ local function categoryLabel(scenarioType, textureKit)
     if scenarioType == 5 then return "Dungeon" end
     if scenarioType == 7 then return "Warfront" end
     if scenarioType == 2 then return "Proving Grounds" end
+    -- Midnight world events report scenarioType 0 / textureKit
+    -- "midnight-scenario"; the name is the only reliable signal, so match
+    -- it directly rather than the kit (other Midnight scenarios may share
+    -- the kit and should keep the generic label).
+    if scenarioName then
+        local n = scenarioName:lower()
+        if n:find("void incursion") or n:find("void assault") then
+            return "Void Incursion"
+        end
+    end
     return "Scenario"
+end
+
+-- Unreleased / PTR scenario steps sometimes return an internal developer
+-- string as the criteria description, e.g. "12.0.5 Void Assaults - Eversong
+-- - Major Attack - Scenario 01 - Step 02 Completion (JTL)". Player-facing
+-- text never starts with a game version or carries "- Step NN" build
+-- markers, so detect those and show the bar alone instead.
+local function looksInternal(s)
+    if not s or s == "" then return false end
+    if s:find("^%s*%d+%.%d+%.%d+") then return true end   -- leading "12.0.5"
+    if s:find("%-%s*Step%s+%d+") then return true end      -- "- Step 02"
+    if s:find("Scenario%s+%d%d") then return true end      -- "Scenario 01"
+    return false
 end
 
 local function buildCriteriaRow(parent)
@@ -184,7 +207,7 @@ function S:Refresh()
     end
 
     subHeader:Show()
-    subHeader.text:SetText(categoryLabel(scenarioType, textureKit))
+    subHeader.text:SetText(categoryLabel(scenarioType, textureKit, scenarioName))
     -- Match the other section headers: user font, +4 over quest titles
     -- (mirrors Frame.lua HEADER_FONT_DELTA so "Delves" sizes like "Quests").
     local Media = ns:GetSubsystem("Media")
@@ -272,20 +295,30 @@ function S:Refresh()
             if info.isWeightedProgress and not info.completed then
                 row:SetWidth(barWidth)
                 row.icon:Hide()
-                row.text:ClearAllPoints()
-                row.text:SetPoint("TOP", row, "TOP", 0, 0)
-                row.text:SetJustifyH("CENTER")
-                row.text:SetText(info.description or "")
-                row.text:SetTextColor(1, 0.82, 0)
+
+                local desc = info.description or ""
+                local showText = desc ~= "" and not looksInternal(desc)
 
                 local pct = math.max(0, math.min(100, info.quantity or 0))
                 row.bar:Show()
                 row.bar:ClearAllPoints()
                 row.bar:SetWidth(barWidth)
-                row.bar:SetPoint("TOP", row.text, "BOTTOM", 0, -2)
                 row.bar:SetValue(pct)
                 row.bar.label:SetFormattedText("%d%%", pct)
-                row:SetHeight(row.text:GetStringHeight() + 2 + BAR_H)
+
+                row.text:ClearAllPoints()
+                if showText then
+                    row.text:SetPoint("TOP", row, "TOP", 0, 0)
+                    row.text:SetJustifyH("CENTER")
+                    row.text:SetText(desc)
+                    row.text:SetTextColor(1, 0.82, 0)
+                    row.bar:SetPoint("TOP", row.text, "BOTTOM", 0, -2)
+                    row:SetHeight(row.text:GetStringHeight() + 2 + BAR_H)
+                else
+                    row.text:SetText("")
+                    row.bar:SetPoint("TOP", row, "TOP", 0, 0)
+                    row:SetHeight(BAR_H)
+                end
             else
                 row:SetWidth(rowWidth)
                 row.bar:Hide()
