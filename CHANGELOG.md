@@ -5,6 +5,19 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-16
+
+### New Features
+
+- **Chain Guide now follows the real campaign** — The "Midnight Campaign" category is sourced live from Blizzard's campaign data instead of a hand-maintained list, so it mirrors your actual in-game campaign: all 17 chapters, in story order, with live per-chapter progress. Previously the category showed a mostly-wrong fixed set of questlines and your real campaign quests never appeared there.
+- **New "The War of Light and Shadow" category** — The max-level campaign (Foothold, The Voidspire, Gathering of the Elves, The Battle of the Bridge, March on Quel'Danas, Dawn of a New Well) now has its own category, sourced the same live way, so you can track that endgame storyline before and as you unlock it.
+
+### Improvements
+
+- **Categories grouped sensibly** — The Chain Guide category list is now ordered campaigns-first (leveling, then max-level) then zones in Midnight progression order, instead of an alphabetical jumble.
+- **Bigger Chain Guide window** — Larger window and wider list panes; long category names (e.g. "The War of Light and Shadow") are no longer clipped, and hovering any category or chain shows its full name (plus quest progress for chains).
+- **No more duplicate storylines** — A questline that is a campaign chapter now appears only under its campaign, not also under its zone. Categories left with no chains of their own are hidden rather than shown as empty.
+
 ## [1.2.1] - 2026-05-16
 
 ### Bug Fixes

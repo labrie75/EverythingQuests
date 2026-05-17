@@ -19,8 +19,8 @@ local CG = ns:RegisterSubsystem("ChainGuide", {})
 local PANE_GAP        = 6
 local TITLE_BAR_H     = 22
 local NAV_BAR_H       = 28
-local CAT_PANE_W      = 180
-local CHAIN_PANE_W    = 240
+local CAT_PANE_W      = 250
+local CHAIN_PANE_W    = 300
 local ROW_H           = 22
 
 CG.catRowPool   = {}; CG.catRowsActive   = {}
@@ -76,6 +76,8 @@ local function releaseAllRows(pool, active)
         r:Hide()
         r:ClearAllPoints()
         r:SetScript("OnClick", nil)
+        r:SetScript("OnEnter", nil)
+        r:SetScript("OnLeave", nil)
         r.selectedTex:Hide()
         r.suffix:SetText("")
         r.suffix:SetTextColor(0.92, 0.72, 0.02)
@@ -96,12 +98,26 @@ local function setCheckAtlas(tex)
     end
 end
 
+-- Hover tooltip showing the row's FULL name (+ optional second line). The
+-- list panes are narrow and some names are long ("The War of Light and
+-- Shadow", long questline titles); the row text is clipped with no wrap,
+-- so hovering is the clean, zero-layout-risk way to read the whole thing.
+local function setRowTooltip(row, title, sub)
+    row:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(title, 1, 0.82, 0, 1, true)
+        if sub and sub ~= "" then GameTooltip:AddLine(sub, 0.7, 0.7, 0.7) end
+        GameTooltip:Show()
+    end)
+    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
 -- ─── Build window ──────────────────────────────────────────────────────
 function CG:Build()
     if self.frame then return end
 
     local f = CreateFrame("Frame", "EQChainGuideFrame", UIParent, "BackdropTemplate")
-    f:SetSize(960, 660)
+    f:SetSize(1160, 720)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -287,6 +303,19 @@ end
 function CG:RenderCategories(activeCatID)
     releaseAllRows(self.catRowPool, self.catRowsActive)
     local Database = ns:GetSubsystem("ChainGuideDatabase")
+    local QLS      = ns:GetSubsystem("ChainGuideQuestLineSource")
+
+    -- Discover every category's chains up front (memoized + cheap: zone
+    -- cats have no map seeds so it's just the routing walk, campaign cats
+    -- delegate to CampaignSource) so we can HIDE any category left with no
+    -- chains. Arator's only storylines are campaign chapters, which now
+    -- live solely under the campaign — without this its row would render
+    -- as a dead, empty shell.
+    if QLS then
+        for id in pairs(Database.categories) do QLS:EnsureZoneChains(id) end
+    end
+    local hasChains = {}
+    for _, c in pairs(Database.chains) do hasChains[c.category] = true end
 
     local prev = self.frame.catHeader
     -- Categories are registered exclusively at file load (Data/QuestChains/
@@ -298,7 +327,13 @@ function CG:RenderCategories(activeCatID)
         for id, c in pairs(Database.categories) do
             cats[#cats + 1] = { id = id, def = c }
         end
+        -- Explicit `order` (Data/QuestChains/_Index.lua) first — campaigns
+        -- then zones in progression order — falling back to name for any
+        -- category that didn't set one.
         table.sort(cats, function(a, b)
+            local ao = a.def.order or math.huge
+            local bo = b.def.order or math.huge
+            if ao ~= bo then return ao < bo end
             return (a.def.name or "") < (b.def.name or "")
         end)
         self._sortedCategories = cats
@@ -307,16 +342,27 @@ function CG:RenderCategories(activeCatID)
 
     for i = 1, #cats do
         local entry = cats[i]
-        local row = acquireRow(self.catRowPool, self.catRowsActive, self.frame.catPane)
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == self.frame.catHeader and -4 or -1)
-        row:SetPoint("TOPRIGHT", self.frame.catPane, "TOPRIGHT", -8, 0)
-        row.title:SetText(entry.def.name or ("Category " .. entry.id))
-        row.title:SetTextColor(1, 1, 1)
-        if entry.id == activeCatID then row.selectedTex:Show() end
-        local catID = entry.id
-        row:SetScript("OnClick", function() CG:NavigateCategory(catID) end)
-        prev = row
+        -- Skip categories with no chains (see hasChains note above).
+        if hasChains[entry.id] then
+            local row = acquireRow(self.catRowPool, self.catRowsActive, self.frame.catPane)
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == self.frame.catHeader and -4 or -1)
+            row:SetPoint("TOPRIGHT", self.frame.catPane, "TOPRIGHT", -8, 0)
+            -- Category rows have no suffix/complete-icon, so reclaim the
+            -- right-side reservation buildListRow leaves for chain rows and
+            -- give the (sometimes long) category name the full width.
+            row.title:ClearAllPoints()
+            row.title:SetPoint("LEFT", 8, 0)
+            row.title:SetPoint("RIGHT", -8, 0)
+            local catName = entry.def.name or ("Category " .. entry.id)
+            row.title:SetText(catName)
+            row.title:SetTextColor(1, 1, 1)
+            if entry.id == activeCatID then row.selectedTex:Show() end
+            local catID = entry.id
+            row:SetScript("OnClick", function() CG:NavigateCategory(catID) end)
+            setRowTooltip(row, catName)
+            prev = row
+        end
     end
 end
 
@@ -343,7 +389,15 @@ function CG:RenderChains(activeCatID, activeChainID)
     for id, c in pairs(Database.chains) do
         if c.category == activeCatID then chains[#chains + 1] = { id = id, def = c } end
     end
-    table.sort(chains, function(a, b) return (a.def.name or "") < (b.def.name or "") end)
+    -- Campaign chapters carry `_campaignOrder` (story order from
+    -- C_CampaignInfo) and must render Chapter 1→N, not alphabetically.
+    -- All other categories sort by name as before.
+    table.sort(chains, function(a, b)
+        local ao, bo = a.def._campaignOrder, b.def._campaignOrder
+        if ao and bo then return ao < bo end
+        if ao or bo then return ao ~= nil end
+        return (a.def.name or "") < (b.def.name or "")
+    end)
 
     -- Eagerly populate items[] for every chain in this category so the
     -- per-row "X/Y" suffix shows up before the user clicks anything.
@@ -363,7 +417,8 @@ function CG:RenderChains(activeCatID, activeChainID)
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == self.frame.chainHeader and -4 or -1)
         row:SetPoint("TOPRIGHT", content, "TOPRIGHT", -8, 0)
-        row.title:SetText(entry.def.name or ("Chain " .. entry.id))
+        local chainName = entry.def.name or ("Chain " .. entry.id)
+        row.title:SetText(chainName)
         row.title:SetTextColor(1, 1, 1)
         local complete, _, total = Characters:ChainProgress(entry.def)
         if total > 0 then
@@ -383,6 +438,8 @@ function CG:RenderChains(activeCatID, activeChainID)
         if entry.id == activeChainID then row.selectedTex:Show() end
         local chainID = entry.id
         row:SetScript("OnClick", function() CG:NavigateChain(chainID) end)
+        setRowTooltip(row, chainName,
+            total > 0 and ("%d / %d quests done"):format(complete, total) or nil)
         prev = row
     end
 

@@ -40,6 +40,9 @@ function QLS:Reset()
     self._discovered = {}
     self._populated  = {}
     self._registered = {}
+    -- Campaign chains live in their own source/reset bucket.
+    local CS = ns:GetSubsystem("ChainGuideCampaignSource")
+    if CS and CS.Reset then CS:Reset() end
 end
 
 local CHAIN_ID_OFFSET = 5000000 -- keep API-derived IDs disjoint from hand-authored ones
@@ -155,10 +158,32 @@ function QLS:EnsureZoneChains(catID)
     local cat = Database.categories[catID]
     if not cat then return end
 
+    -- Campaign categories are sourced live from Blizzard's campaign API
+    -- (C_CampaignInfo chapter spine), not the static questline routing —
+    -- the campaign is cross-zone and never matched a questline category.
+    -- Mark discovered and bail so the static routing/API-map walk below
+    -- never re-files campaign questlines under their zone.
+    if cat.campaignID then
+        local CS = ns:GetSubsystem("ChainGuideCampaignSource")
+        if CS then CS:EnsureCampaignChains(catID) end
+        self._discovered[catID] = true
+        return
+    end
+
     local skip = authoredQuestlinesInCategory(catID)
 
     local function registerChain(qlID, destCat, name)
         if self._registered[qlID] or skip[qlID] then return end
+        -- A campaign-chapter questline lives ONLY under its campaign
+        -- category (CampaignSource owns it). Don't also file it under its
+        -- zone — that was the "Whispers in the Twilight shows twice" case.
+        -- registerChain only ever runs for non-campaign categories (the
+        -- campaign categories bail to CampaignSource above), so this is an
+        -- unconditional skip.
+        local CS = ns:GetSubsystem("ChainGuideCampaignSource")
+        if CS and CS.IsChapterQuestline and CS:IsChapterQuestline(qlID) then
+            return
+        end
         local chainID = CHAIN_ID_OFFSET + qlID
         if not Database.chains[chainID] then
             Database:RegisterChain(chainID, {

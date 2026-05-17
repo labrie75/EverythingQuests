@@ -94,12 +94,14 @@ ns.QUESTLINE_ROUTING = {
     -- Arator
     [5750] = { cat = ns.CAT.ARATOR, name = "The Path of Light" },
     [5751] = { cat = ns.CAT.ARATOR, name = "Regrets of the Past" },
-    -- Midnight Campaign (expansion-level chains)
-    [5811] = { cat = ns.CAT.CAMPAIGN, name = "The Light's Summons" },
-    [5979] = { cat = ns.CAT.CAMPAIGN, name = "The Darkening Sky" },
-    [5792] = { cat = ns.CAT.CAMPAIGN, name = "Foothold" },
-    [5793] = { cat = ns.CAT.CAMPAIGN, name = "The Voidspire" },
-    [5795] = { cat = ns.CAT.CAMPAIGN, name = "Gathering of the Elves" },
-    [5797] = { cat = ns.CAT.CAMPAIGN, name = "March on Quel'Danas" },
-    [5798] = { cat = ns.CAT.CAMPAIGN, name = "Dawn of a New Well" },
+    -- Midnight Campaign: intentionally NOT routed here. The campaign spine
+    -- is sourced live from Blizzard's campaign API in
+    -- Modules/ChainGuide/CampaignSource.lua (C_CampaignInfo → 17 ordered
+    -- chapters), so it always matches the player's real in-game campaign.
+    -- The previous hand-picked list here was wrong: verified in-game,
+    -- 5792/5793/5795/5797/5798 (Foothold, The Voidspire, Gathering of the
+    -- Elves, March on Quel'Danas, Dawn of a New Well) are NOT chapters of
+    -- campaign 270, and chapter 5727 "Emergence" was missing entirely.
+    -- 5811 "The Light's Summons" / 5979 "The Darkening Sky" ARE chapters
+    -- (1 and 17) and now come from the API.
 }

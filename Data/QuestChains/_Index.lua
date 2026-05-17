@@ -25,12 +25,13 @@ DBmod:RegisterExpansion(ns.EXP_MIDNIGHT, {
 })
 
 ns.CAT = {
-    CAMPAIGN       = 1100,
-    EVERSONG_WOODS = 1101,
-    ZULAMAN        = 1102,
-    HARANDAR       = 1103,
-    VOIDSTORM      = 1104,
-    ARATOR         = 1105,
+    CAMPAIGN         = 1100,
+    EVERSONG_WOODS   = 1101,
+    ZULAMAN          = 1102,
+    HARANDAR         = 1103,
+    VOIDSTORM        = 1104,
+    ARATOR           = 1105,
+    WAR_LIGHT_SHADOW = 1106,   -- max-level campaign (Blizzard campaign 284)
 }
 
 -- A category may pull questlines from multiple uiMapIDs (a zone + its city,
@@ -38,12 +39,26 @@ ns.CAT = {
 -- /eqs discover appends to a per-character override list that takes
 -- priority and persists across sessions.
 --
--- The CAMPAIGN category has no mapIDs of its own — its chains are
--- expansion-spanning storylines that get routed in via _QuestLineRouting.lua
--- regardless of which zone surfaced them.
-DBmod:RegisterCategory(ns.CAT.CAMPAIGN,       { expansion = ns.EXP_MIDNIGHT, name = "Midnight Campaign", mapIDs = {} })
-DBmod:RegisterCategory(ns.CAT.EVERSONG_WOODS, { expansion = ns.EXP_MIDNIGHT, name = "Eversong Woods", mapIDs = {} })
-DBmod:RegisterCategory(ns.CAT.ZULAMAN,        { expansion = ns.EXP_MIDNIGHT, name = "Zul'Aman",       mapIDs = {} })
-DBmod:RegisterCategory(ns.CAT.HARANDAR,       { expansion = ns.EXP_MIDNIGHT, name = "Harandar",       mapIDs = {} })
-DBmod:RegisterCategory(ns.CAT.VOIDSTORM,      { expansion = ns.EXP_MIDNIGHT, name = "Voidstorm",      mapIDs = {} })
-DBmod:RegisterCategory(ns.CAT.ARATOR,         { expansion = ns.EXP_MIDNIGHT, name = "Arator",         mapIDs = {} })
+-- Campaign categories carry a `campaignID` and are sourced live from
+-- Blizzard's campaign API (Modules/ChainGuide/CampaignSource.lua), NOT
+-- from _QuestLineRouting.lua. campaignIDs are WoW-global stable IDs
+-- (same hardcoded-ID convention as the questline IDs), verified in-game
+-- via C_CampaignInfo.GetCampaignID on a campaign quest:
+--   270 "Midnight"                  → 17 chapters (the leveling campaign)
+--   284 "The War of Light and Shadow" → 6 chapters (the max-level campaign)
+-- C_CampaignInfo.GetChapterIDs works by ID even for a campaign the
+-- character hasn't unlocked yet (284 is queryable at any level), so the
+-- max-level spine shows at 0/N before you reach it — that's the point of
+-- a guide. CampaignSource falls back to the player's active campaign if
+-- a campaignID ever goes stale.
+-- `order` drives the Categories pane (Frame.lua sorts by it, then name):
+-- the two campaigns first (leveling, then max-level), then the zones in
+-- Midnight progression order (Eversong start → … → Voidstorm 88-90),
+-- which reads more naturally than an alphabetical jumble.
+DBmod:RegisterCategory(ns.CAT.CAMPAIGN,         { expansion = ns.EXP_MIDNIGHT, name = "Midnight Campaign", mapIDs = {}, campaignID = 270, order = 10 })
+DBmod:RegisterCategory(ns.CAT.WAR_LIGHT_SHADOW, { expansion = ns.EXP_MIDNIGHT, name = "The War of Light and Shadow", mapIDs = {}, campaignID = 284, order = 20 })
+DBmod:RegisterCategory(ns.CAT.EVERSONG_WOODS,   { expansion = ns.EXP_MIDNIGHT, name = "Eversong Woods", mapIDs = {}, order = 30 })
+DBmod:RegisterCategory(ns.CAT.ZULAMAN,          { expansion = ns.EXP_MIDNIGHT, name = "Zul'Aman",       mapIDs = {}, order = 40 })
+DBmod:RegisterCategory(ns.CAT.HARANDAR,         { expansion = ns.EXP_MIDNIGHT, name = "Harandar",       mapIDs = {}, order = 50 })
+DBmod:RegisterCategory(ns.CAT.ARATOR,           { expansion = ns.EXP_MIDNIGHT, name = "Arator",         mapIDs = {}, order = 60 })
+DBmod:RegisterCategory(ns.CAT.VOIDSTORM,        { expansion = ns.EXP_MIDNIGHT, name = "Voidstorm",      mapIDs = {}, order = 70 })
