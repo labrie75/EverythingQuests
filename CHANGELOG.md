@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-05-16
+
+### Bug Fixes
+
+- **Campaign quests vanished from the tracker when accepted** — Accepting a campaign quest in the field left it untracked, forcing you to open the quest log and re-track it every time. EQ's tracker shows watched quests, but Blizzard surfaces campaign quests through a separate system that never adds them to the watch list, so they stayed hidden. With auto-track on (the default), EQ now adds the watch itself the moment a quest is accepted, so campaign quests appear in the tracker immediately. World quests are unaffected (they keep their own tracking).
+
+### Improvements
+
+- **Clearer options wording** — The General tab's "Show quest pins on the world map" description is rewritten in plain language explaining exactly what the red `!` / `?` markers are. The World Quests tab's master switch now states explicitly that it does **not** control those red quest rings (those live on the General tab) and does **not** affect the tracker's World Quests list.
+
 ## [1.2.0] - 2026-05-16
 
 ### New Features

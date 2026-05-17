@@ -154,7 +154,7 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     wqMasterHint:SetPoint("TOPLEFT", wqMaster, "BOTTOMLEFT", 0, -2)
     wqMasterHint:SetWidth(430)
     wqMasterHint:SetJustifyH("LEFT")
-    wqMasterHint:SetText("Off: EQ stops drawing World Quests on the map — no world-map pins, no summary box, no zone quest list. Everything below has no effect while this is unchecked. Your tracker's World Quests section is separate (Tracker tab) and is NOT affected by this.")
+    wqMasterHint:SetText("Off: Everything Quests stops putting World Quests on the map — no world-map pins, no reward summary box, no zone quest list. The boxes below do nothing while this is off. This switch is ONLY for World Quests. It does NOT remove the red \"!\" / \"?\" quest rings — those are your normal quests, and you turn them off on the General tab. It also does NOT change the World Quests list in your tracker (that's on the Tracker tab).")
 
     local showWMGet, showWMSet = wqSetting("showOnWorldMap")
     local showWM = Options:CreateCheckbox(

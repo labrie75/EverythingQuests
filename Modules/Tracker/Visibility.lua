@@ -4,9 +4,13 @@
 --   • hideInCombat     → hide while PLAYER_REGEN_DISABLED, show on _ENABLED
 --   • hideInInstances  → hide whenever IsInInstance() is true
 --   • hideOnMapOpen    → hide when WorldMapFrame:IsShown()
---   • autoTrackAccepted → mirror Blizzard's auto-track on QUEST_ACCEPTED;
---                         if user turned this off, immediately remove the
---                         watch Blizzard added.
+--   • autoTrackAccepted → on QUEST_ACCEPTED, force the watch state to match
+--                         the setting. ON (default): explicitly add the
+--                         watch (Blizzard never auto-watches campaign
+--                         quests — its default tracker shows them via a
+--                         separate campaign module, so GetQuestWatchType
+--                         stays nil and EQ's showOnlyWatched filter would
+--                         hide them). OFF: strip the watch Blizzard added.
 
 local _, ns = ...
 
@@ -45,15 +49,37 @@ function V:OnEnable()
     Events:On("PLAYER_REGEN_ENABLED",  apply)   -- left combat
     Events:On("PLAYER_ENTERING_WORLD", apply)   -- entered/left instance
 
-    -- Auto-track-accepted hook. Blizzard auto-watches new quests by default;
-    -- when the user disables that setting, remove the watch right after
-    -- accept so it never appears in the tracker.
+    -- Auto-track-accepted hook. Force the watch state to match the setting
+    -- rather than trusting Blizzard's auto-watch (which does NOT add a
+    -- watch entry for campaign quests — its default tracker surfaces those
+    -- through a dedicated campaign module, leaving GetQuestWatchType nil,
+    -- so EQ's showOnlyWatched filter hid freshly accepted campaign quests
+    -- until the user re-ticked them in the quest log).
     Events:On("QUEST_ACCEPTED", function(_, questID)
         local cfg = getCfg()
-        if not (cfg and questID) then return end
+        if not (cfg and questID and C_QuestLog) then return end
+
+        -- World/task quests have their own watch channel
+        -- (AddWorldQuestWatch, owned by WorldQuests/WatchPersist.lua).
+        -- Don't touch them with the normal-quest watch API.
+        if C_QuestLog.IsWorldQuest and C_QuestLog.IsWorldQuest(questID) then
+            return
+        end
+
+        local watched = C_QuestLog.GetQuestWatchType
+                         and C_QuestLog.GetQuestWatchType(questID) ~= nil
+
         if cfg.autoTrackAccepted == false then
-            if C_QuestLog and C_QuestLog.RemoveQuestWatch then
+            -- Opted out: strip any watch so it never reaches the tracker.
+            if watched and C_QuestLog.RemoveQuestWatch then
                 C_QuestLog.RemoveQuestWatch(questID)
+            end
+        elseif not watched then
+            -- Auto-track ON (default): add the watch ourselves (Manual,
+            -- same as ticking the quest-log checkbox) so every accepted
+            -- quest — campaign included — lands in the tracker at once.
+            if C_QuestLog.AddQuestWatch then
+                C_QuestLog.AddQuestWatch(questID)
             end
         end
     end)

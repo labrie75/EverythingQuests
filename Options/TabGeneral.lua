@@ -53,7 +53,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     qpinsHint:SetPoint("TOPLEFT", qpins, "BOTTOMLEFT", 0, -2)
     qpinsHint:SetWidth(430)
     qpinsHint:SetJustifyH("LEFT")
-    qpinsHint:SetText("EQ's own quest markers on the world map: a red ring with \"!\" (pick up) or \"?\" (turn in). Off = EQ draws none of them. Blizzard's default map markers are not affected.")
+    qpinsHint:SetText("These are the round red markers Everything Quests puts on the big world map to show where your quests are. A red \"!\" means \"come here to pick up a quest.\" A red \"?\" means \"come here to turn a quest in.\" Uncheck this box and all of EQ's red markers go away. The game's own yellow map markers do not change.")
 
     local lockGet, lockSet = generalSetting("lockTracker")
     local lock = Options:CreateCheckbox(content,
