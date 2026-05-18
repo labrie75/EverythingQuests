@@ -493,7 +493,7 @@ function Tracker:_RenderQuestGroup(content, contentWidth, yStart, collapsed, wan
 
     for i = 1, count do
         local q = visible[i]
-        local b = Blocks:Acquire(content)
+        local b = Blocks:AcquireFor(content, q.questID)
         b:SetWidth(contentWidth)
         b:ClearAllPoints()
         b:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
@@ -554,10 +554,10 @@ function Tracker:Render()
     -- and Campaign renders first — releasing inside the Quests renderer
     -- (where this used to live) would wipe the Campaign group's live rows.
     local _Blocks = ns:GetSubsystem("TrackerBlocks")
-    if _Blocks and _Blocks.ReleaseAll then _Blocks:ReleaseAll() end
-    -- Resolve the tracker font once for this whole pass (instead of per
-    -- block); RenderQuest then skips the SetFont calls on blocks already
-    -- styled at the current font generation.
+    -- Open the block render pass: resolves font + render cfg once for the
+    -- whole pass and marks every live block as a sweep candidate. Blocks
+    -- are reused across passes by questID and the unused ones are freed by
+    -- _Blocks:Sweep() at the very end of this function.
     if _Blocks and _Blocks.BeginRenderPass then _Blocks:BeginRenderPass() end
     local _AC = ns:GetSubsystem("TrackerAutoComplete")
     if _AC and _AC.ReleaseAll then _AC:ReleaseAll() end
@@ -710,6 +710,13 @@ function Tracker:Render()
         f.scroll:SetSize(scrollW, scrollH)
         if f.scroll.UpdateScrollChildRect then f.scroll:UpdateScrollChildRect() end
     end
+
+    -- SWEEP: free every block not re-acquired this pass (quest turned in,
+    -- abandoned, filtered out, moved to a popup, or its section
+    -- collapsed). Done here, after ALL sections AND the pinned WQ region,
+    -- so a quest moving between the Campaign and Quests sections is never
+    -- falsely swept. _RenderPinnedEvents uses a separate pool.
+    if _Blocks and _Blocks.Sweep then _Blocks:Sweep() end
 end
 
 -- Render the always-visible World Quests region pinned at the bottom of

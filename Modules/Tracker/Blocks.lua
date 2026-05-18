@@ -17,7 +17,13 @@ local _, ns = ...
 local Blocks = ns:RegisterSubsystem("TrackerBlocks", {})
 
 Blocks.pool = {}
+-- active: blocks shown in the CURRENT pass, in acquire (visual top-to-
+-- bottom) order. Rebuilt every pass. DragDrop walks this for hit-testing
+-- and manual-order commit, so this ordering contract MUST be preserved.
 Blocks.active = {}
+-- byID: questID -> block, for O(1) reuse across passes. A block stays here
+-- until a pass doesn't re-acquire it (mark/sweep), then it's pooled.
+Blocks.byID = {}
 
 -- Reused scratch for buildSubText's objective lines. Single-threaded and
 -- never re-entrant (called once per block, sequentially, inside the render
@@ -25,31 +31,71 @@ Blocks.active = {}
 -- entries from a longer previous quest are never read — so no wipe needed.
 local _subLines = {}
 
--- The tracker font is identical for every block and changes only when the
--- user edits options — but RenderQuest was re-resolving it (Media:GetFontFile)
--- and calling SetFont x3 on every block every refresh. Resolve it once per
--- render pass (BeginRenderPass) and bump a generation int only when it
--- actually changes; each block restyles only when its stored gen is stale.
--- Font is quest-independent, so a pooled block reused for a different quest
--- keeps a correct font and a correct gen — safe under the current pool model.
+-- Per-pass resolution + change-detection generations.
+--   _fontGen   : bumped when the resolved tracker font changes; gates the
+--                per-block SetFont calls (font is quest-independent).
+--   _renderGen : bumped when ANY global that affects a block's rendered
+--                content changes (font OR the render-affecting cfg).
+--                RenderQuest forces a full rebuild on any block whose
+--                stored gen != this, so an options change repaints all.
+-- Resolving font + cfg ONCE per pass here (not per block) was the hot-path
+-- win; the gens + per-quest snapshot let unchanged blocks skip the rebuild.
 Blocks._fontGen     = 0
+Blocks._renderGen   = 0
 Blocks._fontFile    = nil
 Blocks._fontSize    = nil
 Blocks._fontOutline = nil
 
--- Called once per Tracker:Render, right after Blocks:ReleaseAll().
+-- Reused scratch for Sweep so it never allocates while collecting the
+-- questIDs to free (can't safely delete from byID mid-pairs otherwise).
+local _sweepScratch = {}
+
+-- Called once per Tracker:Render, before any section renders. Resolves
+-- font + render cfg for the whole pass, advances the generations on
+-- change, then opens the MARK phase: every live block becomes a sweep
+-- candidate and `active` is rebuilt fresh this pass (AcquireFor re-marks
+-- survivors; Blocks:Sweep() at the end frees the rest).
 function Blocks:BeginRenderPass()
-    local DB = ns:GetSubsystem("DB")
-    if not DB then self._fontFile = nil; return end
-    local t       = DB.db.profile.tracker
-    local Media   = ns:GetSubsystem("Media")
-    local file    = Media and Media.GetFontFile and Media:GetFontFile(t.font)
-    local size    = t.fontSize or 12
-    local outline = t.fontOutline or ""
+    local DB    = ns:GetSubsystem("DB")
+    local t     = DB and DB.db.profile.tracker
+    local dirty = false
+
+    local file, size, outline
+    if t then
+        local Media = ns:GetSubsystem("Media")
+        file    = Media and Media.GetFontFile and Media:GetFontFile(t.font)
+        size    = t.fontSize or 12
+        outline = t.fontOutline or ""
+    end
     if file ~= self._fontFile or size ~= self._fontSize or outline ~= self._fontOutline then
         self._fontFile, self._fontSize, self._fontOutline = file, size, outline
         self._fontGen = self._fontGen + 1
+        dirty = true
     end
+
+    -- Render-affecting cfg (what RenderQuest reads from cfg that is NOT
+    -- per-quest). Compared field-by-field — allocation-free.
+    local cL  = t and t.showLevelInTracker     and true or false
+    local cQI = t and t.showQuestID            and true or false
+    local cZT = (not t) or t.showZoneTag        ~= false
+    local cON = (not t) or t.showObjectiveNumbers ~= false
+    local cCB = (not t) or t.colorByDifficulty  ~= false
+    local tco = t and t.titleColorOverride
+    local tr, tg, tb = tco and tco.r, tco and tco.g, tco and tco.b
+    if cL ~= self._cL or cQI ~= self._cQI or cZT ~= self._cZT
+       or cON ~= self._cON or cCB ~= self._cCB
+       or tr ~= self._cTr or tg ~= self._cTg or tb ~= self._cTb then
+        self._cL, self._cQI, self._cZT, self._cON, self._cCB = cL, cQI, cZT, cON, cCB
+        self._cTr, self._cTg, self._cTb = tr, tg, tb
+        dirty = true
+    end
+
+    if dirty then self._renderGen = self._renderGen + 1 end
+
+    -- MARK: every live block is a sweep candidate until re-acquired; the
+    -- ordered `active` view is rebuilt this pass (preserves DragDrop).
+    for _, b in pairs(self.byID) do b._used = false end
+    wipe(self.active)
 end
 
 local PAD_X, PAD_Y       = 6, 2
@@ -308,60 +354,124 @@ local function buildBlock()
     return b
 end
 
-function Blocks:Acquire(parent)
-    local b = tremove(self.pool)
-    if not b then b = buildBlock() end
-    b:SetParent(parent)
-
-    -- Anchor the icon HOLDER (not the textures themselves — they're already
-    -- centered inside the holder). Title anchors to the holder's right edge
-    -- so layout doesn't shift when atlases of varying native sizes render.
-    b.iconHolder:ClearAllPoints()
-    b.iconHolder:SetPoint("TOPLEFT", b, "TOPLEFT", PAD_X, -PAD_Y)
-
-    b.title:ClearAllPoints()
-    b.title:SetPoint("TOPLEFT",  b.iconHolder, "TOPRIGHT", ICON_TITLE_GAP, 1)
-    b.title:SetPoint("TOPRIGHT", b, "TOPRIGHT", -PAD_X, -PAD_Y)
-
-    b.category:ClearAllPoints()
-    b.category:SetPoint("TOPLEFT",  b.title, "BOTTOMLEFT",  0, -TITLE_TO_CAT_GAP)
-    b.category:SetPoint("TOPRIGHT", b.title, "BOTTOMRIGHT", 0, -TITLE_TO_CAT_GAP)
-
+-- Get the block for questID, reusing the one from a previous pass if it
+-- still exists (the whole point of mark/sweep — its FontStrings/textures
+-- survive untouched and RenderQuest can skip the rebuild). Falls back to a
+-- pooled or freshly-built block. Always appends to `active` in call order
+-- so `active` stays in visual top-to-bottom order for DragDrop.
+function Blocks:AcquireFor(parent, questID)
+    local b = self.byID[questID]
+    if not b then
+        b = tremove(self.pool) or buildBlock()
+        b:SetParent(parent)
+        -- Static child anchors (relative to the block itself; never
+        -- change). Set only for a new / freshly-pooled block — a byID-
+        -- reused block already has them and keeps them across passes, so
+        -- re-anchoring it every refresh would be wasted layout work.
+        b.iconHolder:ClearAllPoints()
+        b.iconHolder:SetPoint("TOPLEFT", b, "TOPLEFT", PAD_X, -PAD_Y)
+        b.title:ClearAllPoints()
+        b.title:SetPoint("TOPLEFT",  b.iconHolder, "TOPRIGHT", ICON_TITLE_GAP, 1)
+        b.title:SetPoint("TOPRIGHT", b, "TOPRIGHT", -PAD_X, -PAD_Y)
+        b.category:ClearAllPoints()
+        b.category:SetPoint("TOPLEFT",  b.title, "BOTTOMLEFT",  0, -TITLE_TO_CAT_GAP)
+        b.category:SetPoint("TOPRIGHT", b.title, "BOTTOMRIGHT", 0, -TITLE_TO_CAT_GAP)
+        self.byID[questID] = b
+    elseif b:GetParent() ~= parent then
+        b:SetParent(parent)
+    end
+    b.questID = questID
+    b._used   = true
     b:Show()
     self.active[#self.active + 1] = b
     return b
 end
 
-function Blocks:ReleaseAll()
-    for i = #self.active, 1, -1 do
-        local b = self.active[i]
+-- SWEEP: pool every block not re-acquired this pass (quest turned in,
+-- abandoned, filtered out, moved to a popup, or its section collapsed).
+-- Collect-then-delete via reused scratch so we never mutate byID mid-pairs
+-- and never allocate. Called once at the end of Tracker:Render.
+function Blocks:Sweep()
+    local s, n = _sweepScratch, 0
+    for qid, b in pairs(self.byID) do
+        if not b._used then
+            n = n + 1
+            s[n] = qid
+        end
+    end
+    for i = 1, n do
+        local qid = s[i]
+        local b   = self.byID[qid]
         b:Hide()
         b:ClearAllPoints()
         b:SetParent(nil)
+        b.questID = nil
+        b._rID    = nil          -- guarantees a full render if this block
+                                 -- is ever reused for a future quest
+        self.byID[qid] = nil
         self.pool[#self.pool + 1] = b
-        self.active[i] = nil
+        s[i] = nil
     end
 end
 
 function Blocks:RenderQuest(block, questData, simplifyMode)
-    block.questID = questData.questID
+    local qid = questData.questID
+    block.questID = qid          -- always current (DragDrop reads this)
 
-    local focused = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
-                    and C_SuperTrack.GetSuperTrackedQuestID() == questData.questID
+    local focused = (C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
+                     and C_SuperTrack.GetSuperTrackedQuestID() == qid) and true or false
 
+    local DB  = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db.profile.tracker or {}
+    local isPinned = (DB and DB.char.pinned and DB.char.pinned[qid]) and true or false
+
+    -- ── Change detection ─────────────────────────────────────────────
+    -- Skip the allocation-heavy content rebuild when nothing this block
+    -- renders from has changed since its last full render. The caller
+    -- already (re)positioned + SetWidth this block, and an unchanged
+    -- block keeps its prior height, so an early return is layout-safe.
+    -- Conservative: pooled reuse (_rID miss) or any global font/cfg
+    -- change (_renderGen) forces a full render. All compares are
+    -- value-based and allocation-free.
+    local objs = questData.objectives
+    local nObj = objs and #objs or 0
+    local curW = block:GetWidth()
+    local changed =
+           block._rID    ~= qid
+        or block._rGen   ~= self._renderGen
+        or block._rTitle ~= questData.title
+        or block._rDone  ~= (questData.isComplete and true or false)
+        or block._rLevel ~= questData.level
+        or block._rClass ~= questData.classification
+        or block._rZone  ~= questData.zone
+        or block._rPin   ~= isPinned
+        or block._rFoc   ~= focused
+        or block._rSimp  ~= (simplifyMode and true or false)
+        or block._rWidth ~= curW
+        or block._rObjN  ~= nObj
+    if not changed and nObj > 0 then
+        local pt, pf = block._rObjT, block._rObjF
+        for i = 1, nObj do
+            local o = objs[i]
+            if pt[i] ~= (o.text or "") or pf[i] ~= (o.finished and true or false) then
+                changed = true
+                break
+            end
+        end
+    end
+    if not changed then return end
+
+    -- ── Full render ──────────────────────────────────────────────────
     -- Icon: type-driven atlas with safe fallback
     applyQuestIcon(block.iconGlow, block.icon, block.iconBang, questData, focused)
 
     -- Title: pinned ★ + optional level prefix + title + optional quest ID
-    local DB = ns:GetSubsystem("DB")
-    local cfg = DB and DB.db.profile.tracker or {}
-    local isPinned = DB and DB.char.pinned and DB.char.pinned[questData.questID]
-    local titleText = questData.title or ("Quest #" .. tostring(questData.questID))
+    local titleText = questData.title or ("Quest #" .. tostring(qid))
     if cfg.showLevelInTracker and questData.level and questData.level > 0 then
         titleText = ("[%d] %s"):format(questData.level, titleText)
     end
-    if cfg.showQuestID and questData.questID then
-        titleText = titleText .. (" |cff666666(#%d)|r"):format(questData.questID)
+    if cfg.showQuestID and qid then
+        titleText = titleText .. (" |cff666666(#%d)|r"):format(qid)
     end
     if isPinned then titleText = "|cffEBB706★|r " .. titleText end
     block.title:SetText(titleText)
@@ -426,7 +536,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     -- Force a deterministic wrap width on the multi-line FontStrings.
     -- Without explicit SetWidth, GetStringHeight can return stale values
     -- on the first render after width changes, causing blocks to overlap.
-    local blockW = block:GetWidth()
+    local blockW = curW
     if blockW and blockW > 0 then
         local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2)
         local subTextW = titleW
@@ -448,4 +558,28 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     local subGap = block.category:IsShown() and CAT_TO_SUB_GAP or TITLE_TO_SUB_GAP
     local h = titleH + categoryH + subGap + block.subText:GetStringHeight() + PAD_Y * 2
     block:SetHeight(h)
+
+    -- ── Snapshot the inputs this full render consumed, so the next pass
+    -- can cheaply tell whether anything changed. Scalars overwrite in
+    -- place; the two objective arrays are created once per block and
+    -- reused (compare/snapshot only ever touch indices 1..nObj).
+    block._rID    = qid
+    block._rGen   = self._renderGen
+    block._rTitle = questData.title
+    block._rDone  = questData.isComplete and true or false
+    block._rLevel = questData.level
+    block._rClass = questData.classification
+    block._rZone  = questData.zone
+    block._rPin   = isPinned
+    block._rFoc   = focused
+    block._rSimp  = simplifyMode and true or false
+    block._rWidth = curW
+    block._rObjN  = nObj
+    local pt = block._rObjT; if not pt then pt = {}; block._rObjT = pt end
+    local pf = block._rObjF; if not pf then pf = {}; block._rObjF = pf end
+    for i = 1, nObj do
+        local o = objs[i]
+        pt[i] = o.text or ""
+        pf[i] = o.finished and true or false
+    end
 end
