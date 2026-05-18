@@ -14,6 +14,12 @@ local M = ns:RegisterSubsystem("WQWorldMap", {})
 
 local PIN_TEMPLATE = "EQWorldQuestPinTemplate"
 
+-- Max reward-data preload attempts per quest before we give up counting it
+-- as "pending". Some WQs never return reward data (cross-faction, transient
+-- API gaps); without a cap one stuck quest keeps the adaptive retry firing
+-- the full pin walk every 2s for the life of the open map.
+local MAX_LOAD_ATTEMPTS = 3
+
 -- Try the modern API first, fall back to the older shape. Either returns
 -- WorldQuestInfo[]; field names sometimes differ (`questId` vs `questID`),
 -- so we normalize when we read.
@@ -95,19 +101,40 @@ function providerMixin:_DoRefresh()
     local filters = DB.db.profile.worldQuests.filters
     local factionFilters = DB.db.profile.worldQuests.factionFilters or {}
 
+    -- Per-quest reward-load attempt counter, scoped to the current map.
+    -- Wiped (not realloc'd) on map change so revisiting a map gives quests
+    -- a fresh budget and the table never grows past one map's quest set.
+    if self._loadAttemptsMapID ~= mapID then
+        self._loadAttemptsMapID = mapID
+        if self._loadAttempts then wipe(self._loadAttempts) else self._loadAttempts = {} end
+    end
+    local loadAttempts = self._loadAttempts
+
     for i = 1, #quests do
         local info = quests[i]
         local questID = info and (info.questID or info.questId)
         if questID and not isExpiredWQ(questID) then
-            -- Pre-flight: when reward data isn't loaded, count this quest as
-            -- pending and request a preload. Pins still render (with FALLBACK
-            -- visuals) so the user sees the quest exists; the retry below
-            -- repaints once HaveQuestRewardData turns true.
+            -- Pre-flight: when reward data isn't loaded, request a preload
+            -- and count this quest as pending so the adaptive retry fires.
+            -- Pins still render (FALLBACK visuals) so the quest is visible;
+            -- the retry repaints once HaveQuestRewardData turns true.
+            -- Capped per quest (MAX_LOAD_ATTEMPTS): after the budget is
+            -- spent we stop counting it pending so a permanently-unloadable
+            -- quest can't keep the 2s retry — and its full pin walk —
+            -- running for the life of the open map.
             if HaveQuestRewardData and not HaveQuestRewardData(questID) then
-                self._pendingCount = self._pendingCount + 1
-                if C_TaskQuest.RequestPreloadRewardData then
-                    C_TaskQuest.RequestPreloadRewardData(questID)
+                local n = (loadAttempts[questID] or 0) + 1
+                loadAttempts[questID] = n
+                if n <= MAX_LOAD_ATTEMPTS then
+                    self._pendingCount = self._pendingCount + 1
+                    if C_TaskQuest.RequestPreloadRewardData then
+                        C_TaskQuest.RequestPreloadRewardData(questID)
+                    end
                 end
+            elseif loadAttempts[questID] then
+                -- Loaded — drop the counter so the table stays minimal and
+                -- a later re-request (rare) gets a fresh attempt budget.
+                loadAttempts[questID] = nil
             end
 
             local x, y = info.x, info.y

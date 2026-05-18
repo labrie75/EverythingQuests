@@ -141,7 +141,10 @@ local function classifyItem(questID, name, texture, count, quality)
     }
 end
 
-function R:Classify(questID)
+-- Pure classification — no caching. R:Classify wraps this with a per-quest
+-- memo so the allocation-heavy parse below runs at most once per quest
+-- (until invalidated), not once per quest per map refresh per event.
+local function classify(questID)
     if not questID then return FALLBACK end
 
     -- 1. Quest tag — PvP / Pet Battle / Profession are definitive.
@@ -195,4 +198,68 @@ function R:Classify(questID)
         return { category = tagCat, atlas = FALLBACK.atlas, text = "" }
     end
     return FALLBACK
+end
+
+-- Per-quest memo of the classified reward. A world quest's reward never
+-- changes for the life of the quest, so once we've resolved it from loaded
+-- client data there's no reason to re-parse (and re-allocate) it on every
+-- map refresh / QUEST_LOG_UPDATE / TASK_PROGRESS_UPDATE. Azeroth-scale maps
+-- return 70+ quests, so this is the dominant per-refresh allocation source.
+local resultCache = {}
+
+-- HaveQuestRewardData is a WoW global; absence (older/Classic clients)
+-- is treated as "ready" so classification still works there.
+local function rewardDataReady(questID)
+    if not HaveQuestRewardData then return true end
+    return HaveQuestRewardData(questID) and true or false
+end
+
+function R:Classify(questID)
+    if not questID then return FALLBACK end
+
+    local cached = resultCache[questID]
+    if cached then return cached end
+
+    local result = classify(questID)
+
+    -- Only memoize a fully-resolved reward. Before the client has the
+    -- reward data, classify() returns the FALLBACK placeholder (or a
+    -- tag-only stub); caching that would freeze the pin on the yellow
+    -- "!" forever. Re-classifying an un-loaded quest each refresh is
+    -- cheap and self-corrects the instant the data arrives.
+    if result ~= FALLBACK and rewardDataReady(questID) then
+        resultCache[questID] = result
+    end
+    return result
+end
+
+-- Drop a stale entry (or wipe all). Public so other WQ modules can force
+-- a re-parse if they ever need to.
+function R:Invalidate(questID)
+    if questID then
+        resultCache[questID] = nil
+    else
+        wipe(resultCache)
+    end
+end
+
+function R:OnInitialize()
+    local Events = ns:GetSubsystem("Events")
+    if Events then
+        -- A finished/abandoned quest's ID can be recycled by a future
+        -- quest; clear it so the next quest under that ID re-parses.
+        local function drop(_, questID)
+            if questID then resultCache[questID] = nil end
+        end
+        Events:On("QUEST_TURNED_IN", drop)
+        Events:On("QUEST_REMOVED",   drop)
+    end
+
+    -- The client periodically discards server-sent quest reward data.
+    -- A coarse wipe also bounds memory over a long session as world
+    -- quests rotate. 10 min is well inside any WQ's lifetime, so the
+    -- re-resolution cost is negligible.
+    if C_Timer and C_Timer.NewTicker then
+        C_Timer.NewTicker(600, function() wipe(resultCache) end)
+    end
 end

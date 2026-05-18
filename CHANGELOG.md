@@ -5,6 +5,13 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-05-17
+
+### Improvements
+
+- **Clearer explanation of the red map markers** — The General options tab now plainly describes Everything Quests' red `!` / `?` world-map markers: they're for quests you've already picked up (a red `!` means "go here for this quest's next step," a red `?` means "this one's done, go turn it in"). Quests you haven't accepted yet keep the game's normal yellow markers.
+- **Lighter and smoother world quests** — World quest pins now remember each quest's reward instead of working it out again every time the map refreshes, and the addon no longer keeps retrying quests whose reward never loads. The result is less memory use and a smoother world map, especially in zones packed with world quests.
+
 ## [1.3.1] - 2026-05-17
 
 ### Bug Fixes

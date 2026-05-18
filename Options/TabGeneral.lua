@@ -53,7 +53,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     qpinsHint:SetPoint("TOPLEFT", qpins, "BOTTOMLEFT", 0, -2)
     qpinsHint:SetWidth(430)
     qpinsHint:SetJustifyH("LEFT")
-    qpinsHint:SetText("These are the round red markers Everything Quests puts on the big world map to show where your quests are. A red \"!\" means \"come here to pick up a quest.\" A red \"?\" means \"come here to turn a quest in.\" Uncheck this box and all of EQ's red markers go away. The game's own yellow map markers do not change.")
+    qpinsHint:SetText("These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away.")
 
     local lockGet, lockSet = generalSetting("lockTracker")
     local lock = Options:CreateCheckbox(content,
