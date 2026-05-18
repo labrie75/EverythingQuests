@@ -5,6 +5,12 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-05-17
+
+### Improvements
+
+- **Lighter, smoother tracker** — The quest tracker now does far less repeated work each time it updates: it remembers your font instead of re-applying it to every quest on every refresh, reuses internal scratch space instead of creating throwaway work, and stops re-checking icon art it has already looked up. The result is noticeably less memory churn with a full quest log, with no change to how the tracker looks or behaves.
+
 ## [1.3.3] - 2026-05-17
 
 ### Improvements

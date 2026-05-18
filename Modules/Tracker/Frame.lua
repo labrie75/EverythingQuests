@@ -555,6 +555,10 @@ function Tracker:Render()
     -- (where this used to live) would wipe the Campaign group's live rows.
     local _Blocks = ns:GetSubsystem("TrackerBlocks")
     if _Blocks and _Blocks.ReleaseAll then _Blocks:ReleaseAll() end
+    -- Resolve the tracker font once for this whole pass (instead of per
+    -- block); RenderQuest then skips the SetFont calls on blocks already
+    -- styled at the current font generation.
+    if _Blocks and _Blocks.BeginRenderPass then _Blocks:BeginRenderPass() end
     local _AC = ns:GetSubsystem("TrackerAutoComplete")
     if _AC and _AC.ReleaseAll then _AC:ReleaseAll() end
 

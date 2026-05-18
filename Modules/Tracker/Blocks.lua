@@ -19,6 +19,39 @@ local Blocks = ns:RegisterSubsystem("TrackerBlocks", {})
 Blocks.pool = {}
 Blocks.active = {}
 
+-- Reused scratch for buildSubText's objective lines. Single-threaded and
+-- never re-entrant (called once per block, sequentially, inside the render
+-- loop), and table.concat below uses an explicit 1..count range so leftover
+-- entries from a longer previous quest are never read — so no wipe needed.
+local _subLines = {}
+
+-- The tracker font is identical for every block and changes only when the
+-- user edits options — but RenderQuest was re-resolving it (Media:GetFontFile)
+-- and calling SetFont x3 on every block every refresh. Resolve it once per
+-- render pass (BeginRenderPass) and bump a generation int only when it
+-- actually changes; each block restyles only when its stored gen is stale.
+-- Font is quest-independent, so a pooled block reused for a different quest
+-- keeps a correct font and a correct gen — safe under the current pool model.
+Blocks._fontGen     = 0
+Blocks._fontFile    = nil
+Blocks._fontSize    = nil
+Blocks._fontOutline = nil
+
+-- Called once per Tracker:Render, right after Blocks:ReleaseAll().
+function Blocks:BeginRenderPass()
+    local DB = ns:GetSubsystem("DB")
+    if not DB then self._fontFile = nil; return end
+    local t       = DB.db.profile.tracker
+    local Media   = ns:GetSubsystem("Media")
+    local file    = Media and Media.GetFontFile and Media:GetFontFile(t.font)
+    local size    = t.fontSize or 12
+    local outline = t.fontOutline or ""
+    if file ~= self._fontFile or size ~= self._fontSize or outline ~= self._fontOutline then
+        self._fontFile, self._fontSize, self._fontOutline = file, size, outline
+        self._fontGen = self._fontGen + 1
+    end
+end
+
 local PAD_X, PAD_Y       = 6, 2
 local TITLE_TO_CAT_GAP   = 1     -- title → category subtitle
 local CAT_TO_SUB_GAP     = 2     -- category → first objective
@@ -31,8 +64,23 @@ local CATEGORY_COLOR     = { 0.42, 0.69, 1.00 }   -- light blue zone subtitle
 -- texture path. Some atlases (Campaign-QuestLog-LoreBook, QuestDaily, etc.)
 -- have shifted across patches; the fallback keeps the icon rendering as
 -- something even if the atlas name is wrong on a given build.
+-- Whether an atlas exists is constant for the session/build, but
+-- safeSetAtlas runs ~3x per block per refresh. Memoize the
+-- C_Texture.GetAtlasInfo result per atlas name instead of re-querying the
+-- C API every render. nil / "" never resolve (treated as missing).
+local _atlasOK = {}
+local function atlasExists(atlas)
+    if not atlas or atlas == "" then return false end
+    local ok = _atlasOK[atlas]
+    if ok == nil then
+        ok = (C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas)) and true or false
+        _atlasOK[atlas] = ok
+    end
+    return ok
+end
+
 local function safeSetAtlas(tex, atlas, fallbackTexture, fallbackTexCoord)
-    if atlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
+    if atlasExists(atlas) then
         tex:SetAtlas(atlas, false)
         return true
     end
@@ -125,18 +173,24 @@ local function applyQuestIcon(iconGlow, icon, iconBang, q, focused)
     if not bangSet then iconBang:SetTexture(nil) end
 end
 
+-- Hoisted to file scope: this captures no locals, so the previous inline
+-- `function(have,need)` allocated a fresh closure on every colorizeProgress
+-- call (once per objective line — ~100/refresh on a big log) for nothing.
+-- One shared function reused instead.
+local function progressRepl(have, need)
+    local h, n = tonumber(have), tonumber(need)
+    if not (h and n) then return have .. "/" .. need end
+    local color
+    if h == 0    then color = "|cffff5050"
+    elseif h < n then color = "|cffeeaa00"
+    else              color = "|cff44ff44"
+    end
+    return color .. have .. "/" .. need .. "|r"
+end
+
 local function colorizeProgress(text)
     if not text or text == "" then return text end
-    return (text:gsub("(%d+)%s*/%s*(%d+)", function(have, need)
-        local h, n = tonumber(have), tonumber(need)
-        if not (h and n) then return have .. "/" .. need end
-        local color
-        if h == 0          then color = "|cffff5050"
-        elseif h < n       then color = "|cffeeaa00"
-        else                    color = "|cff44ff44"
-        end
-        return color .. have .. "/" .. need .. "|r"
-    end))
+    return (text:gsub("(%d+)%s*/%s*(%d+)", progressRepl))
 end
 
 -- Build the multi-line objective string for a quest. Includes BOTH complete
@@ -156,7 +210,7 @@ local function buildSubText(questData, simplifyMode)
         return "|A:common-icon-checkmark:12:12|a |cff44ff44" .. (objs[#objs].text or "") .. "|r"
     end
 
-    local lines, count = {}, 0
+    local count = 0
     for i = 1, #objs do
         local o = objs[i]
         local txt = o.text or ""
@@ -166,9 +220,9 @@ local function buildSubText(questData, simplifyMode)
             txt = "- " .. colorizeProgress(txt)
         end
         count = count + 1
-        lines[count] = txt
+        _subLines[count] = txt
     end
-    return table.concat(lines, "\n", 1, count)
+    return table.concat(_subLines, "\n", 1, count)
 end
 
 local function buildBlock()
@@ -325,17 +379,19 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         block.title:SetTextColor(0.92, 0.72, 0.02)               -- #EBB706 yellow
     end
 
-    -- Apply user-chosen font + size from the Options panel.
-    if DB then
-        local Media = ns:GetSubsystem("Media")
-        local fontFile = Media and Media.GetFontFile and Media:GetFontFile(DB.db.profile.tracker.font)
-        local fontSize = DB.db.profile.tracker.fontSize or 12
-        local outline  = DB.db.profile.tracker.fontOutline or ""
-        if fontFile then
-            block.title:SetFont(fontFile, fontSize, outline)
-            block.subText:SetFont(fontFile, math.max(8, fontSize - 2), outline)
-            block.category:SetFont(fontFile, math.max(8, fontSize - 3), outline)
-        end
+    -- Font resolved once per pass in BeginRenderPass; a block restyles only
+    -- when the resolved font changed (gen bump) or it hasn't been styled
+    -- yet. Font is quest-independent so this stays correct when a pooled
+    -- block is reused for a different quest. _fontGen only ever increases,
+    -- so a stale block's gen can never falsely match the current one.
+    local fontFile = self._fontFile
+    if fontFile and block._fontGen ~= self._fontGen then
+        local fontSize = self._fontSize
+        local outline  = self._fontOutline
+        block.title:SetFont(fontFile, fontSize, outline)
+        block.subText:SetFont(fontFile, math.max(8, fontSize - 2), outline)
+        block.category:SetFont(fontFile, math.max(8, fontSize - 3), outline)
+        block._fontGen = self._fontGen
     end
 
     -- Category subtitle: q.zone is the quest log header (e.g. "Silvermoon
