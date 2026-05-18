@@ -31,6 +31,40 @@ function Util.FmtTimeShort(secs)
     return ("%dd"):format(secs / 86400)
 end
 
+-- ── World-quest time-left (single source of truth) ───────────────────
+-- All WQ surfaces (map pin, zone list, tooltip) take minutes from
+-- C_TaskQuest.GetQuestTimeLeftMinutes and MUST agree on urgency color and
+-- formatting — otherwise the same quest looks differently urgent depending
+-- on where you read it. One ramp here; callers pick Short (compact pin
+-- label) or Long (roomy list/tooltip) for text.
+
+-- Urgency color by minutes remaining: <30 red, <2h orange, <12h yellow,
+-- else green. nil / expired → a distinct red.
+function Util.WQTimeColor(mins)
+    if not mins or mins <= 0 then return 1.00, 0.10, 0.10 end
+    if mins < 30  then return 1.00, 0.25, 0.25 end
+    if mins < 120 then return 1.00, 0.65, 0.10 end
+    if mins < 720 then return 1.00, 1.00, 0.40 end
+    return 0.50, 1.00, 0.50
+end
+
+-- Compact, for the space-constrained map-pin label: "" / "45m" / "3h" / "2d".
+function Util.WQTimeShort(mins)
+    if not mins or mins <= 0 then return "" end
+    if mins < 60   then return ("%dm"):format(mins) end
+    if mins < 1440 then return ("%dh"):format(math.floor(mins / 60)) end
+    return ("%dd"):format(math.floor(mins / 1440))
+end
+
+-- Verbose, for the zone list and tooltip: "Expired" / "45m" / "3h 5m".
+function Util.WQTimeLong(mins)
+    if not mins or mins <= 0 then return "Expired" end
+    local h = math.floor(mins / 60)
+    local m = mins - h * 60
+    if h > 0 then return ("%dh %dm"):format(h, m) end
+    return ("%dm"):format(m)
+end
+
 -- RGB hex string -> {r,g,b,a}. "6D0501" or "#6D0501".
 function Util.HexToRGBA(hex, alpha)
     hex = hex:gsub("^#", "")

@@ -5,6 +5,13 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-05-17
+
+### Improvements
+
+- **Consistent world quest timers** — The time-left countdown on a world quest now uses the same colors and the same format everywhere it appears: the map pin, the zone list, and the tooltip. Before, the same quest could look more or less urgent depending on where you read it, and the tooltip spelled the time out differently. Now it's one clear scale — green when there's plenty of time, down through yellow and orange to red as it runs out.
+- **Lighter quest sorting** — Sorting the tracker's quest list no longer creates throwaway work every time it refreshes, shaving off a bit more memory churn.
+
 ## [1.3.2] - 2026-05-17
 
 ### Improvements

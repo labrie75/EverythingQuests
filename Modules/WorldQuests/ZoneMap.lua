@@ -26,21 +26,8 @@ local PIN_TEMPLATE = "EQWorldQuestPinTemplate"
 Z.rowPool   = {}
 Z.activeRows = {}
 
-local function timeColor(mins)
-    if not mins or mins <= 0  then return 1.00, 0.10, 0.10 end
-    if mins < 30  then return 1.00, 0.25, 0.25 end
-    if mins < 120 then return 1.00, 0.65, 0.10 end
-    if mins < 720 then return 1.00, 1.00, 0.40 end
-    return 0.50, 1.00, 0.50
-end
-
-local function fmtTime(mins)
-    if not mins or mins <= 0 then return "Expired" end
-    local h = math.floor(mins / 60)
-    local m = mins - h * 60
-    if h > 0 then return ("%dh %dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+-- Shared WQ time helpers — single source of truth in Core/Util.lua.
+local Util = ns.Util
 
 local function questTitle(questID)
     if C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID then
@@ -273,8 +260,8 @@ function Z:Refresh()
 
         local mins = C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes
                      and C_TaskQuest.GetQuestTimeLeftMinutes(pin.questID)
-        row.timeText:SetText(fmtTime(mins))
-        row.timeText:SetTextColor(timeColor(mins))
+        row.timeText:SetText(Util.WQTimeLong(mins))
+        row.timeText:SetTextColor(Util.WQTimeColor(mins))
 
         y = y + ROW_H + ROW_GAP
     end

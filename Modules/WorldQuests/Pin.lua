@@ -24,22 +24,9 @@ local RING_COLORS = {
     other    = { 0.70, 0.70, 0.70 },
 }
 
-local function fmtTime(mins)
-    if not mins or mins <= 0 then return "" end
-    if mins < 60   then return mins .. "m" end
-    if mins < 1440 then return math.floor(mins / 60) .. "h" end
-    return math.floor(mins / 1440) .. "d"
-end
-
--- Color the time-left text by urgency:
--- > 4h = green, 1-4h = white, 30-60m = yellow, < 30m = red.
-local function timeColor(mins)
-    if not mins then return 1, 1, 1 end
-    if mins <= 30   then return 1.00, 0.30, 0.30 end
-    if mins <= 60   then return 1.00, 0.82, 0.20 end
-    if mins <= 240  then return 1.00, 1.00, 1.00 end
-    return 0.40, 1.00, 0.40
-end
+-- Shared WQ time helpers — single source of truth in Core/Util.lua so the
+-- pin label's color and format match the zone list and tooltip exactly.
+local Util = _ns.Util
 
 function Pin:OnLoad()
     self:UseFrameLevelType("PIN_FRAME_LEVEL_QUEST_PING")
@@ -76,8 +63,8 @@ function Pin:OnAcquired(questID, x, y, reward)
     -- Time left text + color
     local mins = C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes
                  and C_TaskQuest.GetQuestTimeLeftMinutes(questID)
-    self.timeText:SetText(fmtTime(mins))
-    self.timeText:SetTextColor(timeColor(mins))
+    self.timeText:SetText(Util.WQTimeShort(mins))
+    self.timeText:SetTextColor(Util.WQTimeColor(mins))
 
     -- Apply selection visual based on whether this quest is super-tracked.
     -- Sets ring color + size — the un-selected branch handles the default
