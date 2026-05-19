@@ -239,27 +239,42 @@ local function colorizeProgress(text)
     return (text:gsub("(%d+)%s*/%s*(%d+)", progressRepl))
 end
 
+-- Strip a leading "X/Y" progress count from RAW objective text — used when
+-- the user hides objective numbers. Done BEFORE any color/atlas escapes are
+-- added (that's the whole point): the old approach regex-stripped a string
+-- that already contained |cAARRGGBB..|r codes and could eat into one,
+-- leaking the hex as visible text. Leading-anchored so it never touches a
+-- number inside a description.
+local function stripLeadingCount(text)
+    return (text:gsub("^%s*%d+%s*/%s*%d+%s*", ""))
+end
+
 -- Build the multi-line objective string for a quest. Includes BOTH complete
 -- and incomplete objectives so the user sees full progress (matches the
 -- Blizzard-style tracker the user wants to emulate). Simplify mode shrinks
 -- to just the first incomplete line.
-local function buildSubText(questData, simplifyMode)
+local function buildSubText(questData, simplifyMode, hideNumbers)
     local objs = questData.objectives
     if not objs or #objs == 0 then return "" end
 
     if simplifyMode then
         for i = 1, #objs do
             if not objs[i].finished then
-                return "- " .. colorizeProgress(objs[i].text or "")
+                local t = objs[i].text or ""
+                if hideNumbers then t = stripLeadingCount(t) end
+                return "- " .. colorizeProgress(t)
             end
         end
-        return "|A:common-icon-checkmark:12:12|a |cff44ff44" .. (objs[#objs].text or "") .. "|r"
+        local last = objs[#objs].text or ""
+        if hideNumbers then last = stripLeadingCount(last) end
+        return "|A:common-icon-checkmark:12:12|a |cff44ff44" .. last .. "|r"
     end
 
     local count = 0
     for i = 1, #objs do
         local o = objs[i]
         local txt = o.text or ""
+        if hideNumbers then txt = stripLeadingCount(txt) end
         if o.finished then
             txt = "|A:common-icon-checkmark:12:12|a |cff44ff44" .. txt .. "|r"
         else
@@ -523,14 +538,13 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         block.subText:SetPoint("TOPRIGHT", block.title, "BOTTOMRIGHT", 0, -TITLE_TO_SUB_GAP)
     end
 
-    local subText = buildSubText(questData, simplifyMode)
-    -- Strip the "X/Y " progress-number prefix when showObjectiveNumbers is
-    -- off. We match the colorized prefix our buildSubText emits and remove
-    -- it leaving just the description, a standard hide-numbers option.
-    if cfg.showObjectiveNumbers == false and subText then
-        subText = subText:gsub("|c%x%x%x%x%x%x%x%x(%d+)/(%d+)|r%s*", "")
-        subText = subText:gsub("(%d+)/(%d+)%s+", "")
-    end
+    -- Hide objective numbers by omitting the count when buildSubText
+    -- assembles the line — on RAW text before any color escapes exist, so
+    -- (unlike the old post-hoc regex strip) it can never corrupt a |c..|r
+    -- color code. showObjectiveNumbers is in the render-gen cfg snapshot,
+    -- so toggling it forces a full re-render of every block.
+    local subText = buildSubText(questData, simplifyMode,
+                                 cfg.showObjectiveNumbers == false)
     block.subText:SetText(subText)
 
     -- Force a deterministic wrap width on the multi-line FontStrings.

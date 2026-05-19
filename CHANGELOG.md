@@ -5,6 +5,13 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.7] - 2026-05-18
+
+### Bug Fixes
+
+- **Campaign quests after a game restart** — After fully restarting the game client (not a UI reload), campaign quests could appear under the regular "Quests" section instead of "Campaign" until you turned in a quest. They now move into the Campaign section on their own, within a few seconds of logging in.
+- **Hidden objective numbers** — With "Show objective numbers" turned off, some objective lines could show a stray color code as text (e.g. `44ff44Apprentice…`). Objective text is now clean when numbers are hidden.
+
 ## [1.3.6] - 2026-05-18
 
 ### New Features

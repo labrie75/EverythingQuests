@@ -11,8 +11,11 @@
 --                       the *set* of quests. Triggers a full wipe + rebuild.
 --   • dirtyObjectives — set on QUEST_LOG_UPDATE / QUEST_WATCH_LIST_CHANGED.
 --                       Refreshes objectives + isComplete + isWatched on
---                       existing entries in place, without recreating them.
---                       Skips unwatched quests (they aren't rendered).
+--                       existing entries in place, without recreating them
+--                       (objectives only for watched quests). Also re-
+--                       derives isCampaign every pass so a cold-start
+--                       miscategorization self-heals as campaign data
+--                       loads — no structural rebuild needed.
 --
 -- Net effect: full rebuild fires only on real structural changes (a few
 -- times per minute at most), and the cheap refresh skips most of the log.
@@ -25,6 +28,21 @@ Cache.quests          = {}     -- [questID] = { ... }
 Cache.headerOrder     = {}     -- ordered list of header titles
 Cache.dirtyAll        = true   -- needs full rebuild
 Cache.dirtyObjectives = false  -- needs lightweight objectives/state refresh
+
+-- isCampaign source. On a COLD client start C_QuestLog.GetInfo's
+-- campaignID isn't populated yet at the first cache build, so a campaign
+-- quest would wrongly land in the regular Quests section until a
+-- structural event (accept / turn-in / abandon) forced a rebuild.
+-- C_CampaignInfo is the authoritative live source and fills in as quest
+-- data loads — consult it first, fall back to GetInfo's campaignID when
+-- present. Numbers/booleans only, no allocation.
+local function deriveIsCampaign(id, info)
+    if C_CampaignInfo and C_CampaignInfo.GetCampaignID then
+        local cid = C_CampaignInfo.GetCampaignID(id)
+        if cid and cid > 0 then return true end
+    end
+    return (info and info.campaignID and info.campaignID > 0) and true or false
+end
 
 local function fullRebuild()
     wipe(Cache.quests)
@@ -54,7 +72,7 @@ local function fullRebuild()
                     frequency      = info.frequency,
                     isComplete     = C_QuestLog.IsComplete and C_QuestLog.IsComplete(id) or false,
                     isOnMap        = info.isOnMap,
-                    isCampaign     = info.campaignID and info.campaignID > 0,
+                    isCampaign     = deriveIsCampaign(id, info),
                     isAutoComplete = info.isAutoComplete,
                     -- Blizzard's quest watch state — non-nil means the quest
                     -- is currently in the player's watch list (the checkbox
@@ -95,6 +113,10 @@ local function refreshDynamicFields()
         local watched = C_QuestLog.GetQuestWatchType
                         and C_QuestLog.GetQuestWatchType(id) ~= nil
         q.isWatched = watched
+        -- Self-heal cold-start campaign miscategorization: re-derive every
+        -- pass (for ALL quests, not just watched — section placement
+        -- applies regardless of watch state). See deriveIsCampaign.
+        q.isCampaign = deriveIsCampaign(id)
         if watched then
             if C_QuestLog.GetQuestObjectives then
                 q.objectives = C_QuestLog.GetQuestObjectives(id) or q.objectives
