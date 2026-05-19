@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2026-05-18
+
+### Bug Fixes
+
+- **Drag-and-drop drop line** — When reordering quests by dragging (manual sort mode), the yellow "drop here" line could land a couple of quests below the cursor, especially with a non-default Tracker Scale. It now tracks the cursor exactly at any scale.
+
+### Improvements
+
+- **Hardier saved settings** — Your manual quest order is now cleaned up when it loads, so a corrupted saved value can't break the tracker's sorting. Also includes some under-the-hood groundwork for upcoming features. No visible change from these.
+
 ## [1.3.7] - 2026-05-18
 
 ### Bug Fixes

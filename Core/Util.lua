@@ -74,4 +74,25 @@ function Util.HexToRGBA(hex, alpha)
     return r, g, b, alpha or 1
 end
 
+-- Sanitize a saved manual-order map ({ [questID] = ordinal }) loaded from
+-- SavedVariables. A corrupt non-numeric ordinal would crash the tracker's
+-- manual-sort comparator (it does `number < value`); stale / duplicate /
+-- gappy ordinals are merely untidy. Returns a FRESH compact map: only
+-- numeric questID -> numeric ordinal entries survive, re-sequenced 1..N
+-- preserving their relative order. Cold path (login only), so the small
+-- temp tables are fine; GC-neutral at runtime.
+function Util.ReconcileOrder(orderMap)
+    if type(orderMap) ~= "table" then return {} end
+    local list = {}
+    for qid, ord in pairs(orderMap) do
+        if type(qid) == "number" and type(ord) == "number" then
+            list[#list + 1] = { qid, ord }
+        end
+    end
+    table.sort(list, function(a, b) return a[2] < b[2] end)
+    local clean = {}
+    for i = 1, #list do clean[list[i][1]] = i end
+    return clean
+end
+
 ns.Util = Util

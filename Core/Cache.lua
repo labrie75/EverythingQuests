@@ -29,6 +29,13 @@ Cache.headerOrder     = {}     -- ordered list of header titles
 Cache.dirtyAll        = true   -- needs full rebuild
 Cache.dirtyObjectives = false  -- needs lightweight objectives/state refresh
 
+-- Per-quest "first cached" timestamp (epoch secs). Persists across full
+-- rebuilds (fullRebuild wipes Cache.quests but NOT this), so a quest keeps
+-- its original firstSeen; pruned to the live quest set each rebuild so it
+-- can't grow unbounded. Enables a future "recently added" sort/highlight at
+-- zero hot-path cost — one extra number field on tables we already build.
+local firstSeen = {}
+
 -- isCampaign source. On a COLD client start C_QuestLog.GetInfo's
 -- campaignID isn't populated yet at the first cache build, so a campaign
 -- quest would wrongly land in the regular Quests section until a
@@ -64,8 +71,11 @@ local function fullRebuild()
                 -- excludes and the player cannot abandon.
             else
                 local id = info.questID
+                local fs = firstSeen[id]
+                if not fs then fs = time(); firstSeen[id] = fs end
                 local q = {
                     questID        = id,
+                    firstSeen      = fs,                                           -- epoch secs first cached; survives rebuilds
                     title          = info.title or (C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(id)),
                     level          = info.level,
                     zone           = currentHeader,
@@ -98,6 +108,11 @@ local function fullRebuild()
                 Cache.quests[id] = q
             end
         end
+    end
+    -- Bound the persistent firstSeen map: drop quests no longer in the log
+    -- (setting an existing field to nil mid-pairs is well-defined in Lua).
+    for qid in pairs(firstSeen) do
+        if not Cache.quests[qid] then firstSeen[qid] = nil end
     end
     Cache.dirtyAll        = false
     Cache.dirtyObjectives = false

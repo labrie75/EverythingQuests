@@ -161,4 +161,14 @@ function DB:OnInitialize()
     _G.EverythingQuestsChainCache = _G.EverythingQuestsChainCache or {}
     self.chainCache = _G.EverythingQuestsChainCache
     ns.db = self.db
+
+    -- Harden the saved manual sort order against corruption: a non-numeric
+    -- ordinal from a damaged SavedVariables would crash the tracker's
+    -- manual-sort comparator. Done once here (Commit always writes clean
+    -- 1..N, so only the disk-loaded value needs sanitizing).
+    local Util = ns.Util
+    local t = self.db and self.db.profile and self.db.profile.tracker
+    if Util and Util.ReconcileOrder and t then
+        t.manualOrder = Util.ReconcileOrder(t.manualOrder)
+    end
 end

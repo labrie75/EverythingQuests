@@ -110,9 +110,17 @@ function DD:UpdateDragVisuals()
     local Blocks = ns:GetSubsystem("TrackerBlocks")
     if not (Blocks and Blocks.active) then return end
 
-    local cursorScreenY = cy / s
     local active = Blocks.active
     local n = #active
+    -- Hit-test in the BLOCKS' coordinate space, not the ghost's. Blocks sit
+    -- under EQTrackerFrame (user "Tracker Scale"), so their effective scale
+    -- differs from the ghost's (parented to UIParent). GetTop() pairs with
+    -- a frame's OWN effective scale, so the cursor must be divided by the
+    -- blocks' scale — dividing by the ghost's was the constant drop-line
+    -- offset. Falls back to the ghost scale only when there are no blocks
+    -- (loop doesn't run then anyway).
+    local blockScale = (n > 0 and active[1]:GetEffectiveScale()) or s
+    local cursorScreenY = cy / blockScale
     local targetIndex = n + 1                                -- default: insert at end
     for i = 1, n do
         local b = active[i]
