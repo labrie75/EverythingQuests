@@ -176,13 +176,19 @@ Options:AddTab("tracker", "Tracker", function(content)
         qtotalGet, qtotalSet)
     qtotalCheck:SetPoint("TOPLEFT", qidCheck, "BOTTOMLEFT", 0, -2)
 
+    local itemBtnGet, itemBtnSet = trackerSetting("showItemButtons")
+    local itemBtnCheck = Options:CreateCheckbox(content,
+        "Show usable quest item buttons  |cffaaaaaa(click to use the quest's item)|r",
+        itemBtnGet, itemBtnSet)
+    itemBtnCheck:SetPoint("TOPLEFT", qtotalCheck, "BOTTOMLEFT", 0, -2)
+
     local Media = ns:GetSubsystem("Media")
     local soundGet, soundSet = trackerSetting("questSoundEnabled")
     local soundCheck = Options:CreateCheckbox(
         content,
         "Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r",
         soundGet, soundSet)
-    soundCheck:SetPoint("TOPLEFT", qtotalCheck, "BOTTOMLEFT", 0, -8)
+    soundCheck:SetPoint("TOPLEFT", itemBtnCheck, "BOTTOMLEFT", 0, -8)
 
     local soundList = (Media and Media.GetSoundList and Media:GetSoundList()) or {}
     local sndChoiceGet, sndChoiceSet = trackerSetting("questCompleteSound")

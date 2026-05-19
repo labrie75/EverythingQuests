@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.9] - 2026-05-18
+
+### New Features
+
+- **Usable quest item buttons** — Quests that come with a usable item now show a clickable button right on their tracker entry, so you can use it without opening the quest log. On by default; toggle it on the Tracker tab. (Items become clickable for quests you already had when you entered combat — the game doesn't allow setting these up during a fight.)
+
+### Bug Fixes
+
+- **No more "action blocked" message in combat** — With the new item buttons present, changing the tracker scale (or having a pending scale change) during combat could trigger a Blizzard "action blocked" message. Scale changes are now applied safely, deferred until combat ends if needed.
+
 ## [1.3.8] - 2026-05-18
 
 ### Bug Fixes

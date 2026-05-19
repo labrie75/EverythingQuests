@@ -1,0 +1,190 @@
+-- Modules/Tracker/ItemButtons.lua
+-- Usable quest-item buttons (KT-style). For each visible quest that has a
+-- usable special item (GetQuestLogSpecialItemInfo) we show a clickable
+-- SecureActionButton beside its tracker block.
+--
+-- TAINT MODEL — the whole reason this is careful:
+--   Creating, parenting, SetPoint, SetAttribute, Show or Hide on a SECURE
+--   frame is FORBIDDEN while InCombatLockdown(). So every one of those is
+--   routed through Events:RunWhenOutOfCombat (the shared combat-deferral
+--   primitive). The closure re-reads live state, so a deferred (combat-end)
+--   apply is still correct. Non-secure visuals (icon / count / cooldown)
+--   are plain children and update any time.
+--
+-- Buttons are pooled per questID and parented to the scroll CONTENT (the
+-- same frame the blocks live in), so they scroll and clip with their block
+-- and the Blocks mark/sweep never touches them. Per-quest defer closures
+-- are memoized so combat deferral allocates nothing after warmup.
+
+local _, ns = ...
+
+local IB = ns:RegisterSubsystem("TrackerItemButtons", {})
+
+local BTN = 20                       -- button size (px), square
+
+IB.buttons   = {}                    -- [questID] = secure button (live)
+local pool   = {}                    -- free secure buttons (built out of combat)
+local deferFns = {}                  -- [questID] = memoized defer closure
+local wanted = {}                    -- reused scratch: questID -> true (this pass)
+local stale  = {}                    -- reused scratch: array of questIDs to drop
+local container                      -- frame parented to scroll content
+
+local function getContainer()
+    if container then return container end
+    local Tracker = ns:GetSubsystem("Tracker")
+    local content = Tracker and Tracker.frame and Tracker.frame.content
+    if not content then return nil end
+    container = CreateFrame("Frame", nil, content)
+    container:SetAllPoints(content)
+    -- Sit above the blocks (same strata, higher level) so the item button
+    -- reliably receives the click instead of the block it overlaps.
+    container:SetFrameLevel((content:GetFrameLevel() or 0) + 20)
+    return container
+end
+
+-- questID -> link, icon, charges, logIndex when the quest has a usable
+-- special item; nil otherwise. Pure read, no allocation.
+local function itemInfo(questID)
+    if not (C_QuestLog and C_QuestLog.GetLogIndexForQuestID
+            and GetQuestLogSpecialItemInfo) then return nil end
+    local idx = C_QuestLog.GetLogIndexForQuestID(questID)
+    if not idx then return nil end
+    local link, icon, charges = GetQuestLogSpecialItemInfo(idx)
+    if link and icon then return link, icon, charges, idx end
+    return nil
+end
+
+-- Build a secure button. MUST be called out of combat (callers guarantee).
+local function buildButton()
+    local b = CreateFrame("Button", nil, container, "SecureActionButtonTemplate")
+    b:SetSize(BTN, BTN)
+    b:RegisterForClicks("AnyUp")
+    b:SetAttribute("type", "item")
+
+    b.bg = b:CreateTexture(nil, "BACKGROUND")
+    b.bg:SetPoint("TOPLEFT", -1, 1)
+    b.bg:SetPoint("BOTTOMRIGHT", 1, -1)
+    b.bg:SetColorTexture(0.43, 0.02, 0.0, 1)             -- brand-red 1px frame
+
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetAllPoints()
+    b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    b.count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    b.count:SetPoint("BOTTOMRIGHT", -1, 1)
+
+    b.cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
+    b.cd:SetAllPoints()
+
+    b:Hide()
+    return b
+end
+
+-- All SECURE state for one quest's button (create / parent / attribute /
+-- point / show / hide). Forbidden in combat — callers defer this whole
+-- function via the KT#5 primitive when InCombatLockdown(). Reads live
+-- state so a deferred run at combat-end is still correct.
+function IB:_applySecure(questID)
+    if not getContainer() then return end
+    local DB    = ns:GetSubsystem("DB")
+    local on    = not DB or DB.db.profile.tracker.showItemButtons ~= false
+    local link  = on and itemInfo(questID) or nil
+    local Blocks = ns:GetSubsystem("TrackerBlocks")
+    local block = Blocks and Blocks.byID and Blocks.byID[questID]
+    local b     = self.buttons[questID]
+
+    if not (link and block) then
+        -- No item / no visible block / feature off → retire the button.
+        if b then
+            b:Hide()
+            b:ClearAllPoints()
+            self.buttons[questID] = nil
+            pool[#pool + 1] = b
+        end
+        return
+    end
+
+    if not b then
+        b = tremove(pool) or buildButton()
+        self.buttons[questID] = b
+    end
+    b:SetAttribute("item", link)
+    b:ClearAllPoints()
+    -- Top-right corner of the block (title row is left-justified, so this
+    -- corner is normally clear). Placement is intentionally simple for v1
+    -- and easy to retune from feedback.
+    b:SetPoint("TOPRIGHT", block, "TOPRIGHT", -4, -2)
+    b:Show()
+end
+
+-- Non-secure visual refresh (icon / charge count / cooldown). Safe any
+-- time, including in combat.
+local function paint(b, questID)
+    local _, icon, charges, idx = itemInfo(questID)
+    if not icon then return end
+    b.icon:SetTexture(icon)
+    if charges and charges > 1 then
+        b.count:SetText(charges); b.count:Show()
+    else
+        b.count:SetText(""); b.count:Hide()
+    end
+    if idx and GetQuestLogSpecialItemCooldown then
+        local s, d = GetQuestLogSpecialItemCooldown(idx)
+        if s and d and d > 0 then b.cd:SetCooldown(s, d) else b.cd:Clear() end
+    end
+end
+
+local function deferFn(questID)
+    local f = deferFns[questID]
+    if not f then
+        f = function() IB:_applySecure(questID) end
+        deferFns[questID] = f
+    end
+    return f
+end
+
+-- Run the secure apply now if safe, else coalesce it to combat-end.
+local function applySecure(questID)
+    local Events = ns:GetSubsystem("Events")
+    if Events and Events.InCombat and Events:InCombat() then
+        Events:RunWhenOutOfCombat(questID, deferFn(questID))
+    else
+        IB:_applySecure(questID)
+    end
+end
+
+-- Called at the very end of Tracker:Render (after Sweep), so Blocks.byID
+-- reflects this pass's visible quests. Decides which quests want a button,
+-- applies secure changes (now or deferred), and refreshes non-secure
+-- visuals on the live ones.
+function IB:Reposition()
+    local Blocks = ns:GetSubsystem("TrackerBlocks")
+    if not (Blocks and Blocks.byID) then return end
+    local DB = ns:GetSubsystem("DB")
+    local on = not DB or DB.db.profile.tracker.showItemButtons ~= false
+
+    wipe(wanted)
+    if on then
+        for questID in pairs(Blocks.byID) do
+            if itemInfo(questID) then wanted[questID] = true end
+        end
+    end
+
+    -- Retire buttons whose quest no longer wants one (collect-then-act so
+    -- we never mutate self.buttons mid-pairs).
+    local n = 0
+    for questID in pairs(self.buttons) do
+        if not wanted[questID] then n = n + 1; stale[n] = questID end
+    end
+    for i = 1, n do
+        applySecure(stale[i])
+        stale[i] = nil
+    end
+
+    -- Show / refresh wanted quests.
+    for questID in pairs(wanted) do
+        applySecure(questID)
+        local b = self.buttons[questID]
+        if b and b:IsShown() then paint(b, questID) end
+    end
+end

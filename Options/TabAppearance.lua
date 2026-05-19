@@ -192,7 +192,16 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         local DB = ns:GetSubsystem("DB")
         if DB then DB.db.profile.tracker.scale = value end
         local Tracker = ns:GetSubsystem("Tracker")
-        if Tracker and Tracker.frame then Tracker.frame:SetScale(value) end
+        if not Tracker then return end
+        -- SetScale is protected once the tracker has secure item-button
+        -- descendants. Out of combat: apply now (responsive slider). In
+        -- combat: just save + Refresh — Render applies it combat-safely
+        -- (deferred to combat-end) via the single guarded code path.
+        if not InCombatLockdown() and Tracker.frame then
+            Tracker.frame:SetScale(value)
+        elseif Tracker.Refresh then
+            Tracker:Refresh()
+        end
     end
     local scaleSlider = Options:CreateSlider(content, "Tracker Scale", 0.7, 1.5, 0.05, scaleGet, scaleSet)
     scaleSlider:SetPoint("TOPLEFT", headerPicker, "BOTTOMLEFT", 0, -32)

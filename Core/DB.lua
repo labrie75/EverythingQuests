@@ -52,6 +52,7 @@ DB.defaults = {
             -- disables the outline entirely.
             fontOutline = "OUTLINE",
             colorByDifficulty = true,
+            showItemButtons = true,                                              -- clickable usable-item button beside quests that have one
             questSoundEnabled = true,
             questCompleteSound = "EQ: Work Complete",
             -- Phase 2 additions

@@ -555,6 +555,20 @@ local SECTION_RENDERERS = {
     events     = "_RenderEventsSection",
 }
 
+-- Stable, allocation-free closure for the combat-deferred tracker rescale
+-- (SetScale is protected once the tracker has secure item-button
+-- descendants). Re-reads live state so a deferred combat-end apply is
+-- correct even if the scale changed again meanwhile.
+local function applyTrackerScale()
+    local DB      = ns:GetSubsystem("DB")
+    local Tracker = ns:GetSubsystem("Tracker")
+    local fr = Tracker and Tracker.frame
+    local sc = DB and DB.db.profile.tracker.scale
+    if fr and sc and sc > 0 and fr:GetScale() ~= sc and not InCombatLockdown() then
+        fr:SetScale(sc)
+    end
+end
+
 function Tracker:Render()
     local f = self.frame
     if not f then return end
@@ -611,8 +625,19 @@ function Tracker:Render()
                 f.scrollBarBG:Hide()
             end
         end
+        -- SetScale is a PROTECTED frame method: with secure item-button
+        -- descendants, calling it in combat is blocked
+        -- (ADDON_ACTION_BLOCKED). Apply out of combat; if a change is
+        -- pending mid-combat, defer to combat-end so it still takes
+        -- effect. (Also set by BuildFrame + the Appearance slider, so this
+        -- only matters on a profile switch.)
         if cfg.scale and cfg.scale > 0 and f:GetScale() ~= cfg.scale then
-            f:SetScale(cfg.scale)
+            local Ev = ns:GetSubsystem("Events")
+            if Ev and Ev.InCombat and Ev:InCombat() then
+                Ev:RunWhenOutOfCombat("trackerSetScale", applyTrackerScale)
+            else
+                f:SetScale(cfg.scale)
+            end
         end
     end
 
@@ -747,6 +772,11 @@ function Tracker:Render()
     -- so a quest moving between the Campaign and Quests sections is never
     -- falsely swept. _RenderPinnedEvents uses a separate pool.
     if _Blocks and _Blocks.Sweep then _Blocks:Sweep() end
+
+    -- Usable quest-item buttons track block positions; reposition them
+    -- AFTER Sweep so Blocks.byID reflects exactly this pass's quests.
+    local _IB = ns:GetSubsystem("TrackerItemButtons")
+    if _IB and _IB.Reposition then _IB:Reposition() end
 end
 
 -- Render the always-visible World Quests region pinned at the bottom of
