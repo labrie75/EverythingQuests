@@ -128,6 +128,18 @@ function Tracker:BuildFrame()
     f.background:SetAllPoints()
     f.background:Hide()
 
+    -- Optional border. f is a BackdropTemplate frame and f.background is
+    -- SetAllPoints(f), so a backdrop EDGE on f wraps the background region
+    -- exactly. Set the edge once here with NO bgFile (the border must not
+    -- add its own fill — f.background owns the fill); Tracker:Render
+    -- applies the user's color/visibility, mirroring how f.background is
+    -- created hidden here and shown/colored in Render. The edge auto-
+    -- tracks frame size on resize via BackdropTemplate.
+    f._borderSize = math.max(1, cfg.borderSize or 1)
+    f:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = f._borderSize })
+    f:SetBackdropColor(0, 0, 0, 0)
+    f:SetBackdropBorderColor(0, 0, 0, 0)
+
     -- Top drag handle: invisible strip across the top edge. Brightens slightly
     -- on hover so users discover it without it cluttering the UI when idle.
     local drag = CreateFrame("Frame", nil, f)
@@ -571,6 +583,24 @@ function Tracker:Render()
             f.background:Show()
         else
             f.background:Hide()
+        end
+        -- Border wraps the same rect as f.background, independent of
+        -- whether the background fill is shown. Transparent = "off".
+        -- SetBackdrop is relatively heavy and the only way to change edge
+        -- thickness, so re-apply it ONLY when the size actually changed
+        -- (initial set is in BuildFrame); per-pass cost stays just the
+        -- cheap SetBackdropBorderColor below.
+        local bsz = math.max(1, cfg.borderSize or 1)
+        if f._borderSize ~= bsz then
+            f._borderSize = bsz
+            f:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = bsz })
+            f:SetBackdropColor(0, 0, 0, 0)
+        end
+        if cfg.showBorder then
+            local bc = cfg.borderColor or { r = 0.427, g = 0.020, b = 0.004, a = 1 }
+            f:SetBackdropBorderColor(bc.r or 0, bc.g or 0, bc.b or 0, bc.a or 1)
+        else
+            f:SetBackdropBorderColor(0, 0, 0, 0)
         end
         if f.scrollBarBG then
             if cfg.scrollBarBg ~= false then

@@ -33,6 +33,12 @@ DB.defaults = {
             showOnlyWatched = true,
             showBackground = false,
             backgroundColor = { r = 0, g = 0, b = 0, a = 0.6 },
+            -- Optional 1px border wrapping the tracker background region.
+            -- Off by default; color is user-set (the picker carries the
+            -- Class option). Default = suite brand red #6D0501.
+            showBorder = false,
+            borderColor = { r = 0.427, g = 0.020, b = 0.004, a = 1 },
+            borderSize  = 1,                                                      -- edge thickness in px (Appearance slider, 1-5)
             -- Default font. Bundled with the addon and registered with
             -- LibSharedMedia in Core/Media.lua, so this resolves for every
             -- user with no external dependency. Must match the LSM-

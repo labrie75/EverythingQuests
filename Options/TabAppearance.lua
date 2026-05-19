@@ -103,6 +103,37 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     sbPicker.label:ClearAllPoints()
     sbPicker.label:SetPoint("RIGHT", sbPicker.button, "LEFT", -8, 0)
 
+    -- Optional border around the tracker (wraps the background region).
+    -- Off by default; the color picker carries the same Class/Default
+    -- options as every other EQ picker. Mirrors the scroll-bar row's
+    -- anchoring so the swatch stays in the shared color column.
+    local borderGet, borderSet = trackerSetting("showBorder")
+    local borderCheck = Options:CreateCheckbox(content, "Border", borderGet, borderSet)
+    borderCheck:SetPoint("TOPLEFT", sbCheck, "BOTTOMLEFT", 0, -10)
+
+    local function borderColorGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.borderColor or { r = 0.427, g = 0.020, b = 0.004, a = 1 }
+    end
+    local function borderColorSet(c)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.borderColor = c end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    local borderPicker = Options:CreateColorPicker(content, "Border Color", borderColorGet, borderColorSet)
+    borderPicker:SetPoint("TOPLEFT", sbPicker, "BOTTOMLEFT", 0, -8)
+    borderPicker.button:ClearAllPoints()
+    borderPicker.button:SetPoint("TOP",  borderPicker, "TOP", 0, -1)
+    borderPicker.button:SetPoint("LEFT", bgPicker.button, "LEFT", 0, 0)
+    borderPicker.label:ClearAllPoints()
+    borderPicker.label:SetPoint("RIGHT", borderPicker.button, "LEFT", -8, 0)
+
+    local bThickGet, bThickSet = trackerSetting("borderSize")
+    local borderThickSlider = Options:CreateSlider(content, "Border Thickness", 1, 5, 1, bThickGet, bThickSet)
+    borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
+    borderThickSlider:SetWidth(280)
+
     -- ─── RIGHT COLUMN: colors + dimensions ──────────────────────────────
     local colorsHeader = Options:CreateSectionHeader(content, "Colors & Dimensions")
     colorsHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)

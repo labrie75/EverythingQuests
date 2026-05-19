@@ -5,6 +5,12 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2026-05-18
+
+### New Features
+
+- **Tracker border** — Optional border around the quest tracker, off by default. Turn it on in the Appearance tab, pick any color (including your class color via the picker's **Class** button), and set how thick it is with the new **Border Thickness** slider. The border wraps cleanly around the tracker whether or not the background is enabled. Thanks to **Spydawg2233** for the suggestion!
+
 ## [1.3.5] - 2026-05-17
 
 ### Improvements
