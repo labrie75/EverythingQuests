@@ -5,6 +5,12 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.11] - 2026-05-19
+
+### Improvements
+
+- **Developer tooling** — New `/eqs profile` slash command for diagnosing CPU and memory hot spots (`show`, `reset`, `mem on/off`), plus a shared event-throttler primitive for upcoming features. Under-the-hood groundwork — no visible change for typical play.
+
 ## [1.3.10] - 2026-05-19
 
 ### Bug Fixes

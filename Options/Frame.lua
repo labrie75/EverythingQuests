@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.3.10"))
+    f.version:SetText("v" .. (ns.VERSION or "1.3.11"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -625,6 +625,26 @@ local function eqSlashHandler(msg)
         return
     elseif msg == "wqdebug" then
         Options:DumpWorldQuestSources()
+        return
+    elseif msg:match("^profile") then
+        -- /eqs profile [show|reset|mem on|mem off]
+        local rest = msg:match("^profile%s*(.*)$") or ""
+        local Profiler = ns:GetSubsystem("Profiler")
+        if not Profiler then return end
+        if rest == "" or rest == "show" then
+            Profiler:Show()
+        elseif rest == "reset" then
+            Profiler:Reset()
+            print("|cffEBB706EQ Profile|r reset")
+        elseif rest:match("^mem%s+on") then
+            Profiler:SetMemoryMode(true)
+            print("|cffEBB706EQ Profile|r memory mode ON — collectgarbage forced at boundaries (expensive; toggle off when done)")
+        elseif rest:match("^mem%s+off") then
+            Profiler:SetMemoryMode(false)
+            print("|cffEBB706EQ Profile|r memory mode OFF")
+        else
+            print("|cffEBB706EQ Profile|r usage: /eqs profile [show | reset | mem on | mem off]")
+        end
         return
     end
     local ok, err = pcall(function() Options:Toggle() end)
