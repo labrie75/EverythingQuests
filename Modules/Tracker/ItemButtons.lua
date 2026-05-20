@@ -1,6 +1,6 @@
 -- Modules/Tracker/ItemButtons.lua
--- Usable quest-item buttons (KT-style). For each visible quest that has a
--- usable special item (GetQuestLogSpecialItemInfo) we show a clickable
+-- Usable quest-item buttons. For each visible quest that has a usable
+-- special item (GetQuestLogSpecialItemInfo) we show a clickable
 -- SecureActionButton beside its tracker block.
 --
 -- TAINT MODEL — the whole reason this is careful:
@@ -21,6 +21,7 @@ local _, ns = ...
 local IB = ns:RegisterSubsystem("TrackerItemButtons", {})
 
 local BTN = 20                       -- button size (px), square
+local RANGE_THROTTLE = 0.25          -- seconds between in-range polls (no event exists)
 
 IB.buttons   = {}                    -- [questID] = secure button (live)
 local pool   = {}                    -- free secure buttons (built out of combat)
@@ -54,11 +55,37 @@ local function itemInfo(questID)
     return nil
 end
 
+-- Range-aware icon tint. WoW exposes no "out of range" event so we poll;
+-- throttled to ~4Hz with all-C internals (no allocations). OnUpdate only
+-- fires while the frame is :IsShown(), so hidden / pooled buttons are free.
+-- IsQuestLogSpecialItemInRange returns 0 = out, 1 = in, nil = item with no
+-- range concept (treat as normal).
+local function onRangeUpdate(self, elapsed)
+    local t = (self._rangeTimer or 0) - elapsed
+    if t > 0 then self._rangeTimer = t; return end
+    self._rangeTimer = RANGE_THROTTLE
+
+    local qid = self._questID
+    if not (qid and IsQuestLogSpecialItemInRange
+            and C_QuestLog and C_QuestLog.GetLogIndexForQuestID) then return end
+    local idx = C_QuestLog.GetLogIndexForQuestID(qid)
+    if not idx then return end
+    if IsQuestLogSpecialItemInRange(idx) == 0 then
+        self.icon:SetVertexColor(1.0, 0.3, 0.3)         -- red, out of range
+    else
+        self.icon:SetVertexColor(1.0, 1.0, 1.0)         -- normal
+    end
+end
+
 -- Build a secure button. MUST be called out of combat (callers guarantee).
 local function buildButton()
     local b = CreateFrame("Button", nil, container, "SecureActionButtonTemplate")
     b:SetSize(BTN, BTN)
-    b:RegisterForClicks("AnyUp")
+    -- Must register BOTH down and up: a SecureActionButton registered only
+    -- for "AnyUp" frequently won't fire its secure /use on click (depends on
+    -- the client's down/up click-handling state). Both is the proven
+    -- Blizzard pattern.
+    b:RegisterForClicks("AnyDown", "AnyUp")
     b:SetAttribute("type", "item")
 
     b.bg = b:CreateTexture(nil, "BACKGROUND")
@@ -76,14 +103,15 @@ local function buildButton()
     b.cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
     b.cd:SetAllPoints()
 
+    b:SetScript("OnUpdate", onRangeUpdate)
     b:Hide()
     return b
 end
 
 -- All SECURE state for one quest's button (create / parent / attribute /
 -- point / show / hide). Forbidden in combat — callers defer this whole
--- function via the KT#5 primitive when InCombatLockdown(). Reads live
--- state so a deferred run at combat-end is still correct.
+-- function via the shared combat-deferral primitive when InCombatLockdown().
+-- Reads live state so a deferred run at combat-end is still correct.
 function IB:_applySecure(questID)
     if not getContainer() then return end
     local DB    = ns:GetSubsystem("DB")
@@ -98,6 +126,8 @@ function IB:_applySecure(questID)
         if b then
             b:Hide()
             b:ClearAllPoints()
+            b._questID    = nil
+            b._rangeTimer = nil
             self.buttons[questID] = nil
             pool[#pool + 1] = b
         end
@@ -108,6 +138,8 @@ function IB:_applySecure(questID)
         b = tremove(pool) or buildButton()
         self.buttons[questID] = b
     end
+    b._questID    = questID                              -- onRangeUpdate reads this
+    b._rangeTimer = 0                                    -- force a check on first tick
     b:SetAttribute("item", link)
     b:ClearAllPoints()
     -- Top-right corner of the block (title row is left-justified, so this

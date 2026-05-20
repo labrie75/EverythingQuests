@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.10] - 2026-05-19
+
+### Bug Fixes
+
+- **Quest item buttons are now clickable** — The new tracker item buttons added in 1.3.9 wouldn't actually use the item when clicked. They now work as intended (out of combat).
+
+### Improvements
+
+- **Out-of-range tint** — Quest item buttons in the tracker now tint red when their item is out of range, and return to normal as soon as you're close enough to use it.
+
 ## [1.3.9] - 2026-05-18
 
 ### New Features
