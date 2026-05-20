@@ -17,6 +17,16 @@ DB.defaults = {
             hideInInstances  = false,
             hideOnMapOpen    = false,
             autoTrackAccepted = true,
+            -- Quest dialog automation (handled by Modules/QuestAuto.lua).
+            -- Both default OFF — accepting / turning in quests for the
+            -- player is opinionated, so it's strictly opt-in.
+            autoAcceptQuests = false,
+            autoTurnInQuests = false,
+            -- Map auto-zoom (Modules/Tracker/MapAutoSwitch.lua). When ON,
+            -- opening the world map switches to the super-tracked quest's
+            -- zone. OFF by default — overriding the player's map view is
+            -- only desirable if they ask for it.
+            autoZoomToTrackedQuest = false,
         },
         tracker = {
             anchor = "TOPRIGHT",

@@ -5,6 +5,25 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.12] - 2026-05-19
+
+### New Features
+
+- **Auto-accept and auto-turn-in quests** — Two new toggles on the General tab let Everything Quests click through quest dialogs for you. Auto-accept accepts offered quests; auto-turn-in finishes quests whenever there's no reward to choose between (multi-choice reward screens stay open so you pick the item yourself). Hold **Alt** while talking to a quest-giver to pause automation for that interaction, or decline a quest manually to pause everything for 10 seconds.
+- **"Chain" button on the world map's quest details** — A small button next to Abandon: click it and the Chain Guide opens directly to that quest's chain, highlighting it. If the quest isn't in any chain Everything Quests knows about yet, a Wowhead link is printed in chat instead so the click is never dead.
+- **Flight master highlight** — Open a flight master and the taxi node closest to your focused quest's destination now glows gold, so you can spot the right one at a glance.
+- **Auto-zoom map** — Optional toggle on the General tab (off by default): opening the world map automatically switches it to your focused quest's zone. Stays put while you're already on a flight path.
+- **Skipped-quest markers in the Chain Guide** — If you've moved past a quest in a chain without finishing it, the Chain Guide flags it with an orange marker and a red ✕, plus a "N skipped" count at the top of the chain. Hover the marked quest for an explanation. Optional breadcrumb quests aren't flagged.
+
+### Bug Fixes
+
+- **Completion sound now fires for instant-complete quests** — Some quests (certain dailies, scenario step turn-ins, a few Midnight callings) finish without ever entering your quest log, so the completion sound was silently skipped. They're now caught from the chat message and play the sound like any other quest.
+
+### Improvements
+
+- **Live memory meter** — New `/eqs profile memhog` slash command opens a small draggable panel showing Everything Quests' current memory use and how fast that's changing in kB/s. Useful for the curious or for spotting allocation spikes during play. Type the same command again to hide it.
+- **Under-the-hood polish** — Tighter cleanup when tracker quest entries are recycled (invisible during play, but keeps memory healthier) and a new internal tooltip-reading helper for future features.
+
 ## [1.3.11] - 2026-05-19
 
 ### Improvements

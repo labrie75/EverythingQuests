@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.3.11"))
+    f.version:SetText("v" .. (ns.VERSION or "1.3.12"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -636,6 +636,10 @@ local function eqSlashHandler(msg)
         elseif rest == "reset" then
             Profiler:Reset()
             print("|cffEBB706EQ Profile|r reset")
+        elseif rest:match("^memhog") then
+            Profiler:ToggleMemHog()
+            print("|cffEBB706EQ Profile|r memhog "
+                  .. (Profiler.memhog and Profiler.memhog.active and "ON" or "OFF"))
         elseif rest:match("^mem%s+on") then
             Profiler:SetMemoryMode(true)
             print("|cffEBB706EQ Profile|r memory mode ON — collectgarbage forced at boundaries (expensive; toggle off when done)")
@@ -643,7 +647,7 @@ local function eqSlashHandler(msg)
             Profiler:SetMemoryMode(false)
             print("|cffEBB706EQ Profile|r memory mode OFF")
         else
-            print("|cffEBB706EQ Profile|r usage: /eqs profile [show | reset | mem on | mem off]")
+            print("|cffEBB706EQ Profile|r usage: /eqs profile [show | reset | mem on | mem off | memhog]")
         end
         return
     end

@@ -116,3 +116,125 @@ function Profiler:Show()
         print(line)
     end
 end
+
+-- ── In-game memory-hog meter ──────────────────────────────────────────
+-- A small on-screen widget that reports EQ's addon memory + the rolling
+-- kB/s allocation rate, sampled once per second. Catches allocation
+-- spikes the moment they happen (open a map, accept a quest) so you can
+-- correlate them with player actions. Off by default — toggle via
+-- `/eqs profile memhog`.
+--
+-- UpdateAddOnMemoryUsage is documented as relatively expensive; sampling
+-- once per second is fine, per-frame would not be. The frame is hidden
+-- when off, so OnUpdate doesn't fire and the meter costs nothing.
+
+local MEMHOG_INTERVAL_S = 1.0          -- seconds between samples
+local MEMHOG_BUFFER_N   = 5            -- rolling samples for the kB/s average
+
+Profiler.memhog = {
+    active      = false,
+    frame       = nil,
+    label       = nil,
+    lastMem     = 0,                   -- KB at last sample
+    lastTime    = 0,                   -- GetTime() at last sample
+    accumulated = 0,                   -- OnUpdate elapsed-sum accumulator
+    buf         = {},                  -- ring of recent kB/s samples
+    bufHead     = 1,                   -- next write index (1-based)
+    bufLen      = 0,                   -- entries valid in `buf` (until ring fills)
+}
+
+local _UpdateMem = (C_AddOns and C_AddOns.UpdateAddOnMemoryUsage) or UpdateAddOnMemoryUsage
+local _GetMem    = (C_AddOns and C_AddOns.GetAddOnMemoryUsage)    or GetAddOnMemoryUsage
+
+local function memhogTick(_, elapsed)
+    local mh = Profiler.memhog
+    mh.accumulated = mh.accumulated + elapsed
+    if mh.accumulated < MEMHOG_INTERVAL_S then return end
+    mh.accumulated = 0
+
+    if not (_UpdateMem and _GetMem and mh.label) then return end
+    _UpdateMem()
+    local mem = _GetMem("EverythingQuests") or 0
+    local now = GetTime()
+    local dt  = now - mh.lastTime
+    if mh.lastTime > 0 and dt > 0 then
+        local rate = (mem - mh.lastMem) / dt
+        mh.buf[mh.bufHead] = rate
+        mh.bufHead = (mh.bufHead % MEMHOG_BUFFER_N) + 1
+        if mh.bufLen < MEMHOG_BUFFER_N then mh.bufLen = mh.bufLen + 1 end
+
+        local sum = 0
+        for i = 1, mh.bufLen do sum = sum + (mh.buf[i] or 0) end
+        local avg = sum / mh.bufLen
+        -- IDE can't infer the deferred FontString assignment in
+        -- ensureMemHogFrame; the nil-guard above this loop already runs.
+        local label = mh.label                                                  ---@type any
+        if mem >= 1024 then
+            label:SetText(("EQ %+.1f kB/s | %.2f MB"):format(avg, mem / 1024))
+        else
+            label:SetText(("EQ %+.1f kB/s | %.0f KB"):format(avg, mem))
+        end
+    end
+    mh.lastMem  = mem
+    mh.lastTime = now
+end
+
+local function ensureMemHogFrame()
+    local mh = Profiler.memhog
+    if mh.frame then return mh.frame end
+
+    local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    f:SetSize(190, 26)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("HIGH")
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop",  f.StopMovingOrSizing)
+
+    f:SetBackdrop({
+        bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets   = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    f:SetBackdropColor(0, 0, 0, 0.80)
+
+    mh.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    mh.label:SetPoint("CENTER")
+    mh.label:SetText("EQ memhog: starting...")
+
+    f:SetScript("OnUpdate", memhogTick)
+    mh.frame = f
+    return f
+end
+
+function Profiler:StartMemHog()
+    if self.memhog.active then return end
+    local f = ensureMemHogFrame()
+    if not f then return end                                                -- defensive; ensureMemHogFrame always succeeds in practice
+    -- Reset state so the very first sample is "now" (no spurious huge
+    -- delta on the first tick).
+    if _UpdateMem and _GetMem then
+        _UpdateMem()
+        self.memhog.lastMem = _GetMem("EverythingQuests") or 0
+    end
+    self.memhog.lastTime    = GetTime()
+    self.memhog.accumulated = 0
+    self.memhog.bufLen      = 0
+    self.memhog.bufHead     = 1
+    f:Show()
+    self.memhog.active = true
+end
+
+function Profiler:StopMemHog()
+    if not self.memhog.active then return end
+    local f = self.memhog.frame
+    if f then f:Hide() end
+    self.memhog.active = false
+end
+
+function Profiler:ToggleMemHog()
+    if self.memhog.active then self:StopMemHog() else self:StartMemHog() end
+end

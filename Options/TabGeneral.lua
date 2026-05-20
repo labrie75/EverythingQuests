@@ -85,6 +85,24 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         autoGet, autoSet)
     auto:SetPoint("TOPLEFT", mapHide, "BOTTOMLEFT", 0, -2)
 
+    local autoAccGet, autoAccSet = generalSetting("autoAcceptQuests")
+    local autoAcc = Options:CreateCheckbox(content,
+        "Auto-accept quests  |cffaaaaaa(hold Alt to pause)|r",
+        autoAccGet, autoAccSet)
+    autoAcc:SetPoint("TOPLEFT", auto, "BOTTOMLEFT", 0, -2)
+
+    local autoTIGet, autoTISet = generalSetting("autoTurnInQuests")
+    local autoTI = Options:CreateCheckbox(content,
+        "Auto-turn-in quests  |cffaaaaaa(skips reward-choice screens)|r",
+        autoTIGet, autoTISet)
+    autoTI:SetPoint("TOPLEFT", autoAcc, "BOTTOMLEFT", 0, -2)
+
+    local zoomGet, zoomSet = generalSetting("autoZoomToTrackedQuest")
+    local zoom = Options:CreateCheckbox(content,
+        "Zoom world map to focused quest's zone  |cffaaaaaa(when you open the map)|r",
+        zoomGet, zoomSet)
+    zoom:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
+
     -- Minimap button — uses LibDBIcon's hide flag stored in db.char.minimap.
     local function mmGet()
         local DB = ns:GetSubsystem("DB")
@@ -100,7 +118,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         end
     end
     local mm = Options:CreateCheckbox(content, "Show minimap button", mmGet, mmSet)
-    mm:SetPoint("TOPLEFT", auto, "BOTTOMLEFT", 0, -2)
+    mm:SetPoint("TOPLEFT", zoom, "BOTTOMLEFT", 0, -2)
 
     -- ─── Reset profile button ───────────────────────────────────────────
     local reset = Options:CreateYellowButton(content, "Reset all settings", function()

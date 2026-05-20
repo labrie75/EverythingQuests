@@ -30,12 +30,20 @@ local CONNECTOR_PX   = 2
 -- every time the user clicks a chain or hits Back/Forward.
 local _metaParts = {}
 local _nodes     = {}
+local _resolved  = {}                            -- [i] = variation-resolved item
+local _statuses  = {}                            -- [i] = status key
+local _revConn   = {}                            -- [i] = list of items that depend on i
 
 local STATUS = {
     complete = { atlas = "common-icon-checkmark",                color = { 0.55, 0.55, 0.55 } },
     turnin   = { atlas = "QuestTurnin",                          color = { 1.00, 1.00, 1.00 } },
     active   = { atlas = "Quest-Available",                      color = { 1.00, 1.00, 1.00 } },
     pending  = { atlas = nil,                                    color = { 0.78, 0.78, 0.78 } },
+    -- Skipped breadcrumb: this item is still pending but a quest that
+    -- *depends* on it is already active or completed, so the player passed
+    -- over it. Orange to draw the eye, no atlas required (a tinted title
+    -- + meta-line "N skipped" carry the signal).
+    skipped  = { atlas = "common-icon-redx",                     color = { 1.00, 0.65, 0.00 } },
     chainnav = { atlas = "Garr_LevelUpgradeArrow",               color = { 0.92, 0.72, 0.02 } },
     locked   = { atlas = nil,                                    color = { 0.45, 0.45, 0.45 } },
 }
@@ -199,6 +207,10 @@ local function buildQuestTooltip(item, statusKey)
         GameTooltip:AddLine("Ready to turn in", 1, 0.82, 0)
     elseif statusKey == "active" then
         GameTooltip:AddLine("In your quest log", 1, 1, 1)
+    elseif statusKey == "skipped" then
+        GameTooltip:AddLine("Skipped", 1.0, 0.65, 0.0)
+        GameTooltip:AddLine("A later quest in this chain has already passed this one.", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine("May be worth going back to pick up.", 0.7, 0.7, 0.7, true)
     else
         GameTooltip:AddLine("Not started", 0.7, 0.7, 0.7)
     end
@@ -301,21 +313,20 @@ function CV:Render(pane, chain)
     if QLS then QLS:EnsureChainItems(chain) end
     Database:NormalizeChain(chain)
 
-    pane._cvHeader:SetText(chain.name or "Chain")
-    local complete, active, total = Characters:ChainProgress(chain)
-    wipe(_metaParts)
-    if chain.range then
-        _metaParts[#_metaParts + 1] = ("Level %d–%d"):format(chain.range[1], chain.range[2])
-    end
-    if total > 0 then
-        _metaParts[#_metaParts + 1] = ("%d/%d done"):format(complete, total)
-        if active > 0 then _metaParts[#_metaParts + 1] = ("%d active"):format(active) end
-    end
-    pane._cvMeta:SetText(table.concat(_metaParts, "  •  "))
-    pane._cvMeta:SetTextColor(0.75, 0.75, 0.75)
-
     local items = chain.items
     if not items or #items == 0 then
+        pane._cvHeader:SetText(chain.name or "Chain")
+        local complete, active, total = Characters:ChainProgress(chain)
+        wipe(_metaParts)
+        if chain.range then
+            _metaParts[#_metaParts + 1] = ("Level %d–%d"):format(chain.range[1], chain.range[2])
+        end
+        if total > 0 then
+            _metaParts[#_metaParts + 1] = ("%d/%d done"):format(complete, total)
+            if active > 0 then _metaParts[#_metaParts + 1] = ("%d active"):format(active) end
+        end
+        pane._cvMeta:SetText(table.concat(_metaParts, "  •  "))
+        pane._cvMeta:SetTextColor(0.75, 0.75, 0.75)
         pane._cvCanvas:SetSize(1, 1)
         pane._cvEmpty:Show()
         return
@@ -325,13 +336,80 @@ function CV:Render(pane, chain)
     local cols, rows, maxCol, maxRow = computeLayout(items)
     local char = Database:CurrentCharacter()
 
+    -- ── First pass: resolve variations and compute every item's status.
+    -- Done up front so we can detect "skipped breadcrumbs" before any node
+    -- renders — a status discovered in the second loop would be too late
+    -- to influence the meta-line "N skipped" badge.
+    wipe(_resolved)
+    wipe(_statuses)
+    for i = 1, #items do
+        local resolved = Database:GetVariation(items[i], char)
+        _resolved[i] = resolved
+        if resolved.type == "chain" then
+            _statuses[i] = "chainnav"
+        else
+            _statuses[i] = statusForQuestItem(resolved, Characters)
+        end
+    end
+
+    -- ── Skip detection: an item is "skipped" if it's still pending AND
+    -- some item that depends on it (i.e. lists it as a prereq via
+    -- `connections`) is already active or completed. Breadcrumb-flagged
+    -- items are excluded because they're declared optional in the data.
+    -- The reverse-connection table is rebuilt per render; cheap for the
+    -- size of a single chain and only fires on chain-detail clicks.
+    wipe(_revConn)
+    for j = 1, #items do
+        local jt = items[j]
+        if jt.connections then
+            for _, src in ipairs(jt.connections) do
+                local list = _revConn[src]
+                if not list then list = {}; _revConn[src] = list end
+                list[#list + 1] = j
+            end
+        end
+    end
+    local skippedCount = 0
+    for i = 1, #items do
+        if _statuses[i] == "pending" and not _resolved[i].breadcrumb then
+            local consumers = _revConn[i]
+            if consumers then
+                for k = 1, #consumers do
+                    local s = _statuses[consumers[k]]
+                    if s == "complete" or s == "turnin" or s == "active" then
+                        _statuses[i] = "skipped"
+                        skippedCount = skippedCount + 1
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    -- Meta line now that we know the skip count.
+    pane._cvHeader:SetText(chain.name or "Chain")
+    local complete, active, total = Characters:ChainProgress(chain)
+    wipe(_metaParts)
+    if chain.range then
+        _metaParts[#_metaParts + 1] = ("Level %d–%d"):format(chain.range[1], chain.range[2])
+    end
+    if total > 0 then
+        _metaParts[#_metaParts + 1] = ("%d/%d done"):format(complete, total)
+        if active > 0 then _metaParts[#_metaParts + 1] = ("%d active"):format(active) end
+        if skippedCount > 0 then
+            _metaParts[#_metaParts + 1] = ("|cffff9933%d skipped|r"):format(skippedCount)
+        end
+    end
+    pane._cvMeta:SetText(table.concat(_metaParts, "  •  "))
+    pane._cvMeta:SetTextColor(0.75, 0.75, 0.75)
+
     -- Place nodes. _nodes is a module-scoped scratch array mapping
     -- items[] index → node frame, used by the connector loop below to
     -- look up endpoints. Wiped instead of reallocated each render.
     wipe(_nodes)
     local nodes = _nodes
     for i = 1, #items do
-        local resolved = Database:GetVariation(items[i], char)
+        local resolved = _resolved[i]
         local node = acquireNode(pane._cvCanvas)
         node:SetPoint("TOPLEFT", pane._cvCanvas, "TOPLEFT",
             cols[i] * (CELL_W + CELL_GAP_X),
@@ -353,7 +431,7 @@ function CV:Render(pane, chain)
                 C_QuestLog.RequestLoadQuestByID(resolved.id)
             end
             title = resolved.name or cached or ("Quest #" .. tostring(resolved.id))
-            statusKey = statusForQuestItem(resolved, Characters)
+            statusKey = _statuses[i]
         end
 
         node.title:SetText(title)

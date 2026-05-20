@@ -2,7 +2,7 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.3.11
+## Version: 1.3.12
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
@@ -42,6 +42,7 @@ Core\Profiler.lua
 Core\Cache.lua
 Core\Util.lua
 Core\Media.lua
+Core\TooltipScan.lua
 
 # ─── Modules (subsystems must exist before Data/* registers into them) ─
 Modules\Minimap\Minimap.lua
@@ -59,6 +60,8 @@ Modules\Tracker\Events.lua
 Modules\Tracker\QuestSound.lua
 Modules\Tracker\Visibility.lua
 Modules\Tracker\ItemButtons.lua
+Modules\Tracker\TaxiHighlight.lua
+Modules\Tracker\MapAutoSwitch.lua
 
 Modules\WorldQuests\Rewards.lua
 Modules\WorldQuests\Tooltip.lua
@@ -78,10 +81,13 @@ Modules\ChainGuide\Waypoint.lua
 Modules\ChainGuide\ChainView.lua
 Modules\ChainGuide\Characters.lua
 Modules\ChainGuide\History.lua
+Modules\ChainGuide\QuestMapButton.lua
 
 Modules\MapPOI\Pin.lua
 Modules\MapPOI\Pin.xml
 Modules\MapPOI\Provider.lua
+
+Modules\QuestAuto.lua
 
 # ─── Data (registers chain definitions into ChainGuideDatabase) ────────
 Data\RewardIcons.lua

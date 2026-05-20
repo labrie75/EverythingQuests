@@ -420,9 +420,31 @@ function Blocks:Sweep()
         b:Hide()
         b:ClearAllPoints()
         b:SetParent(nil)
+        -- Selective pool-release contract: keep all child frames + textures
+        -- (so the pooled block is ready to repopulate without rebuilding),
+        -- but null EVERY quest-data + per-render-snapshot field so a
+        -- pooled-then-reused block can't leak prior state into the next
+        -- quest's render. Adding a new _r* render-input field to RenderQuest?
+        -- Add it to this list too.
         b.questID = nil
-        b._rID    = nil          -- guarantees a full render if this block
-                                 -- is ever reused for a future quest
+        b._used   = false
+        b._rID    = nil          -- _rID nil also guarantees a full render
+        b._rGen   = nil
+        b._rTitle = nil
+        b._rDone  = nil
+        b._rLevel = nil
+        b._rClass = nil
+        b._rZone  = nil
+        b._rPin   = nil
+        b._rFoc   = nil
+        b._rSimp  = nil
+        b._rWidth = nil
+        b._rObjN  = nil
+        -- _rObjT / _rObjF: kept as scratch arrays. RenderQuest overwrites
+        -- indices 1..nObj before they're read; indices past nObj are never
+        -- consulted.
+        -- _fontGen: kept; tracks the global font generation independent of
+        -- which quest this block is currently assigned to.
         self.byID[qid] = nil
         self.pool[#self.pool + 1] = b
         s[i] = nil
