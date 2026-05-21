@@ -25,6 +25,26 @@ local DD = ns:RegisterSubsystem("TrackerDragDrop", {})
 DD.dragQuestID = nil
 DD.dropIndex   = nil
 
+-- Canonical "throttled OnUpdate" pattern for the addon. WoW fires OnUpdate
+-- every visual frame (60+/s on modern hardware), but most per-frame work
+-- only needs to run a handful of times per second to look smooth. We
+-- accumulate `elapsed` into a file-scope counter and only run the real
+-- handler when the accumulator crosses the throttle threshold — one
+-- number, zero per-frame allocation, no closures created in the hot path.
+-- 30 Hz is below the visible cursor-lag threshold for dragging.
+local GHOST_THROTTLE_S = 1/30
+local _ghostAccum      = 0
+
+-- Hoisted to module scope: defining `function() DD:UpdateDragVisuals() end`
+-- inside OnBlockDragStart would allocate a fresh closure per drag-start.
+-- One handler reused across every drag instead.
+local function ghostOnUpdate(_, elapsed)
+    _ghostAccum = _ghostAccum + elapsed
+    if _ghostAccum < GHOST_THROTTLE_S then return end
+    _ghostAccum = 0
+    DD:UpdateDragVisuals()
+end
+
 -- ─── Ghost / indicator factories ───────────────────────────────────────
 local function ensureGhost()
     if DD.ghost then return DD.ghost end
@@ -87,9 +107,10 @@ function DD:OnBlockDragStart(block)
 
     ensureIndicator():Show()
 
-    -- Use OnUpdate on the ghost to track cursor + recompute drop target each
-    -- frame. Cheap: a few GetTop/GetBottom calls and a SetPoint.
-    g:SetScript("OnUpdate", function() DD:UpdateDragVisuals() end)
+    -- Throttled OnUpdate (see GHOST_THROTTLE_S comment up top). Reset the
+    -- accumulator so the first tick of this drag fires promptly.
+    _ghostAccum = 0
+    g:SetScript("OnUpdate", ghostOnUpdate)
 end
 
 function DD:UpdateDragVisuals()

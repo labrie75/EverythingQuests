@@ -1,0 +1,567 @@
+-- Modules/History/Recorder.lua
+-- Quest history data layer. Records turn-ins on QUEST_TURNED_IN into a
+-- single account-wide SavedVariable (`EverythingQuestsHistory`), tagged
+-- with the recording character so cross-character views can pivot.
+--
+-- Entries use short field names to keep SV size down (a fully-cap'd 5000
+-- entries is still under ~500 KB):
+--     q = questID         (number)
+--     t = epoch seconds   (server time; 0 means "unknown" — backfilled)
+--     n = quest title     (cached at record-time; may be nil on backfill)
+--     c = "Name-Realm"    (character that turned it in)
+--     z = zone name       (player's zone at turn-in; nil on backfill)
+--     k = classification  (Enum.QuestClassification; nil if unknown)
+--
+-- Retention: rolling window per the configured cap (default 5000). When
+-- the array overflows, oldest entries are shifted out. 0 = unlimited.
+--
+-- Backfill is opt-in via the "Populate from past completions" button on
+-- the History options tab. Backfilled entries carry t=0 so the UI can
+-- show them as "(date unknown)".
+
+local _, ns = ...
+
+local R = ns:RegisterSubsystem("History", {})
+
+-- Cached "Name-Realm" key for the current character. Realm names with
+-- spaces (e.g. "Wyrmrest Accord") survive untouched — we don't strip them.
+local _charKey
+local function charKey()
+    if _charKey then return _charKey end
+    local name  = UnitName and UnitName("player") or "?"
+    local realm = GetRealmName and GetRealmName() or "?"
+    _charKey = name .. "-" .. realm
+    return _charKey
+end
+
+local function ensureSV()
+    _G.EverythingQuestsHistory = _G.EverythingQuestsHistory or {}
+    local sv = _G.EverythingQuestsHistory
+    sv.entries        = sv.entries        or {}
+    sv.charBackfilled = sv.charBackfilled or {}
+    return sv
+end
+
+local function enabled()
+    local DB = ns:GetSubsystem("DB")
+    return not DB or DB.db.profile.history.enabled ~= false
+end
+
+local function retention()
+    local DB = ns:GetSubsystem("DB")
+    local n = DB and DB.db.profile.history.retention
+    return tonumber(n) or 5000                                            -- 0 = unlimited
+end
+
+function R:OnInitialize()
+    self.sv = ensureSV()
+    -- Runtime "questID → latest timestamp" cache for fast lookups (chain
+    -- guide tooltip calls this on hover). Built once at init, updated
+    -- incrementally on Record / Backfill / Wipe so it never needs a full
+    -- SV walk after warmup.
+    self._completion = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        self:_updateCompletion(entries[i].q, entries[i].t or 0)
+    end
+    -- Runtime "Blizzard told us no data exists" set. QUEST_DATA_LOAD_RESULT
+    -- with success=false means the server has no data for this questID on
+    -- this client (retired/internal/promotional IDs); requesting it again
+    -- just wastes a slot in the throttled load burst. Session-scoped only:
+    -- a /reload re-tries everything in case the player has logged into a
+    -- character that does have access to those quests.
+    self._giveUp = {}
+end
+
+-- Title resolver: tries multiple Blizzard APIs in order. GetTitleForQuestID
+-- is the primary source, but it sometimes returns nil for entries that
+-- QuestUtils_GetQuestName or C_TaskQuest can resolve (world quests,
+-- partially-cached entries, race conditions where the data has loaded but
+-- the title hasn't been promoted to the lookup table yet). Returns nil
+-- only when EVERY source comes up empty.
+local function resolveTitle(qid)
+    if not qid then return nil end
+    if C_QuestLog and C_QuestLog.GetTitleForQuestID then
+        local t = C_QuestLog.GetTitleForQuestID(qid)
+        if t and t ~= "" then return t end
+    end
+    if QuestUtils_GetQuestName then
+        local t = QuestUtils_GetQuestName(qid)
+        if t and t ~= "" then return t end
+    end
+    if C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID then
+        local t = C_TaskQuest.GetQuestInfoByQuestID(qid)
+        if t and t ~= "" then return t end
+    end
+    return nil
+end
+R._resolveTitle = resolveTitle                                                -- exposed for tests / dev tooling
+
+function R:_updateCompletion(qid, t)
+    if not qid then return end
+    local cur = self._completion[qid]
+    -- Latest real timestamp wins; a real time replaces a t=0 backfill;
+    -- a t=0 backfill only fills if there's no entry at all.
+    if not cur or (t > 0 and t > cur) or (cur == 0 and t > 0) then
+        self._completion[qid] = t
+    end
+end
+
+-- O(1) lookup for the Chain Guide tooltip and other cross-references.
+-- Returns nil if the quest isn't in history, 0 if it's backfilled
+-- (no date known), or a positive epoch if it has a real completion time.
+function R:GetCompletionTime(questID)
+    return self._completion and self._completion[questID]
+end
+
+function R:OnEnable()
+    local Events = ns:GetSubsystem("Events")
+    if not Events then return end
+    Events:On("QUEST_TURNED_IN", function(_, questID, xpReward, moneyReward)
+        if not enabled() then return end
+        self:Record(questID, xpReward, moneyReward)
+    end)
+    -- Async title-fill: whenever Blizzard returns data for a quest we
+    -- asked about, look for any history entry missing its title and fill
+    -- it in. Re-render is debounced so a batch of fills coalesces into
+    -- one paint. success=false means the server has no data for this
+    -- questID — mark it so we don't re-queue it on the next Open.
+    Events:On("QUEST_DATA_LOAD_RESULT", function(_, questID, success)
+        if success then
+            self:_fillTitle(questID)
+        elseif questID then
+            self._giveUp[questID] = true
+        end
+    end)
+end
+
+-- Look up the now-cached title for a quest and patch every history entry
+-- that's missing one. Debounced re-render keeps a flood of QUEST_DATA_
+-- LOAD_RESULT events from re-rendering the History window per fill.
+-- Title lookup uses resolveTitle so it tries every available API, not just
+-- the primary one — fixes a class of "data loaded but GetTitleForQuestID
+-- still nil" races that otherwise leave entries blank forever.
+function R:_fillTitle(questID)
+    local title = resolveTitle(questID)
+    if not title then return end
+    local touched = false
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        local e = entries[i]
+        if e.q == questID and (not e.n or e.n == "") then
+            e.n = title
+            touched = true
+        end
+    end
+    if touched and not self._rerenderPending then
+        self._rerenderPending = true
+        C_Timer.After(0.5, function()
+            self._rerenderPending = false
+            local HF = ns:GetSubsystem("HistoryFrame")
+            if HF and HF.Render then HF:Render() end
+        end)
+    end
+end
+
+-- Final sweep: walk every nil-name entry and try resolveTitle once more.
+-- Catches data that arrived between requests (e.g. from QUEST_LOG_UPDATE
+-- triggered by an unrelated quest action) but whose questIDs we never
+-- explicitly waited on. Cheap (~O(N) scan, no allocations beyond the
+-- render flag), and only fires when there's something to sweep.
+function R:SweepTitles()
+    local entries = self.sv.entries
+    local touched = false
+    for i = 1, #entries do
+        local e = entries[i]
+        if e.q and (not e.n or e.n == "") then
+            local t = resolveTitle(e.q)
+            if t then e.n = t; touched = true end
+        end
+    end
+    if touched then
+        local HF = ns:GetSubsystem("HistoryFrame")
+        if HF and HF.Render then HF:Render() end
+    end
+    return touched
+end
+
+-- Title-load queue. Backfilled (and some long-ago) entries arrive with no
+-- title because Blizzard hasn't cached the quest data on this client yet.
+-- We ask the server to load each missing one — throttled to avoid a
+-- spammy burst when a fresh backfill produces hundreds at once. The
+-- responses flow back through QUEST_DATA_LOAD_RESULT → _fillTitle.
+local _titleQueue = {}
+local _titleTimer
+
+function R:RequestMissingTitles()
+    if not (C_QuestLog and C_QuestLog.RequestLoadQuestByID) then return 0 end
+    -- Before queuing new requests, sweep with resolveTitle — many entries
+    -- now have data in the client cache (loaded for unrelated reasons) and
+    -- can be filled without spending a server round-trip slot.
+    self:SweepTitles()
+    wipe(_titleQueue)
+    local seen = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        local e = entries[i]
+        if e.q and (not e.n or e.n == "")
+           and not seen[e.q] and not self._giveUp[e.q] then
+            seen[e.q] = true
+            _titleQueue[#_titleQueue + 1] = e.q
+        end
+    end
+    local n = #_titleQueue
+    if n > 0 then self:_pumpTitles() end
+    return n
+end
+
+-- Throttled batch loader. Burst rate was originally 25 per 0.25s (~100/s);
+-- Blizzard's quest-data load API silently drops requests under that kind
+-- of pressure, leaving entries unresolved forever. 10 per 0.3s (~33/s) is
+-- well under any observed drop threshold and still drains 2-3K entries in
+-- well under two minutes.
+function R:_pumpTitles()
+    if not (C_QuestLog and C_QuestLog.RequestLoadQuestByID) then return end
+    local BATCH = 10
+    local fired = 0
+    while #_titleQueue > 0 and fired < BATCH do
+        local qid = tremove(_titleQueue)
+        C_QuestLog.RequestLoadQuestByID(qid)
+        fired = fired + 1
+    end
+    if #_titleQueue > 0 then
+        if not _titleTimer then
+            _titleTimer = C_Timer.NewTimer(0.3, function()
+                _titleTimer = nil
+                self:_pumpTitles()
+            end)
+        end
+    else
+        -- Queue drained. Give the in-flight QUEST_DATA_LOAD_RESULT events
+        -- a few seconds to land, then sweep one more time so any data
+        -- that arrived for IDs we'd already burned through gets picked up.
+        C_Timer.After(3, function() self:SweepTitles() end)
+    end
+end
+
+function R:Record(questID, xpReward, moneyReward)
+    if not questID then return end
+    local entry = {
+        q = questID,
+        t = (GetServerTime and GetServerTime()) or time(),
+        n = resolveTitle(questID),
+        c = charKey(),
+        z = (GetZoneText and GetZoneText()) or nil,
+        k = (C_QuestInfoSystem and C_QuestInfoSystem.GetQuestClassification
+             and C_QuestInfoSystem.GetQuestClassification(questID))
+            or (C_QuestLog and C_QuestLog.GetQuestClassification
+                and C_QuestLog.GetQuestClassification(questID)) or nil,
+    }
+    -- Reward fields — added in the reward-tracking pass. Stored only when
+    -- non-zero so SV stays compact and old/backfilled entries that lack
+    -- this data simply don't have the keys.
+    if xpReward    and xpReward    > 0 then entry.xp = xpReward    end
+    if moneyReward and moneyReward > 0 then entry.m  = moneyReward end
+
+    local entries = self.sv.entries
+    entries[#entries + 1] = entry
+    self:_updateCompletion(entry.q, entry.t)
+    self:_enforceRetention()
+end
+
+-- Drop oldest entries when over the cap. Append-only writes keep oldest
+-- at index 1, so we just shift the tail down.
+function R:_enforceRetention()
+    local cap = retention()
+    if cap <= 0 then return end
+    local entries = self.sv.entries
+    local n = #entries
+    if n <= cap then return end
+    local drop = n - cap
+    for i = 1, cap do
+        entries[i] = entries[i + drop]
+    end
+    for i = cap + 1, n do
+        entries[i] = nil
+    end
+end
+
+-- Walk Blizzard's "all completed quests" API and record what we don't
+-- already have for this character. Used by the manual "Populate from past
+-- completions" button. Backfilled entries carry t=0; we never overwrite
+-- a real recorded entry. Returns the count added.
+function R:Backfill()
+    local key = charKey()
+    local got
+    if C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs then
+        got = C_QuestLog.GetAllCompletedQuestIDs()
+    end
+    if not got then return 0 end
+
+    -- Build a seen-set of this character's existing questIDs to avoid
+    -- duplicates from a prior backfill or new turn-ins since.
+    local seen = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        local e = entries[i]
+        if e.c == key then seen[e.q] = true end
+    end
+
+    local added = 0
+    for i = 1, #got do
+        local qid = got[i]
+        if not seen[qid] then
+            entries[#entries + 1] = {
+                q = qid,
+                t = 0,
+                n = resolveTitle(qid),
+                c = key,
+            }
+            self:_updateCompletion(qid, 0)
+            added = added + 1
+        end
+    end
+    self.sv.charBackfilled[key] = true
+    self:_enforceRetention()
+    return added
+end
+
+function R:IsBackfilled()
+    return self.sv.charBackfilled[charKey()] == true
+end
+
+function R:Wipe()
+    self.sv.entries        = {}
+    self.sv.charBackfilled = {}
+    self._completion       = {}
+end
+
+function R:CurrentCharacter()
+    return charKey()
+end
+
+-- Unique character keys present in history, sorted alphabetically.
+function R:GetCharacters()
+    local set = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do set[entries[i].c] = true end
+    local list = {}
+    for k in pairs(set) do list[#list + 1] = k end
+    table.sort(list)
+    return list
+end
+
+-- Map Enum.QuestClassification → short bucket name. Anything not in the
+-- table buckets as "other". Built once at file load; defensive against
+-- builds where a particular Enum entry is missing.
+local CLASS_BUCKET = {}
+do
+    local QC = Enum and Enum.QuestClassification or {}
+    if QC.Campaign   then CLASS_BUCKET[QC.Campaign]   = "campaign"   end
+    if QC.Questline  then CLASS_BUCKET[QC.Questline]  = "questline"  end
+    if QC.Calling    then CLASS_BUCKET[QC.Calling]    = "calling"    end
+    if QC.Recurring  then CLASS_BUCKET[QC.Recurring]  = "recurring"  end
+    if QC.WorldQuest then CLASS_BUCKET[QC.WorldQuest] = "worldquest" end
+end
+local function bucketOf(k)
+    return (k and CLASS_BUCKET[k]) or "other"
+end
+
+-- Filter shape (all fields optional):
+--   search          : substring of title (case-insensitive)
+--   char            : "Name-Realm" | "all" | nil
+--   dateRange       : "all" | "today" | "7d" | "30d"
+--   classification  : "all" | "campaign" | "questline" | "calling"
+--                       | "recurring" | "worldquest" | "other"
+--   hideBackfilled  : true to exclude entries with t == 0
+-- Returns array of entries matching filter, NEWEST FIRST. Allocates one
+-- fresh result table per call (click-driven; not a hot path).
+function R:Query(filter)
+    local entries = self.sv.entries
+    local out = {}
+
+    local search = filter and filter.search
+    if search and search ~= "" then search = search:lower() else search = nil end
+    local wantChar = filter and filter.char
+    if wantChar == "all" or wantChar == "" then wantChar = nil end
+    local hideBackfilled = filter and filter.hideBackfilled and true or false
+    local wantClass = filter and filter.classification
+    if wantClass == "all" or wantClass == "" or wantClass == nil then wantClass = nil end
+
+    -- Date range → min acceptable timestamp.
+    local minTime = 0
+    local dateRange = filter and filter.dateRange
+    if dateRange and dateRange ~= "all" then
+        local now = (GetServerTime and GetServerTime()) or time()
+        if dateRange == "today" then
+            minTime = math.floor(now / 86400) * 86400      -- UTC midnight today
+        elseif dateRange == "7d" then
+            minTime = now - 7  * 86400
+        elseif dateRange == "30d" then
+            minTime = now - 30 * 86400
+        end
+    end
+
+    for i = #entries, 1, -1 do
+        local e = entries[i]
+        local ok = true
+        if wantChar and e.c ~= wantChar then ok = false end
+        if ok and search then
+            local n = e.n
+            if not (n and n:lower():find(search, 1, true)) then ok = false end
+        end
+        if ok and hideBackfilled and (not e.t or e.t == 0) then ok = false end
+        if ok and minTime > 0 then
+            if not e.t or e.t < minTime then ok = false end
+        end
+        if ok and wantClass then
+            if bucketOf(e.k) ~= wantClass then ok = false end
+        end
+        if ok then out[#out + 1] = e end
+    end
+    return out
+end
+
+-- Account-wide daily streak: consecutive UTC-day numbers ending at today
+-- (today OR yesterday counts as "still alive" since a player may not have
+-- played yet today). Backfilled entries (t=0) are excluded — they have no
+-- day to attribute. Returns { current, best, total } where total = entries
+-- with a real timestamp.
+function R:Streak()
+    local entries = self.sv.entries
+    if #entries == 0 then return { current = 0, best = 0, total = 0 } end
+
+    local days = {}
+    local datedCount = 0
+    for i = 1, #entries do
+        local t = entries[i].t
+        if t and t > 0 then
+            local d = math.floor(t / 86400)
+            if not days[d] then days[d] = true end
+            datedCount = datedCount + 1
+        end
+    end
+
+    -- Sorted descending
+    local list = {}
+    for d in pairs(days) do list[#list + 1] = d end
+    table.sort(list, function(a, b) return a > b end)
+    if #list == 0 then return { current = 0, best = 0, total = datedCount } end
+
+    local today = math.floor(((GetServerTime and GetServerTime()) or time()) / 86400)
+
+    -- Current run, anchored at today or yesterday.
+    local current = 0
+    if list[1] == today or list[1] == today - 1 then
+        current = 1
+        local prev = list[1]
+        for i = 2, #list do
+            if list[i] == prev - 1 then
+                current = current + 1
+                prev = list[i]
+            else
+                break
+            end
+        end
+    end
+
+    -- Best run anywhere in history.
+    local best, run = 0, 1
+    for i = 2, #list do
+        if list[i] == list[i - 1] - 1 then
+            run = run + 1
+        else
+            if run > best then best = run end
+            run = 1
+        end
+    end
+    if run > best then best = run end
+    if current > best then best = current end
+
+    return { current = current, best = best, total = datedCount }
+end
+
+-- Returns the runtime completion map { [questID] = epoch (0 if backfilled) }
+-- built and maintained at OnInitialize / Record / Backfill / Wipe. Callers
+-- MUST NOT mutate the returned table.
+function R:CompletionMap()
+    return self._completion
+end
+
+function R:EntryCount()
+    return #self.sv.entries
+end
+
+-- Reward aggregates for the Totals tab. Single O(N) walk that fills:
+--   totalCount  — every entry counts, even old/backfilled ones
+--   totalXP     — sum of xp across entries that have it
+--   totalMoney  — sum of money (copper) across entries that have it
+--   byChar      — [Name-Realm] = { count, xp, money } per character
+--   topGold     — entry with the largest single-quest money reward
+--   topXP       — entry with the largest single-quest XP reward
+-- Allocates fresh result tables per call (click-driven; not hot).
+function R:Totals()
+    local entries = self.sv.entries
+    local totalCount, totalXP, totalMoney = 0, 0, 0
+    local byChar = {}
+    local topGold, topXP
+
+    for i = 1, #entries do
+        local e = entries[i]
+        totalCount = totalCount + 1
+
+        local c = e.c or "?"
+        local rec = byChar[c]
+        if not rec then
+            rec = { count = 0, xp = 0, money = 0 }
+            byChar[c] = rec
+        end
+        rec.count = rec.count + 1
+
+        local xp = e.xp
+        if xp and xp > 0 then
+            totalXP = totalXP + xp
+            rec.xp  = rec.xp  + xp
+            if not topXP or xp > (topXP.xp or 0) then topXP = e end
+        end
+        local m = e.m
+        if m and m > 0 then
+            totalMoney = totalMoney + m
+            rec.money  = rec.money  + m
+            if not topGold or m > (topGold.m or 0) then topGold = e end
+        end
+    end
+
+    return {
+        totalCount = totalCount,
+        totalXP    = totalXP,
+        totalMoney = totalMoney,
+        byChar     = byChar,
+        topGold    = topGold,
+        topXP      = topXP,
+    }
+end
+
+-- Day-bucketed counts for the Activity heatmap. Returns:
+--   counts  — { [dayNumber] = quests turned in that day }
+--   today   — today's day number (UTC-day = epoch / 86400, floored)
+--   minDay  — oldest day in the window (today - daysBack + 1)
+-- Backfilled entries (t == 0) are excluded — they have no day to attribute.
+function R:DayCounts(daysBack)
+    daysBack = daysBack or 90
+    local now = (GetServerTime and GetServerTime()) or time()
+    local today = math.floor(now / 86400)
+    local minDay = today - daysBack + 1
+    local counts = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        local t = entries[i].t
+        if t and t > 0 then
+            local d = math.floor(t / 86400)
+            if d >= minDay and d <= today then
+                counts[d] = (counts[d] or 0) + 1
+            end
+        end
+    end
+    return counts, today, minDay
+end

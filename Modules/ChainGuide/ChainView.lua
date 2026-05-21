@@ -215,6 +215,22 @@ local function buildQuestTooltip(item, statusKey)
         GameTooltip:AddLine("Not started", 0.7, 0.7, 0.7)
     end
     GameTooltip:AddLine("ID: " .. tostring(item.id), 0.5, 0.5, 0.5)
+
+    -- Cross-link from the Quest History recorder: when did the player
+    -- finish this one? Fast lookup; the History subsystem maintains the
+    -- map incrementally so this hover doesn't walk the SV.
+    local R = ns:GetSubsystem("History")
+    if R and R.GetCompletionTime then
+        local t = R:GetCompletionTime(item.id)
+        if t then
+            if t > 0 then
+                GameTooltip:AddLine("Completed: " .. date("%Y-%m-%d %H:%M", t), 0.55, 0.85, 0.55)
+            else
+                GameTooltip:AddLine("Completed (before tracking)", 0.55, 0.85, 0.55)
+            end
+        end
+    end
+
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Shift-click to link in chat", 0.6, 0.6, 0.6)
     GameTooltip:Show()

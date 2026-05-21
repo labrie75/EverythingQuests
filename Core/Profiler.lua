@@ -89,6 +89,109 @@ function Profiler:Reset()
     -- be ignored by Stop (the `a.cpu` nil-check).
 end
 
+-- ── Auto-instrument: wrap subsystem methods in place ──────────────────
+-- `Profiler:Wrap("Tracker", "Render")` replaces Tracker.Render with a
+-- function that does Start("Tracker:Render"), calls the original, then
+-- Stop("Tracker:Render"). Idempotent — wrapping the same method twice is
+-- a no-op. AutoInstrument(true) wraps everything in HOT_PATHS at once;
+-- AutoInstrument(false) restores every original.
+--
+-- The `done(original(...))` trick passes through arbitrary return values
+-- (including nils) intact, which `{ original(...) }` + `unpack` would
+-- mangle. If the wrapped method errors, Stop is skipped and the error
+-- bubbles unchanged; the next Start on that tag simply overwrites the
+-- abandoned sample, so the profiler self-heals without try/catch noise.
+
+Profiler._wrapped = {}                   -- [key] = { tbl, method, original }
+
+local function tableHasMethod(tbl, name)
+    return tbl and type(tbl[name]) == "function"
+end
+
+function Profiler:Wrap(subsystemName, methodName)
+    local tbl = ns:GetSubsystem(subsystemName)
+    if not tableHasMethod(tbl, methodName) then return false end
+
+    local key = subsystemName .. "." .. methodName
+    if self._wrapped[key] then return true end                              -- already wrapped
+
+    local original = tbl[methodName]
+    local tag      = subsystemName .. ":" .. methodName
+    local prof     = self
+    tbl[methodName] = function(...)
+        prof:Start(tag)
+        local function done(...) prof:Stop(tag); return ... end
+        return done(original(...))
+    end
+    self._wrapped[key] = { tbl = tbl, method = methodName, original = original }
+    return true
+end
+
+function Profiler:Unwrap(subsystemName, methodName)
+    local key = subsystemName .. "." .. methodName
+    local rec = self._wrapped[key]
+    if not rec then return false end
+    rec.tbl[rec.method] = rec.original
+    self._wrapped[key]  = nil
+    return true
+end
+
+-- Curated list of subsystem methods worth measuring. Picked for being
+-- on a frequently-traveled rebuild path (Tracker render, WQ refresh,
+-- Chain Guide render, History query/render). Refreshing this list is
+-- the right knob to expose more or fewer measurements at once; manual
+-- Profiler:Start/Stop pairs in code still work alongside this.
+Profiler.HOT_PATHS = {
+    { "Tracker",         "Render"        },
+    { "Tracker",         "Refresh"       },
+    { "TrackerBlocks",   "RenderQuest"   },
+    { "TrackerBlocks",   "Sweep"         },
+    { "TrackerScenario", "Refresh"       },
+    { "WQSummary",       "Refresh"       },
+    { "WQWorldMap",      "Refresh"       },
+    { "WQZoneMap",       "Refresh"       },
+    { "ChainGuide",      "RenderCurrent" },
+    { "ChainGuideView",  "Render"        },
+    { "HistoryFrame",    "Render"        },
+    { "History",         "Query"         },
+    { "History",         "Totals"        },
+}
+
+function Profiler:AutoInstrument(on)
+    if on then
+        local wrapped, missing = 0, 0
+        for _, p in ipairs(self.HOT_PATHS) do
+            if self:Wrap(p[1], p[2]) then wrapped = wrapped + 1 else missing = missing + 1 end
+        end
+        return wrapped, missing
+    else
+        local unwrapped = 0
+        -- Snapshot keys first; Unwrap mutates _wrapped during iteration.
+        local keys = {}
+        for k in pairs(self._wrapped) do keys[#keys + 1] = k end
+        for _, k in ipairs(keys) do
+            local rec = self._wrapped[k]
+            if rec then
+                rec.tbl[rec.method] = rec.original
+                self._wrapped[k]    = nil
+                unwrapped = unwrapped + 1
+            end
+        end
+        return unwrapped, 0
+    end
+end
+
+function Profiler:IsAutoInstrumented()
+    return next(self._wrapped) ~= nil
+end
+
+function Profiler:ListWrapped()
+    local out = {}
+    for k in pairs(self._wrapped) do out[#out + 1] = k end
+    table.sort(out)
+    return out
+end
+
 function Profiler:Show()
     local title = "|cffEBB706Everything Quests Profile|r"
     print(title .. (self.memMode and " (memory mode ON)" or ""))

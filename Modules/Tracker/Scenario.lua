@@ -49,6 +49,16 @@ local function categoryLabel(scenarioType, textureKit, scenarioName)
     if scenarioType == 5 then return "Dungeon" end
     if scenarioType == 7 then return "Warfront" end
     if scenarioType == 2 then return "Proving Grounds" end
+    -- scenarioType 3 surfaces Follower Dungeons (instanceType "party",
+    -- difficulty id 205 "Follower"). Verified live in Den of Nalorakk via
+    -- /eqs scenario; no textureKit is returned, so the type number alone
+    -- is the signal. Also catch the 205 difficulty as a belt-and-suspenders
+    -- check in case Blizzard reuses scenarioType 3 elsewhere.
+    if scenarioType == 3 then return "Follower Dungeon" end
+    if GetInstanceInfo then
+        local _, _, diffID = GetInstanceInfo()
+        if diffID == 205 then return "Follower Dungeon" end
+    end
     -- Midnight world events report scenarioType 0 / textureKit
     -- "midnight-scenario"; the name is the only reliable signal, so match
     -- it directly rather than the kit (other Midnight scenarios may share
@@ -58,6 +68,20 @@ local function categoryLabel(scenarioType, textureKit, scenarioName)
         if n:find("void incursion") or n:find("void assault") then
             return "Void Incursion"
         end
+    end
+
+    -- Generic fallback: when neither scenarioType nor textureKit match
+    -- something we recognize, ask the client what kind of instance we're
+    -- actually in. instanceType is authoritative for the broad category
+    -- ("party" = dungeon, "raid" = raid, etc.), so any future dungeon or
+    -- follower dungeon that reports a scenarioType we haven't classified
+    -- still labels as "Dungeon" instead of the generic "Scenario".
+    if GetInstanceInfo then
+        local _, instanceType = GetInstanceInfo()
+        if instanceType == "party"    then return "Dungeon"     end
+        if instanceType == "raid"     then return "Raid"        end
+        if instanceType == "pvp"      then return "Battleground" end
+        if instanceType == "arena"    then return "Arena"       end
     end
     return "Scenario"
 end

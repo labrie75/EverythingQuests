@@ -5,6 +5,30 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-20
+
+### New Features
+
+- **Quest History** — An account-wide log of every quest you turn in, kept across all your characters. Open it with `/eqs history` or from the new **History** tab on the options window. Five views:
+    - **Quests** — searchable, filterable list (by character, date range, or quest type). Right-click any row to jump straight to that quest's chain in the Chain Guide.
+    - **Streak** — your current and best daily turn-in streaks across the whole account.
+    - **Chain Timeline** — every chain you've made progress in, with per-quest dates. Click a chain to expand it; right-click to open it in the Chain Guide.
+    - **Activity** — a 13-week heatmap showing how many quests you turned in each day.
+    - **Totals** — gold and XP earned per character, plus your single biggest gold and XP rewards.
+  - **One-time backfill** — A "Populate from past completions" button on the History options tab walks the list of quests this character has already completed (according to the game's own record) and adds them to history. These show as "(before tracking)" since the game doesn't tell us when they happened.
+  - **Quest names fill in automatically** — Backfilled entries may show as "Quest #12345" at first because Blizzard hasn't sent your client their names yet. EQ asks the server for them in the background; names trickle in over a minute or two. A **Re-scan names** button in the History window (and on the options tab) re-runs the lookup if you want to nudge it.
+  - **Export** — An Export button on the History window copies the currently visible data to your clipboard as plain text, ready to paste anywhere.
+- **Completion date in Chain Guide tooltips** — Hover any quest in the Chain Guide and you'll now see when (or whether) you've completed it.
+- **Smarter Scenario header** — The Scenario section header now identifies Follower Dungeons, regular Dungeons, Raids, Battlegrounds, etc. instead of always saying "Scenario." A new `/eqs scenario` diagnostic prints everything Blizzard tells us about the current instance — useful if you ever see a generic label and want to report it.
+- **"Keep focused quest after relog"** — New option on the General tab, off by default. When off, EQ clears whatever quest the game restored as super-tracked at login so you don't log in to a stale waypoint arrow (or TomTom marker).
+
+### Improvements
+
+- **What's New popup** — A one-time popup at login walks you through the v1.4.0 additions. Dismiss it once and it won't come back; the next major release will bring a fresh one.
+- **Tracker drag-and-drop is gentler on memory** — The throttled drag-ghost update was rebuilt around a shared elapsed counter so a single quest reorder no longer allocates a function per frame.
+- **Safety-net hook for world-quest data** — A backup hook on Blizzard's own world-quest provider makes sure EQ's world-quest pins refresh in the rare case our normal events miss a change.
+- **Developer tooling** — `/eqs profile auto on` instruments the heaviest render and refresh paths so you can profile them without editing code. `/eqs profile auto off` removes the instrumentation, `/eqs profile auto list` shows what's wrapped.
+
 ## [1.3.12] - 2026-05-19
 
 ### New Features

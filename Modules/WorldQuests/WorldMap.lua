@@ -304,4 +304,17 @@ function M:OnEnable()
     Events:On("SUPER_TRACKING_CHANGED", function()
         if WorldMapFrame and WorldMapFrame:IsShown() then self:UpdateSelections() end
     end)
+
+    -- Safety net: piggy-back on Blizzard's own WQ provider refresh so that
+    -- any internal event path we don't listen to directly still ends up
+    -- repainting our pins. Our Refresh has its own throttle, so multiple
+    -- triggers in one frame collapse cleanly. Defensive — no known event we
+    -- currently miss; this is here so a future Blizzard API churn doesn't
+    -- silently leave EQ's WQ layer one event behind.
+    if hooksecurefunc and WorldMap_WorldQuestDataProviderMixin
+       and WorldMap_WorldQuestDataProviderMixin.RefreshAllData then
+        hooksecurefunc(WorldMap_WorldQuestDataProviderMixin, "RefreshAllData", function()
+            if WorldMapFrame and WorldMapFrame:IsShown() then self:Refresh() end
+        end)
+    end
 end

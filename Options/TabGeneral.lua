@@ -103,6 +103,12 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         zoomGet, zoomSet)
     zoom:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
+    local restoreGet, restoreSet = generalSetting("restoreSuperTrackOnLogin")
+    local restore = Options:CreateCheckbox(content,
+        "Keep focused quest after relog  |cffaaaaaa(restores the waypoint arrow)|r",
+        restoreGet, restoreSet)
+    restore:SetPoint("TOPLEFT", zoom, "BOTTOMLEFT", 0, -2)
+
     -- Minimap button — uses LibDBIcon's hide flag stored in db.char.minimap.
     local function mmGet()
         local DB = ns:GetSubsystem("DB")
@@ -118,7 +124,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         end
     end
     local mm = Options:CreateCheckbox(content, "Show minimap button", mmGet, mmSet)
-    mm:SetPoint("TOPLEFT", zoom, "BOTTOMLEFT", 0, -2)
+    mm:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -2)
 
     -- ─── Reset profile button ───────────────────────────────────────────
     local reset = Options:CreateYellowButton(content, "Reset all settings", function()

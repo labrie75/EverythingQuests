@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.3.12"))
+    f.version:SetText("v" .. (ns.VERSION or "1.4.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -618,6 +618,10 @@ local function eqSlashHandler(msg)
     if msg == "chain" then
         local CG = ns:GetSubsystem("ChainGuide"); if CG then CG:Toggle() end
         return
+    elseif msg == "history" then
+        local HF = ns:GetSubsystem("HistoryFrame")
+        if HF and HF.Toggle then HF:Toggle() end
+        return
     elseif msg:match("^discover") then
         local hint = msg:match("^discover%s+(.+)$")
         local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
@@ -625,6 +629,9 @@ local function eqSlashHandler(msg)
         return
     elseif msg == "wqdebug" then
         Options:DumpWorldQuestSources()
+        return
+    elseif msg == "scenario" then
+        Options:DumpScenarioInfo()
         return
     elseif msg:match("^profile") then
         -- /eqs profile [show|reset|mem on|mem off]
@@ -646,8 +653,26 @@ local function eqSlashHandler(msg)
         elseif rest:match("^mem%s+off") then
             Profiler:SetMemoryMode(false)
             print("|cffEBB706EQ Profile|r memory mode OFF")
+        elseif rest:match("^auto%s+on") then
+            local wrapped, missing = Profiler:AutoInstrument(true)
+            print(("|cffEBB706EQ Profile|r auto-instrument ON \194\183 wrapped %d hot path%s%s"):format(
+                wrapped, wrapped == 1 and "" or "s",
+                missing > 0 and (", " .. missing .. " missing (subsystem not loaded)") or ""))
+            print("  Use /eqs profile show after playing for a few minutes; /eqs profile auto off to unwrap")
+        elseif rest:match("^auto%s+off") then
+            local n = Profiler:AutoInstrument(false)
+            print(("|cffEBB706EQ Profile|r auto-instrument OFF \194\183 unwrapped %d method%s"):format(
+                n, n == 1 and "" or "s"))
+        elseif rest:match("^auto%s+list") or rest == "auto" then
+            local list = Profiler:ListWrapped()
+            if #list == 0 then
+                print("|cffEBB706EQ Profile|r auto-instrument is OFF (nothing wrapped)")
+            else
+                print(("|cffEBB706EQ Profile|r currently wrapped (%d):"):format(#list))
+                for _, k in ipairs(list) do print("  " .. k) end
+            end
         else
-            print("|cffEBB706EQ Profile|r usage: /eqs profile [show | reset | mem on | mem off | memhog]")
+            print("|cffEBB706EQ Profile|r usage: /eqs profile [show | reset | mem on | mem off | memhog | auto on | auto off | auto list]")
         end
         return
     end
@@ -667,6 +692,43 @@ end
 SLASH_EVERYTHINGQUESTS1 = "/eqs"
 SLASH_EVERYTHINGQUESTS2 = "/everythingquests"
 SlashCmdList["EVERYTHINGQUESTS"] = eqSlashHandler
+
+-- /eqs scenario — print everything Blizzard tells us about the current
+-- scenario/dungeon/raid. When the Tracker labels something as the
+-- generic "Scenario", running this from inside the instance gives us
+-- the scenarioType / textureKit / instanceType combo needed to add a
+-- proper label in Modules/Tracker/Scenario.lua's categoryLabel().
+function Options:DumpScenarioInfo()
+    local function line(label, value) print(("|cffEBB706EQ Scenario|r %s: %s"):format(label, tostring(value))) end
+
+    if C_Scenario and C_Scenario.GetInfo then
+        local name, currentStage, numStages, _, _, _, _, _, _, scenarioType, _, textureKit = C_Scenario.GetInfo()
+        line("scenarioName", name or "(nil)")
+        line("scenarioType", scenarioType or "(nil)")
+        line("textureKit",   textureKit or "(nil)")
+        line("stage",        tostring(currentStage or "?") .. " / " .. tostring(numStages or "?"))
+    else
+        line("C_Scenario.GetInfo", "unavailable")
+    end
+
+    if C_Scenario and C_Scenario.GetStepInfo then
+        local stepName = C_Scenario.GetStepInfo()
+        line("stepName", stepName or "(nil)")
+    end
+
+    if GetInstanceInfo then
+        local instName, instType, diffID, diffName = GetInstanceInfo()
+        line("instance name",  instName or "(nil)")
+        line("instance type",  instType or "(nil)")
+        line("difficulty",     tostring(diffName) .. " (id " .. tostring(diffID) .. ")")
+    end
+
+    if C_Map and C_Map.GetBestMapForUnit then
+        local mapID = C_Map.GetBestMapForUnit("player")
+        local info = mapID and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
+        line("map", ((info and info.name) or "?") .. " (id " .. tostring(mapID) .. ")")
+    end
+end
 
 -- /eqs wqdebug — surfaces every data source the World Quests tracker
 -- section consults, so we can tell which API a missing quest *is* in

@@ -27,6 +27,12 @@ DB.defaults = {
             -- zone. OFF by default — overriding the player's map view is
             -- only desirable if they ask for it.
             autoZoomToTrackedQuest = false,
+            -- Super-track persistence (Modules/Tracker/SuperTrackPersist).
+            -- Blizzard restores the previously super-tracked quest on
+            -- login, which also revives the in-game waypoint arrow (and
+            -- TomTom's, if installed). OFF by default so a fresh login
+            -- starts clean; flip ON to keep the last focus across logins.
+            restoreSuperTrackOnLogin = false,
         },
         tracker = {
             anchor = "TOPRIGHT",
@@ -131,6 +137,13 @@ DB.defaults = {
             -- log. false = EQ draws none of them on the world map.
             showQuestPins = true,
         },
+        history = {
+            -- Quest history recorder (Modules/History/Recorder.lua). Writes
+            -- entries to the account-wide `EverythingQuestsHistory` SV on
+            -- every QUEST_TURNED_IN. Master switch + rolling-window cap.
+            enabled   = true,
+            retention = 5000,                                                    -- entries; 0 = unlimited
+        },
         chainGuide = {
             scale = 1.0,
             showOnLogin = false,
@@ -146,6 +159,14 @@ DB.defaults = {
         appearance = {
             optionsAlpha = 0.95,
         },
+    },
+    global = {
+        -- Stores the version string of the most recent "What's New" popup
+        -- the user has dismissed (Modules/WhatsNew.lua). Account-wide so a
+        -- single dismiss covers every character. Compared against the
+        -- hard-coded FEATURE_POPUP_VERSION in WhatsNew.lua — when they
+        -- don't match, the popup shows once then writes the version here.
+        whatsNewSeen = "",
     },
     char = {
         favorites = {},               -- [questID] = true
