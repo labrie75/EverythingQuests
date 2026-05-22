@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-05-21
+
+### Bug Fixes
+
+- **Reloading no longer drops your focused quest** — Reloading the UI (`/reload`) was clearing the quest you had super-tracked, forcing you to re-select it. The login cleanup that removes a stale waypoint arrow now only runs on a genuine fresh login or client restart, so reloads (and zone changes) leave your focused quest exactly as it was.
+
+### Improvements
+
+- **Scenario header auto-names anything it doesn't recognize** — Instead of falling back to the generic word "Scenario" for content types it hasn't been taught (open-world events, story scenarios, future Midnight content), the tracker now shows the scenario's own name from the game. Known categories like Delves, Dungeon, Follower Dungeon, and Raid still use their friendly labels.
+
 ## [1.4.0] - 2026-05-20
 
 ### New Features

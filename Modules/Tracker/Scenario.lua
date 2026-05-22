@@ -83,6 +83,14 @@ local function categoryLabel(scenarioType, textureKit, scenarioName)
         if instanceType == "pvp"      then return "Battleground" end
         if instanceType == "arena"    then return "Arena"       end
     end
+
+    -- Auto-name: anything still unclassified (open-world Midnight events,
+    -- story scenarios, future content) gets the scenario's OWN name from
+    -- Blizzard rather than the generic word "Scenario". This means we no
+    -- longer need a hard-coded entry per scenario — the header is always
+    -- meaningful even for content shipped after this code. We only fall
+    -- back to the literal "Scenario" when Blizzard hands us no name at all.
+    if scenarioName and scenarioName ~= "" then return scenarioName end
     return "Scenario"
 end
 
