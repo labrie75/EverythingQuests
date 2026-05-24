@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.4.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.5.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -156,6 +156,64 @@ end
 function Options:Toggle()
     self:Build()
     if self.frame:IsShown() then self.frame:Hide() else self.frame:Show() end
+end
+
+function Options:Show()
+    self:Build()
+    self.frame:Show()
+end
+
+-- Register a small proxy panel in Blizzard's Options > AddOns list. Our real
+-- options live in the standalone EQOptionsFrame window, so this entry just
+-- carries the name/version and a button that opens it (the modern Settings
+-- canvas can't host our fixed-size, draggable window cleanly). Without this
+-- the addon simply doesn't appear in that list. Settings.* exists on all
+-- supported clients; the guard keeps us safe if Blizzard ever renames it.
+function Options:RegisterBlizzardCategory()
+    if self._blizzCategory then return end
+    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then
+        return
+    end
+
+    local panel = CreateFrame("Frame")
+
+    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, -16)
+    title:SetText("Everything Quests")
+    title:SetTextColor(unpack(HEADER_RED))
+
+    local ver = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    ver:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+    ver:SetText("Version " .. (ns.VERSION or ""))
+    ver:SetTextColor(unpack(YELLOW))
+
+    local desc = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    desc:SetPoint("TOPLEFT", ver, "BOTTOMLEFT", 0, -18)
+    desc:SetWidth(560)
+    desc:SetJustifyH("LEFT")
+    desc:SetText("Everything Quests opens its full options in a dedicated window. "
+        .. "Click the button below, or type |cffEBB706/eqs|r in chat.")
+
+    local btn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    btn:SetSize(240, 26)
+    btn:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -18)
+    btn:SetText("Open Everything Quests Options")
+    btn:SetScript("OnClick", function()
+        -- Get out of the Settings window first so our DIALOG-strata window
+        -- isn't stacked behind it.
+        if SettingsPanel and SettingsPanel.IsShown and SettingsPanel:IsShown() then
+            HideUIPanel(SettingsPanel)
+        end
+        Options:Show()
+    end)
+
+    local category = Settings.RegisterCanvasLayoutCategory(panel, "Everything Quests")
+    Settings.RegisterAddOnCategory(category)
+    self._blizzCategory = category
+end
+
+function Options:OnEnable()
+    self:RegisterBlizzardCategory()
 end
 
 -- Helper exposed to TabXxx files for consistent header style.
@@ -716,11 +774,32 @@ function Options:DumpScenarioInfo()
         line("stepName", stepName or "(nil)")
     end
 
+    -- C_ScenarioInfo.GetScenarioInfo() returns a struct; its .name is a
+    -- separate candidate for the specific instance/delve name and sometimes
+    -- differs from C_Scenario.GetInfo's first return.
+    if C_ScenarioInfo and C_ScenarioInfo.GetScenarioInfo then
+        local si = C_ScenarioInfo.GetScenarioInfo()
+        line("GetScenarioInfo.name", (si and si.name) or "(nil)")
+    end
+
     if GetInstanceInfo then
         local instName, instType, diffID, diffName = GetInstanceInfo()
         line("instance name",  instName or "(nil)")
         line("instance type",  instType or "(nil)")
         line("difficulty",     tostring(diffName) .. " (id " .. tostring(diffID) .. ")")
+    end
+
+    -- Which field would Step 2's resolveName() pick as the two-tier name
+    -- line? Hypothesis order: instance name -> GetScenarioInfo.name ->
+    -- scenarioName. This line lets us confirm the choice live before wiring it.
+    do
+        local instName = GetInstanceInfo and select(1, GetInstanceInfo()) or nil
+        local si = C_ScenarioInfo and C_ScenarioInfo.GetScenarioInfo and C_ScenarioInfo.GetScenarioInfo()
+        local sName = C_Scenario and C_Scenario.GetInfo and select(1, C_Scenario.GetInfo()) or nil
+        local proposed = (instName and instName ~= "" and instName)
+                         or (si and si.name)
+                         or sName
+        line("<- proposed name line", proposed or "(none)")
     end
 
     if C_Map and C_Map.GetBestMapForUnit then

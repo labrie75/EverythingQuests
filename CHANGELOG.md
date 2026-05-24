@@ -5,6 +5,19 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-05-24
+
+### New Features
+
+- **Delves and dungeons show their real name** — The tracker's instance header is now two-tier: a small category line ("Delves", "Dungeon", "Follower Dungeon", "Raid") sits above the specific name of where you actually are ("The Darkway", "Windrunner Spire", and so on). Before, a delve header just read "Delves" with no hint of which delve you were in. This works for every instance type without a hard-coded list, so new content is named correctly too.
+- **Hide the tracker scroll bar** — A new "Hide scroll bar" option on the Tracker options tab removes the scroll bar entirely; you scroll with the mouse wheel instead. Thanks to Spydawg2233 for the suggestion.
+- **Mouse-wheel scrolling** — Both the quest list and the World Quests list now scroll with the mouse wheel, whether or not the scroll bar is showing.
+- **Everything Quests now appears in Blizzard's AddOns options list** — Game Menu > Options > AddOns now includes an Everything Quests entry with a button that opens the full options window. Typing `/eqs` still works as before.
+
+### Bug Fixes
+
+- **Normal dungeons no longer mislabel as "Follower Dungeon"** — Follower Dungeons and normal dungeons report the same scenario type to the game, and the header was tagging every normal dungeon as a Follower Dungeon based on that alone. It now tells them apart by difficulty, so a normal dungeon reads "Dungeon" and a Follower Dungeon reads "Follower Dungeon".
+
 ## [1.4.1] - 2026-05-21
 
 ### Bug Fixes

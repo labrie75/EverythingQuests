@@ -87,6 +87,7 @@ DB.defaults = {
             blockSpacing         = 2,                                            -- vertical gap between blocks
             scrollBarBg          = true,                                         -- background strip behind the scroll bar
             scrollBarBgColor     = { r = 0.60, g = 0.60, b = 0.65, a = 0.25 },    -- pale grey, low alpha: barely visible but hints the bar is there
+            hideScrollBar        = false,                                        -- hide the scroll bar entirely; mouse wheel still scrolls
             -- Type-by-type visibility filters. All on by default — the user
             -- opts INTO hiding categories rather than opting in to seeing them.
             filters = {

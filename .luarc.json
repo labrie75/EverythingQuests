@@ -46,7 +46,7 @@
         "UiMapPoint", "OpenWorldMap", "TomTom", "GetQuestID", "ShowUIPanel", "ChatEdit_InsertLink", "OKAY",
         "GameFontWhiteSmall",
         "Mixin", "CreateFromMixins", "CallbackRegistryMixin", "CallbackRegistryBaseMixin",
-        "LibStub", "Settings", "EditModeManagerFrame", "MenuUtil", "Menu",
+        "LibStub", "Settings", "SettingsPanel", "EditModeManagerFrame", "MenuUtil", "Menu",
         "Minimap", "GetMinimapShape",
         "PlaySound", "PlaySoundFile", "print",
         "GameTooltip_Hide",

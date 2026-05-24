@@ -284,6 +284,24 @@ function Tracker:BuildFrame()
 
     f.scroll = scroll
     f.content = content
+
+    -- Mouse-wheel scrolling for both lists. Always on, so the tracker still
+    -- scrolls when the scroll bar is hidden (Tracker Options > Hide scroll
+    -- bar). No-op when the content fits (vertical range 0), and it leaves the
+    -- bar's own dragging untouched when the bar is visible.
+    local WHEEL_STEP = 24
+    local function wheelScroll(sf, delta)
+        local range = sf:GetVerticalScrollRange() or 0
+        if range <= 0 then return end
+        local new = (sf:GetVerticalScroll() or 0) - delta * WHEEL_STEP
+        if new < 0 then new = 0 elseif new > range then new = range end
+        sf:SetVerticalScroll(new)
+    end
+    for _, sf in ipairs({ scroll, eventsScroll }) do
+        sf:EnableMouseWheel(true)
+        sf:SetScript("OnMouseWheel", wheelScroll)
+    end
+
     f.drag    = drag
     f.grip    = grip
     self.frame = f
@@ -569,6 +587,28 @@ local function applyTrackerScale()
     end
 end
 
+-- Hide or restore a scroll frame's bar. UIPanelScrollFrameTemplate auto-shows
+-- its bar whenever the scroll range changes, so a one-off Hide() won't stick;
+-- a one-time OnShow guard re-hides it while `_eqHidden` is set. On restore we
+-- can't rely on the template re-showing the bar (it only reacts to a range
+-- *change*, which a settings toggle doesn't produce), so we set its shown
+-- state directly from the current scroll range. Must be called after sizing.
+local function setScrollBarHidden(sf, hidden)
+    if not sf then return end
+    local bar = sf.ScrollBar or sf.scrollBar
+    if not bar then return end
+    bar._eqHidden = hidden
+    if not bar._eqShowHook then
+        bar._eqShowHook = true
+        bar:HookScript("OnShow", function(b) if b._eqHidden then b:Hide() end end)
+    end
+    if hidden then
+        if bar:IsShown() then bar:Hide() end
+    else
+        bar:SetShown((sf:GetVerticalScrollRange() or 0) > 0.5)
+    end
+end
+
 function Tracker:Render()
     local f = self.frame
     if not f then return end
@@ -616,8 +656,12 @@ function Tracker:Render()
         else
             f:SetBackdropBorderColor(0, 0, 0, 0)
         end
+        -- The bar BG strip only makes sense behind a visible bar, so it's
+        -- suppressed when the bar is hidden. (The bars themselves are toggled
+        -- AFTER sizing, below, where the scroll range is accurate.)
+        local hideBar = cfg.hideScrollBar == true
         if f.scrollBarBG then
-            if cfg.scrollBarBg ~= false then
+            if cfg.scrollBarBg ~= false and not hideBar then
                 local s = cfg.scrollBarBgColor or { r = 0.60, g = 0.60, b = 0.65, a = 0.25 }
                 f.scrollBarBG:SetColorTexture(s.r or 0.60, s.g or 0.60, s.b or 0.65, s.a or 0.25)
                 f.scrollBarBG:Show()
@@ -766,6 +810,16 @@ function Tracker:Render()
         if f.scroll.UpdateScrollChildRect then f.scroll:UpdateScrollChildRect() end
     end
 
+    -- Toggle the scroll bars AFTER both scroll frames are sized (the WQ list
+    -- is sized inside _RenderPinnedEvents above), so GetVerticalScrollRange is
+    -- accurate when we decide whether to restore a bar.
+    do
+        local DB2 = ns:GetSubsystem("DB")
+        local hideBar = DB2 and DB2.db.profile.tracker.hideScrollBar == true
+        setScrollBarHidden(f.scroll, hideBar)
+        setScrollBarHidden(f.eventsScroll, hideBar)
+    end
+
     -- SWEEP: free every block not re-acquired this pass (quest turned in,
     -- abandoned, filtered out, moved to a popup, or its section
     -- collapsed). Done here, after ALL sections AND the pinned WQ region,
@@ -890,7 +944,7 @@ function Tracker:_RenderPinnedEvents(eventsCap)
     -- the cap (mirrors the main scrollBarBG color/visibility logic).
     if f.eventsScrollBarBG then
         local needsBar = heightUsed > viewport + 0.5
-        if needsBar and (not cfg or cfg.scrollBarBg ~= false) then
+        if needsBar and (not cfg or (cfg.scrollBarBg ~= false and cfg.hideScrollBar ~= true)) then
             local s = (cfg and cfg.scrollBarBgColor) or { r = 0.60, g = 0.60, b = 0.65, a = 0.25 }
             f.eventsScrollBarBG:SetColorTexture(s.r or 0.60, s.g or 0.60, s.b or 0.65, s.a or 0.25)
             f.eventsScrollBarBG:Show()
