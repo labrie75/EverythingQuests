@@ -2,7 +2,7 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.6.0
+## Version: 1.6.1
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache, EverythingQuestsHistory
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
@@ -42,6 +42,7 @@ Core\Profiler.lua
 Core\Cache.lua
 Core\Util.lua
 Core\Media.lua
+Core\Dialog.lua
 Core\TooltipScan.lua
 
 # ─── Modules (subsystems must exist before Data/* registers into them) ─

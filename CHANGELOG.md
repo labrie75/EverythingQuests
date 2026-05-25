@@ -5,6 +5,12 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-05-25
+
+### Bug Fixes
+
+- **No more "blocked action" error on logout or quit** — Everything Quests' own confirmation dialogs (reset settings, new profile, wipe history, clear chain cache, the move-it hint, and the ElvUI nameplate prompt) were built on Blizzard's shared popup system, which on Midnight could leave EQ blamed for a taint error (ADDON_ACTION_BLOCKED / ADDON_ACTION_FORBIDDEN) when you logged out or quit — because that system recycles the same frames Blizzard uses for its Quit / Logout dialogs. All of EQ's dialogs now use their own self-contained window, removing EQ from that system entirely so it can't taint those dialogs.
+
 ## [1.6.0] - 2026-05-25
 
 ### New Features

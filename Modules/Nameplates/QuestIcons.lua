@@ -348,45 +348,39 @@ function QI:ApplyEnabled()
     end
 end
 
--- One-time conflict prompt for ElvUI users. ElvUI shows its own nameplate
--- quest icons, so rather than silently defaulting ours off (and leaving the
--- user unaware the feature exists), we ask once which they'd like. Shown only
--- while the setting is still "auto" (nil) and ElvUI is loaded; choosing either
--- button writes an explicit value so it never asks again. Ignoring it leaves
--- the safe default (ours off, ElvUI's untouched).
-StaticPopupDialogs = StaticPopupDialogs or {}
-StaticPopupDialogs["EQ_NAMEPLATE_ELVUI"] = {
-    text = "|cffEBB706Everything Quests|r\n\nEQ can show quest icons (the \"!\" + remaining count) on enemy nameplates.\n\nElvUI is installed and already offers this, so EQ's version is currently OFF to avoid showing two of each icon. Which would you like to use?",
-    button1 = "Everything Quests",
-    button2 = "Keep ElvUI's",
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,   -- avoid tainting the default StaticPopup slot
-    OnAccept = function()
-        local DB = ns:GetSubsystem("DB")
-        if DB then DB.db.profile.general.questNameplateIcons = true end
-        QI:ApplyEnabled()
-    end,
-    OnCancel = function()
-        local DB = ns:GetSubsystem("DB")
-        if DB then DB.db.profile.general.questNameplateIcons = false end
-        QI:ApplyEnabled()
-    end,
-}
-
 function QI:OnEnable()
     self.playerName = UnitName and UnitName("player")
     self.enabled = false
     self:ApplyEnabled()
 
-    -- Ask ElvUI users once (deferred so it lands after the loading screen).
+    -- One-time conflict prompt for ElvUI users. ElvUI shows its own nameplate
+    -- quest icons, so rather than silently defaulting ours off (and leaving
+    -- the user unaware the feature exists), ask once which they'd like. Shown
+    -- only while the setting is still "auto" (nil) and ElvUI is loaded;
+    -- choosing either button writes an explicit value so it never asks again.
+    -- Uses EQ's own Dialog (not Blizzard StaticPopup) to stay clear of the
+    -- Quit/Logout taint. Deferred so it lands after the loading screen.
     local DB = ns:GetSubsystem("DB")
     local g  = DB and DB.db.profile.general
     if g and g.questNameplateIcons == nil and not g.npConflictAsked and elvUILoaded() then
         g.npConflictAsked = true
         C_Timer.After(4, function()
-            if StaticPopup_Show then StaticPopup_Show("EQ_NAMEPLATE_ELVUI") end
+            local Dialog = ns:GetSubsystem("Dialog")
+            if not Dialog then return end
+            Dialog:Show({
+                title = "Everything Quests",
+                text = "EQ can show quest icons (the \"!\" + remaining count) on enemy nameplates.\n\nElvUI is installed and already offers this, so EQ's version is currently OFF to avoid showing two of each icon. Which would you like to use?",
+                button1 = "Everything Quests",
+                button2 = "Keep ElvUI's",
+                onAccept = function()
+                    g.questNameplateIcons = true
+                    QI:ApplyEnabled()
+                end,
+                onCancel = function()
+                    g.questNameplateIcons = false
+                    QI:ApplyEnabled()
+                end,
+            })
         end)
     end
 end

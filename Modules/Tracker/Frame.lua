@@ -1176,19 +1176,6 @@ function Tracker:OnInitialize()
     self:BuildFrame()
 end
 
--- One-time onboarding popup: the drag strip is invisible by design, so a
--- first-run dialog tells the player how to move the tracker. preferredIndex 3
--- is the standard guard against tainting the default StaticPopup slot.
-StaticPopupDialogs["EVERYTHINGQUESTS_MOVE_HINT"] = {
-    text = "|cffEBB706Everything Quests|r\n\nDrag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options.",
-    button1 = OKAY,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    showAlert = true,
-    preferredIndex = 3,
-}
-
 function Tracker:OnEnable()
     local Events = ns:GetSubsystem("Events")
     local function refresh() self:Refresh() end
@@ -1203,17 +1190,26 @@ function Tracker:OnEnable()
     Events:On("PLAYER_ENTERING_WORLD",    refresh)
     self:Refresh()
 
-    -- One-time discovery popup. The flag lives in the account-wide chain
-    -- cache (a plain saved table that reliably persists — AceDB's .global
-    -- scope is never created for this DB, so the previous attempt silently
-    -- no-op'd). Set immediately so it never shows twice; deferred so it
-    -- clears the loading screen first.
+    -- One-time onboarding popup: the drag strip is invisible by design, so a
+    -- first-run dialog tells the player how to move the tracker. The flag lives
+    -- in the account-wide chain cache (a plain saved table that reliably
+    -- persists — AceDB's .global scope is never created for this DB, so the
+    -- previous attempt silently no-op'd). Set immediately so it never shows
+    -- twice; deferred so it clears the loading screen first. Uses EQ's own
+    -- Dialog (not Blizzard StaticPopup) to stay clear of the Quit/Logout taint.
     local DBs   = ns:GetSubsystem("DB")
     local cache = DBs and DBs.chainCache
     if cache and not cache._shownMoveHint then
         cache._shownMoveHint = true
         C_Timer.After(4, function()
-            if StaticPopup_Show then StaticPopup_Show("EVERYTHINGQUESTS_MOVE_HINT") end
+            local Dialog = ns:GetSubsystem("Dialog")
+            if Dialog then
+                Dialog:Show({
+                    title = "Everything Quests",
+                    text = "Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options.",
+                    button1 = OKAY,
+                })
+            end
         end)
     end
 end

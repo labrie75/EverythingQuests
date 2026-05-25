@@ -147,25 +147,19 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
 
     -- ─── Reset profile button ───────────────────────────────────────────
     local reset = Options:CreateYellowButton(content, "Reset all settings", function()
-        StaticPopupDialogs = StaticPopupDialogs or {}
-        StaticPopupDialogs.EQ_RESET_PROFILE = StaticPopupDialogs.EQ_RESET_PROFILE or {
-            text         = "Reset every Everything Quests setting to defaults?",
-            button1      = "Reset",
-            button2      = "Cancel",
-            timeout      = 0,
-            whileDead    = true,
-            hideOnEscape = true,
-            -- Use a high StaticPopup slot so our dialog never taints the low
-            -- slots Blizzard reuses for protected dialogs (Quit / ForceQuit),
-            -- which otherwise blames EQ for ADDON_ACTION_FORBIDDEN on quit.
-            preferredIndex = 3,
-            OnAccept = function()
+        local Dialog = ns:GetSubsystem("Dialog")
+        if not Dialog then return end
+        Dialog:Show({
+            title   = "Everything Quests",
+            text    = "Reset every Everything Quests setting to defaults?",
+            button1 = "Reset",
+            button2 = "Cancel",
+            onAccept = function()
                 local DB = ns:GetSubsystem("DB")
                 if DB and DB.db and DB.db.ResetProfile then DB.db:ResetProfile() end
                 ReloadUI()
             end,
-        }
-        if StaticPopup_Show then StaticPopup_Show("EQ_RESET_PROFILE") end
+        })
     end)
     reset:SetSize(160, 24)
     reset:SetPoint("TOPLEFT", mm, "BOTTOMLEFT", 0, -16)
@@ -221,42 +215,21 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     -- the user. Empty input is rejected; existing name is treated as
     -- "switch to that profile".
     local function promptNewProfile()
-        StaticPopupDialogs = StaticPopupDialogs or {}
-        StaticPopupDialogs.EQ_NEW_PROFILE = StaticPopupDialogs.EQ_NEW_PROFILE or {
-            text         = "Profile name:",
-            button1      = "Create",
-            button2      = "Cancel",
-            hasEditBox   = true,
-            maxLetters   = 32,
-            timeout      = 0,
-            whileDead    = true,
-            hideOnEscape = true,
-            -- High slot to avoid tainting Blizzard's protected Quit/ForceQuit
-            -- dialogs (see EQ_RESET_PROFILE).
-            preferredIndex = 3,
-            -- Modern WoW exposes the popup's edit box as `self.EditBox`
-            -- (PascalCase) and its buttons as `self.Buttons[1..n]`. The
-            -- old `editBox` / `button1` field names are still aliased on
-            -- some popups but unreliable on this build — use the new ones.
-            OnShow = function(self)
-                if self.EditBox then self.EditBox:SetFocus() end
-            end,
-            OnAccept = function(self)
-                local edit = self.EditBox
-                if not edit then return end
-                local name = edit:GetText():gsub("^%s+", ""):gsub("%s+$", "")
+        local Dialog = ns:GetSubsystem("Dialog")
+        if not Dialog then return end
+        Dialog:Show({
+            title      = "New Profile",
+            text       = "Profile name:",
+            hasEditBox = true,
+            maxLetters = 32,
+            button1    = "Create",
+            button2    = "Cancel",
+            onAccept = function(text)
+                local name = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
                 if name == "" then return end
                 createProfileCopiedFromCurrent(name)
             end,
-            EditBoxOnEnterPressed = function(editBox)
-                local popup = editBox:GetParent()
-                if popup and popup.Buttons and popup.Buttons[1] then
-                    popup.Buttons[1]:Click()
-                end
-            end,
-            EditBoxOnEscapePressed = function(editBox) editBox:GetParent():Hide() end,
-        }
-        if StaticPopup_Show then StaticPopup_Show("EQ_NEW_PROFILE") end
+        })
     end
     local newProfileBtn = Options:CreateYellowButton(content, "New Profile", promptNewProfile)
     newProfileBtn:SetSize(120, 22)

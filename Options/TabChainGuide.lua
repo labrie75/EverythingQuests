@@ -80,20 +80,18 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
     cacheHint:SetText("Per-character chain progress is cached account-wide so alts can browse what your other characters have completed. Clearing the cache removes that cross-character data; live completions stay (Blizzard tracks those).")
 
     local clear = Options:CreateYellowButton(content, "Clear chain cache", function()
-        StaticPopupDialogs = StaticPopupDialogs or {}
-        StaticPopupDialogs.EQ_CLEAR_CHAIN_CACHE = StaticPopupDialogs.EQ_CLEAR_CHAIN_CACHE or {
-            text         = "Clear all cached chain-completion data across every character?",
-            button1      = "Clear",
-            button2      = "Cancel",
-            timeout      = 0,
-            whileDead    = true,
-            hideOnEscape = true,
-            OnAccept = function()
+        local Dialog = ns:GetSubsystem("Dialog")
+        if not Dialog then return end
+        Dialog:Show({
+            title   = "Everything Quests",
+            text    = "Clear all cached chain-completion data across every character?",
+            button1 = "Clear",
+            button2 = "Cancel",
+            onAccept = function()
                 _G.EverythingQuestsChainCache = {}
                 ReloadUI()
             end,
-        }
-        if StaticPopup_Show then StaticPopup_Show("EQ_CLEAR_CHAIN_CACHE") end
+        })
     end)
     clear:SetSize(180, 24)
     clear:SetPoint("TOPLEFT", cacheHint, "BOTTOMLEFT", 0, -12)

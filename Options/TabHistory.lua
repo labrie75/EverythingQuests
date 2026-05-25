@@ -111,23 +111,21 @@ ns:GetSubsystem("Options"):AddTab("history", "History", function(content)
     rescanHint:SetText("Some quests in the backfilled history show up as \"Quest #12345\" because Blizzard hasn't sent the client their name yet. This button asks the server for every missing one. Quests the server flatly has no data for (retired or internal IDs) will keep their numeric placeholder.")
 
     local wipeBtn = Options:CreateYellowButton(content, "Wipe history", function()
-        StaticPopupDialogs = StaticPopupDialogs or {}
-        StaticPopupDialogs.EQ_WIPE_HISTORY = StaticPopupDialogs.EQ_WIPE_HISTORY or {
-            text         = "Delete ALL recorded quest history (every character)? This cannot be undone.",
-            button1      = "Wipe",
-            button2      = "Cancel",
-            timeout      = 0,
-            whileDead    = true,
-            hideOnEscape = true,
-            OnAccept = function()
+        local Dialog = ns:GetSubsystem("Dialog")
+        if not Dialog then return end
+        Dialog:Show({
+            title   = "Everything Quests",
+            text    = "Delete ALL recorded quest history (every character)? This cannot be undone.",
+            button1 = "Wipe",
+            button2 = "Cancel",
+            onAccept = function()
                 local R = ns:GetSubsystem("History")
                 if R and R.Wipe then R:Wipe() end
                 local HF = ns:GetSubsystem("HistoryFrame")
                 if HF and HF.Render then HF:Render() end
                 print("|cffEBB706EQ History:|r wiped.")
             end,
-        }
-        if StaticPopup_Show then StaticPopup_Show("EQ_WIPE_HISTORY") end
+        })
     end)
     wipeBtn:SetSize(160, 24)
     wipeBtn:SetPoint("TOPLEFT", rescanHint, "BOTTOMLEFT", 0, -16)
