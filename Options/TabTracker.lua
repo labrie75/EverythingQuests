@@ -188,13 +188,19 @@ Options:AddTab("tracker", "Tracker", function(content)
         hideBarGet, hideBarSet)
     hideBarCheck:SetPoint("TOPLEFT", itemBtnCheck, "BOTTOMLEFT", 0, -2)
 
+    local popupGet, popupSet = trackerSetting("showQuestPopups")
+    local popupCheck = Options:CreateCheckbox(content,
+        "Show Quest Discovered popups  |cffaaaaaa(boxes for newly discovered / completed quests)|r",
+        popupGet, popupSet)
+    popupCheck:SetPoint("TOPLEFT", hideBarCheck, "BOTTOMLEFT", 0, -2)
+
     local Media = ns:GetSubsystem("Media")
     local soundGet, soundSet = trackerSetting("questSoundEnabled")
     local soundCheck = Options:CreateCheckbox(
         content,
         "Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r",
         soundGet, soundSet)
-    soundCheck:SetPoint("TOPLEFT", hideBarCheck, "BOTTOMLEFT", 0, -8)
+    soundCheck:SetPoint("TOPLEFT", popupCheck, "BOTTOMLEFT", 0, -8)
 
     local soundList = (Media and Media.GetSoundList and Media:GetSoundList()) or {}
     local sndChoiceGet, sndChoiceSet = trackerSetting("questCompleteSound")

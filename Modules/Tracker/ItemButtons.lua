@@ -142,11 +142,29 @@ function IB:_applySecure(questID)
     b._rangeTimer = 0                                    -- force a check on first tick
     b:SetAttribute("item", link)
     b:ClearAllPoints()
-    -- Top-right corner of the block (title row is left-justified, so this
-    -- corner is normally clear). Placement is intentionally simple for v1
-    -- and easy to retune from feedback.
-    b:SetPoint("TOPRIGHT", block, "TOPRIGHT", -4, -2)
-    b:Show()
+    -- Anchor to the CONTAINER at the block's top-right corner, NOT to the
+    -- block itself. Anchoring a secure frame onto a block pulls the block into
+    -- the button's secure "anchor family", which makes the block combat-
+    -- protected — and then Tracker:Render's Show/Hide/SetPoint/SetWidth on
+    -- that block get blocked in combat (ADDON_ACTION_BLOCKED on Frame:Show).
+    -- The container is never moved/shown/hidden in combat, so it can safely
+    -- absorb the protection. container :SetAllPoints(content) and the block is
+    -- a child of content, so both share the container's coordinate space; we
+    -- offset by the block's position within it. (Re-applied out of combat on
+    -- every Reposition, so it re-tracks the block whenever layout settles; in
+    -- combat the secure SetPoint is deferred, so the button may briefly lag a
+    -- moving block until combat ends — a cosmetic, self-correcting trade for
+    -- never tainting the block.)
+    local cl, ct = container:GetLeft(), container:GetTop()
+    local br, bt = block:GetRight(), block:GetTop()
+    if cl and ct and br and bt then
+        b:SetPoint("TOPRIGHT", container, "TOPLEFT", (br - cl) - 4, (bt - ct) - 2)
+        b:Show()
+    else
+        -- Block not laid out yet; retry on the next Reposition rather than
+        -- risk anchoring to the block.
+        b:Hide()
+    end
 end
 
 -- Non-secure visual refresh (icon / charge count / cooldown). Safe any

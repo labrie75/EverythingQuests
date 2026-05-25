@@ -11,33 +11,22 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
-local FEATURE_POPUP_VERSION = "1.4.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.4.0"
+local FEATURE_POPUP_VERSION = "1.6.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.6.0"
 
 local POPUP_BODY = [[
-|cffEBB706Quest History|r |cffaaaaaa(new feature)|r
-A full account-wide quest log going back to whenever you installed EQ, plus a one-time backfill of every quest the game already knows you've completed. Open with |cffEBB706/eqs history|r or via the new |cffffffffHistory|r tab in Options. Five tabs:
-    - |cffffffffQuests|r — search and filter by character, date, or type
-    - |cffffffffStreak|r — your daily quest streak (current and best)
-    - |cffffffffChain Timeline|r — every chain you've made progress in, with per-quest dates
-    - |cffffffffActivity|r — 13-week heatmap of your turn-ins
-    - |cffffffffTotals|r — gold and XP earned per character
+|cffEBB706Quest icons on nameplates|r |cffaaaaaa(new feature)|r
+Quest objective enemies now show a "|cffEBB706!|r" right on their nameplate, with the amount you still need (a count like |cffffffff3|r, or |cffffffff76%|r for progress objectives). See at a glance which mobs count for your quests instead of guessing. On by default; toggle it under |cffffffffGeneral|r in Options. If you also run ElvUI (which has its own version), EQ asks once which you'd like to use so you don't get doubles.
 
-|cffEBB706Chain Guide cross-link|r
-Quests you've already completed now show a completion date in the Chain Guide tooltips.
+|cffEBB706"Quest Discovered!" boxes|r |cffaaaaaa(new feature)|r
+Newly discovered and ready-to-complete quests now show a clickable callout box at the top of the Quests section of the tracker, matching the game's default behavior. Toggle under |cffffffffTracker|r in Options.
 
-|cffEBB706"Keep focused quest after relog"|r |cffaaaaaa(new option, General tab)|r
-OFF by default. When OFF, EQ clears the leftover super-tracked-quest arrow at login so you don't log in to a stale waypoint (or TomTom marker).
+|cffEBB706Directions on ready-to-turn-in quests|r
+"Go talk to someone" quests that have no checklist objectives used to show a bare title. They now show where to go — e.g. |cffffffffSpeak to Mothkeeper Wew'tam in the Den.|r — so you're never left guessing.
 
-|cffEBB706Smarter Scenario labeling|r
-The Scenario section header now identifies Follower Dungeons, regular Dungeons, Raids, Battlegrounds, etc. instead of always saying "Scenario".
-
-|cffEBB706Polish|r
-    - Quest History Totals tab shows coin icons properly and fits on screen
-    - Chain Timeline rows show a green checkmark for fully-completed chains
-    - History window pops above the Options window instead of behind it
-    - Export any History view to your clipboard (Export button, top right)
-    - Right-click any History Quests row to open it in the Chain Guide
+|cffEBB706Fixes|r
+    - Usable quest-item buttons no longer trigger a "blocked action" error in combat
+    - Hardened EQ's popups so they can't be blamed for a quit-time error
 ]]
 -- ──────────────────────────────────────────────────────────────────────
 
@@ -120,12 +109,12 @@ function WN:Build()
     openBg:SetColorTexture(0.10, 0.10, 0.10, 0.95)
     f.openBtn.text = f.openBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.openBtn.text:SetPoint("CENTER")
-    f.openBtn.text:SetText("Open Quest History")
+    f.openBtn.text:SetText("Open Options")
     f.openBtn.text:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     f.openBtn:SetScript("OnClick", function()
         dismiss()
-        local HF = ns:GetSubsystem("HistoryFrame")
-        if HF and HF.Open then HF:Open() end
+        local O = ns:GetSubsystem("Options")
+        if O and O.Show then O:Show() end
     end)
 
     f.gotBtn = CreateFrame("Button", nil, f, "BackdropTemplate")

@@ -209,6 +209,15 @@ local function applyQuestIcon(iconGlow, icon, iconBang, q, focused)
     local faceSet = safeSetAtlas(icon, faceAtlas, "")
     if not faceSet then icon:SetTexture(nil) end
 
+    -- q.noBang: render the bare face (the available-quest "!") with no
+    -- in-progress / turn-in overlay. Used by the auto-quest popup boxes so
+    -- "Quest Discovered!" always shows a "!", never a "?" that reads as a
+    -- different state.
+    if q.noBang then
+        iconBang:SetTexture(nil)
+        return
+    end
+
     local bangAtlas
     if q.isComplete then
         bangAtlas = lookupClassification(CENTER_TURNIN, q.classification)
@@ -217,6 +226,13 @@ local function applyQuestIcon(iconGlow, icon, iconBang, q, focused)
     end
     local bangSet = safeSetAtlas(iconBang, bangAtlas, "")
     if not bangSet then iconBang:SetTexture(nil) end
+end
+
+-- Public wrapper so other tracker pieces (the auto-quest popup boxes) can
+-- render the SAME crisp layered POI icon as a quest row. `q` only needs
+-- .classification and .isComplete.
+function Blocks:ApplyQuestIcon(iconGlow, icon, iconBang, q, focused)
+    applyQuestIcon(iconGlow, icon, iconBang, q, focused)
 end
 
 -- Hoisted to file scope: this captures no locals, so the previous inline
@@ -255,7 +271,21 @@ end
 -- to just the first incomplete line.
 local function buildSubText(questData, simplifyMode, hideNumbers)
     local objs = questData.objectives
-    if not objs or #objs == 0 then return "" end
+    if not objs or #objs == 0 then
+        -- No trackable leaderboard objectives (e.g. a "speak to X" quest, or a
+        -- ready-to-turn-in quest with no countable goal). Without a fallback
+        -- the block is a bare title with nothing underneath. Mirror Blizzard's
+        -- and ElvUI's trackers: show the quest's own summary line (the turn-in
+        -- / next-step direction), green when the quest is ready to hand in.
+        local fb = questData.fallbackText
+        if fb and fb ~= "" then
+            if questData.isComplete then
+                return "- |cff44ff44" .. fb .. "|r"
+            end
+            return "- " .. fb
+        end
+        return ""
+    end
 
     if simplifyMode then
         for i = 1, #objs do

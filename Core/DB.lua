@@ -33,6 +33,11 @@ DB.defaults = {
             -- TomTom's, if installed). OFF by default so a fresh login
             -- starts clean; flip ON to keep the last focus across logins.
             restoreSuperTrackOnLogin = false,
+            -- questNameplateIcons (Modules/Nameplates/QuestIcons.lua) is
+            -- intentionally ABSENT from defaults: nil = "auto", which the
+            -- module resolves to ON unless ElvUI is loaded (it shows its own
+            -- nameplate quest icons, so we'd double up). Toggling the General-
+            -- tab checkbox writes an explicit true/false.
         },
         tracker = {
             anchor = "TOPRIGHT",
@@ -88,6 +93,7 @@ DB.defaults = {
             scrollBarBg          = true,                                         -- background strip behind the scroll bar
             scrollBarBgColor     = { r = 0.60, g = 0.60, b = 0.65, a = 0.25 },    -- pale grey, low alpha: barely visible but hints the bar is there
             hideScrollBar        = false,                                        -- hide the scroll bar entirely; mouse wheel still scrolls
+            showQuestPopups      = true,                                         -- "Quest Discovered!"/"Quest Complete!" auto-quest popup boxes
             -- Type-by-type visibility filters. All on by default — the user
             -- opts INTO hiding categories rather than opting in to seeing them.
             filters = {

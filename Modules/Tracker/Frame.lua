@@ -740,10 +740,27 @@ function Tracker:Render()
             local sectionCollapsed = self:IsSectionCollapsed(def.id)
 
             local probeY = y + SECTION_H + 2
+
+            -- Auto-quest "Quest Discovered!" / "Quest Complete!" boxes sit at
+            -- the top of the Quests section, between its header and the rows
+            -- (matches Blizzard/ElvUI). Rendered before the rows so they start
+            -- below the boxes; only when the section is expanded and the
+            -- feature is on. Released (hidden) otherwise.
+            local popupH = 0
+            local AQP = (def.id == "quests") and ns:GetSubsystem("TrackerAutoQuestPopup") or nil
+            if AQP then
+                if not sectionCollapsed and (not cfg or cfg.showQuestPopups ~= false) then
+                    popupH = AQP:Render(content, contentWidth, probeY) or 0
+                elseif AQP.ReleaseAll then
+                    AQP:ReleaseAll()
+                end
+            end
+
             local sectionHeight, sectionCount, sectionTotal = 0, 0, nil
             if rendererName and self[rendererName] then
-                sectionHeight, sectionCount, sectionTotal = self[rendererName](self, content, contentWidth, probeY, sectionCollapsed)
+                sectionHeight, sectionCount, sectionTotal = self[rendererName](self, content, contentWidth, probeY + popupH, sectionCollapsed)
             end
+            sectionHeight = sectionHeight + popupH
 
             if sectionCount and sectionCount > 0 then
                 headerFrame:Show()
@@ -787,6 +804,10 @@ function Tracker:Render()
                 y = y + SECTION_H + 2 + sectionHeight + gap
             else
                 headerFrame:Hide()
+                -- Section won't show: don't leave popup boxes floating with no
+                -- header/rows to anchor them (rare — the popup's quest is
+                -- usually in the log, so the section has rows).
+                if AQP and popupH > 0 and AQP.ReleaseAll then AQP:ReleaseAll() end
             end
         end
       end

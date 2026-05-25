@@ -109,6 +109,25 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         restoreGet, restoreSet)
     restore:SetPoint("TOPLEFT", zoom, "BOTTOMLEFT", 0, -2)
 
+    -- Nameplate quest icons. Custom get/set: the stored value is nil until the
+    -- user touches it, which resolves to ON unless ElvUI is loaded (ElvUI shows
+    -- its own, so we avoid doubling up). Toggling writes an explicit bool and
+    -- applies live through the module.
+    local function npGet()
+        local QI = ns:GetSubsystem("NameplateQuestIcons")
+        return QI and QI.IsEnabled and QI:IsEnabled()
+    end
+    local function npSet(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.general.questNameplateIcons = value and true or false end
+        local QI = ns:GetSubsystem("NameplateQuestIcons")
+        if QI and QI.ApplyEnabled then QI:ApplyEnabled() end
+    end
+    local nameplates = Options:CreateCheckbox(content,
+        "Quest icons on nameplates  |cffaaaaaa(shows the \"!\" + count on objective mobs)|r",
+        npGet, npSet)
+    nameplates:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -2)
+
     -- Minimap button — uses LibDBIcon's hide flag stored in db.char.minimap.
     local function mmGet()
         local DB = ns:GetSubsystem("DB")
@@ -124,7 +143,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         end
     end
     local mm = Options:CreateCheckbox(content, "Show minimap button", mmGet, mmSet)
-    mm:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -2)
+    mm:SetPoint("TOPLEFT", nameplates, "BOTTOMLEFT", 0, -2)
 
     -- ─── Reset profile button ───────────────────────────────────────────
     local reset = Options:CreateYellowButton(content, "Reset all settings", function()
@@ -136,6 +155,10 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
             timeout      = 0,
             whileDead    = true,
             hideOnEscape = true,
+            -- Use a high StaticPopup slot so our dialog never taints the low
+            -- slots Blizzard reuses for protected dialogs (Quit / ForceQuit),
+            -- which otherwise blames EQ for ADDON_ACTION_FORBIDDEN on quit.
+            preferredIndex = 3,
             OnAccept = function()
                 local DB = ns:GetSubsystem("DB")
                 if DB and DB.db and DB.db.ResetProfile then DB.db:ResetProfile() end
@@ -208,6 +231,9 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
             timeout      = 0,
             whileDead    = true,
             hideOnEscape = true,
+            -- High slot to avoid tainting Blizzard's protected Quit/ForceQuit
+            -- dialogs (see EQ_RESET_PROFILE).
+            preferredIndex = 3,
             -- Modern WoW exposes the popup's edit box as `self.EditBox`
             -- (PascalCase) and its buttons as `self.Buttons[1..n]`. The
             -- old `editBox` / `button1` field names are still aliased on

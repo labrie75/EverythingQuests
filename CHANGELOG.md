@@ -5,6 +5,22 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-05-25
+
+### New Features
+
+- **Quest icons on nameplates** — Quest objective enemies now show a "!" right on their nameplate, along with the amount you still need (a count like 3, or a percent like 76% for progress objectives). Kill objectives get a skull, talk-to objectives a chat bubble, and use-item objectives the quest's item icon. See at a glance which mobs count for your quests instead of guessing. On by default; toggle it under General in Options. If ElvUI (which has its own version) is installed, EQ defaults this off and asks once which you'd prefer, so you never get duplicate icons.
+- **"Quest Discovered!" popup boxes** — Newly discovered and ready-to-complete quests now show a clickable callout box at the top of the Quests section of the tracker, matching the game's default behavior (which EQ's tracker previously hid). Click a box to open the quest. Toggle under Tracker in Options.
+
+### Improvements
+
+- **Directions on ready-to-turn-in quests** — Quests that are ready to hand in but have no checklist objectives (the "go talk to someone" kind) used to show a bare title with nothing underneath. They now show where to go — e.g. "Speak to Mothkeeper Wew'tam in the Den." — matching what Blizzard's and ElvUI's trackers display.
+
+### Bug Fixes
+
+- **Quest-item buttons no longer error in combat** — The usable quest-item button on a tracker row could trigger a "blocked action" error (ADDON_ACTION_BLOCKED) while you were in combat. The button is now anchored so it never makes its tracker row combat-protected, so the tracker updates cleanly during a fight.
+- **Hardened popups against a quit-time error** — Everything Quests' own dialogs now use a high popup slot so they can't taint Blizzard's protected Quit / Force Quit dialog (which could otherwise blame EQ for an ADDON_ACTION_FORBIDDEN error when you quit).
+
 ## [1.5.0] - 2026-05-24
 
 ### New Features

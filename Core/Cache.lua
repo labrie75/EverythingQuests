@@ -51,6 +51,30 @@ local function deriveIsCampaign(id, info)
     return (info and info.campaignID and info.campaignID > 0) and true or false
 end
 
+-- Fallback "objectives" line for quests with no trackable leaderboard
+-- objectives (e.g. "speak to X" / ready-to-turn-in quests). Such quests would
+-- otherwise render as a bare title; the tracker shows this summary/turn-in
+-- direction instead (see Blocks.buildSubText). The text is the quest log's
+-- objectivesText, which is selection-based (GetQuestLogQuestText reads the
+-- SELECTED quest), so we save and restore the player's selection around the
+-- read. It never changes for a quest, so cache it for the session and fetch
+-- each quest at most once — keeping the selection mutation off the hot path.
+local objTextCache = {}
+local function getObjectivesText(id)
+    local cached = objTextCache[id]
+    if cached ~= nil then return cached end
+    local text = ""
+    if C_QuestLog and C_QuestLog.SetSelectedQuest and _G.GetQuestLogQuestText then
+        local saved = C_QuestLog.GetSelectedQuest and C_QuestLog.GetSelectedQuest()
+        C_QuestLog.SetSelectedQuest(id)
+        local _, objText = _G.GetQuestLogQuestText()
+        text = objText or ""
+        if saved and saved ~= 0 then C_QuestLog.SetSelectedQuest(saved) end
+    end
+    objTextCache[id] = text
+    return text
+end
+
 local function fullRebuild()
     wipe(Cache.quests)
     wipe(Cache.headerOrder)
@@ -105,6 +129,11 @@ local function fullRebuild()
                                       and C_QuestLog.GetQuestClassification(id)),
                     objectives     = C_QuestLog.GetQuestObjectives and C_QuestLog.GetQuestObjectives(id) or {},
                 }
+                -- Quests with no leaderboard objectives get a fallback summary
+                -- line so the tracker block isn't a bare title (see Blocks).
+                if #q.objectives == 0 then
+                    q.fallbackText = getObjectivesText(id)
+                end
                 Cache.quests[id] = q
             end
         end
@@ -138,6 +167,12 @@ local function refreshDynamicFields()
             end
             if C_QuestLog.IsComplete then
                 q.isComplete = C_QuestLog.IsComplete(id) or false
+            end
+            -- A quest that now has no objectives (e.g. just became ready to
+            -- turn in) needs the fallback summary line too. Cached per quest,
+            -- so this is a no-op after the first fetch.
+            if q.objectives and #q.objectives == 0 and not q.fallbackText then
+                q.fallbackText = getObjectivesText(id)
             end
         end
     end

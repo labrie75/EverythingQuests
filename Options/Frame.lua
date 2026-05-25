@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.5.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.6.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -691,6 +691,12 @@ local function eqSlashHandler(msg)
     elseif msg == "scenario" then
         Options:DumpScenarioInfo()
         return
+    elseif msg == "questobj" then
+        Options:DumpQuestObjectives()
+        return
+    elseif msg == "autopopup" then
+        Options:DumpAutoQuestPopups()
+        return
     elseif msg:match("^profile") then
         -- /eqs profile [show|reset|mem on|mem off]
         local rest = msg:match("^profile%s*(.*)$") or ""
@@ -806,6 +812,102 @@ function Options:DumpScenarioInfo()
         local mapID = C_Map.GetBestMapForUnit("player")
         local info = mapID and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
         line("map", ((info and info.name) or "?") .. " (id " .. tostring(mapID) .. ")")
+    end
+end
+
+-- /eqs questobj — for every watched quest, dumps what the objective APIs
+-- return. The point is the empty case: some quests render with no sub-text
+-- because C_QuestLog.GetQuestObjectives() is an empty table (e.g. "go talk to
+-- X" quests). This surfaces the candidate fallback sources so we can see what
+-- Blizzard/ElvUI show in their place (the user reports ElvUI shows "Quest
+-- Discovered") and wire the matching text without guessing.
+function Options:DumpQuestObjectives()
+    local function p(s) print("|cffEBB706EQ QuestObj|r " .. s) end
+    if not C_QuestLog then p("C_QuestLog unavailable"); return end
+
+    local num     = (C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetNumQuestLogEntries()) or 0
+    local savedID = C_QuestLog.GetSelectedQuest and C_QuestLog.GetSelectedQuest()
+    local getText = _G.GetQuestLogQuestText   -- selection-based global; guarded
+    local shown   = 0
+
+    for i = 1, num do
+        local info = C_QuestLog.GetInfo and C_QuestLog.GetInfo(i)
+        if info and not info.isHeader then
+            local id      = info.questID
+            local watched = C_QuestLog.GetQuestWatchType and C_QuestLog.GetQuestWatchType(id) ~= nil
+            if watched then
+                local objs     = (C_QuestLog.GetQuestObjectives and C_QuestLog.GetQuestObjectives(id)) or {}
+                local complete = C_QuestLog.IsComplete and C_QuestLog.IsComplete(id)
+                local ready    = C_QuestLog.ReadyForTurnIn and C_QuestLog.ReadyForTurnIn(id)
+                p(("[%d] %s | obj=%d complete=%s ready=%s"):format(
+                    id, info.title or "?", #objs, tostring(complete), tostring(ready)))
+                for j = 1, #objs do
+                    local o = objs[j]
+                    p(("    obj%d type=%s finished=%s text=%q"):format(
+                        j, tostring(o.type), tostring(o.finished), tostring(o.text)))
+                end
+                if #objs == 0 then
+                    -- Candidate fallback sources for the empty case.
+                    local compText = C_QuestLog.GetQuestLogCompletionText
+                                     and C_QuestLog.GetQuestLogCompletionText(id)
+                    p(("    completionText=%q"):format(tostring(compText)))
+                    if getText and C_QuestLog.SetSelectedQuest then
+                        C_QuestLog.SetSelectedQuest(id)
+                        local _, objText = getText()
+                        p(("    objectivesText=%q"):format(tostring(objText)))
+                    end
+                end
+                shown = shown + 1
+            end
+        end
+    end
+
+    -- Restore the player's selected quest (we mutated it to read objectivesText).
+    if savedID and savedID ~= 0 and C_QuestLog.SetSelectedQuest then
+        C_QuestLog.SetSelectedQuest(savedID)
+    end
+    if shown == 0 then p("no watched quests found") end
+end
+
+-- /eqs autopopup — confirms the auto-quest-popup API surface ("Quest
+-- Discovered!" / "Quest Complete!" boxes) before we build the tracker module
+-- for it. Midnight relocates engine globals into C_ namespaces, so this checks
+-- which functions actually exist in this client and what GetAutoQuestPopUp
+-- returns (questID + popUpType) so the module is built on the real surface.
+function Options:DumpAutoQuestPopups()
+    local function p(s) print("|cffEBB706EQ AutoPopup|r " .. s) end
+
+    -- Function-surface probe: print which candidate APIs exist. _G lookups so
+    -- a missing/renamed global is reported, not a Lua error.
+    local function has(name) return _G[name] and "yes" or "no" end
+    p(("API: GetNumAutoQuestPopUps=%s GetAutoQuestPopUp=%s RemoveAutoQuestPopUp=%s"):format(
+        has("GetNumAutoQuestPopUps"), has("GetAutoQuestPopUp"), has("RemoveAutoQuestPopUp")))
+    p(("API: ShowQuestOffer=%s ShowQuestComplete=%s"):format(
+        has("ShowQuestOffer"), has("ShowQuestComplete")))
+    p(("API (C_): C_QuestLog.GetNumAutoQuestPopUps=%s"):format(
+        (C_QuestLog and C_QuestLog.GetNumAutoQuestPopUps) and "yes" or "no"))
+
+    local getNum = _G.GetNumAutoQuestPopUps
+                   or (C_QuestLog and C_QuestLog.GetNumAutoQuestPopUps)
+    local getPop = _G.GetAutoQuestPopUp
+                   or (C_QuestLog and C_QuestLog.GetAutoQuestPopUp)
+    if not (getNum and getPop) then
+        p("no usable GetNumAutoQuestPopUps/GetAutoQuestPopUp — engine API moved or unavailable")
+        return
+    end
+
+    local n = getNum() or 0
+    p(("active popups: %d"):format(n))
+    for i = 1, n do
+        local questID, popUpType = getPop(i)
+        local title = questID and (
+            (C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(questID))
+            or (QuestUtils_GetQuestName and QuestUtils_GetQuestName(questID)))
+        p(("  [%d] questID=%s type=%q title=%q"):format(
+            i, tostring(questID), tostring(popUpType), tostring(title or "?")))
+    end
+    if n == 0 then
+        p("none right now — run this while a 'Quest Discovered!'/'Quest Complete!' box is up")
     end
 end
 
