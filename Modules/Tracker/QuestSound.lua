@@ -2,6 +2,10 @@ local _, ns = ...
 
 local Q = ns:RegisterSubsystem("TrackerQuestSound", {})
 
+-- Midnight (12.x) can hand back "secret values" that error if indexed/operated
+-- on by addon (tainted) code — even though they still report type "string".
+local _issecret = _G.issecretvalue
+
 Q.lastComplete = {}
 Q.armed = false
 
@@ -112,6 +116,10 @@ local function getCompletePattern()
 end
 
 local function onSystemChat(_, msg)
+    -- A secret-value system message still reports type "string", but indexing
+    -- it (msg:match below) throws from tainted addon code. Skip those — the
+    -- Cache-diff path still catches quests that enter the log.
+    if _issecret and _issecret(msg) then return end
     if type(msg) ~= "string" then return end
     local p = getCompletePattern()
     if not p then return end
