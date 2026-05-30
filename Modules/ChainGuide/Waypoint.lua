@@ -29,13 +29,40 @@ end
 local function cacheGet(questID)
     local t = cacheTable()
     local e = t and t[questID]
-    if e and e.m and e.x and e.y then return e.m, e.x, e.y end
+    if e and e.m and e.x and e.y then
+        e.lastSeen = time()   -- last-used stamp keeps actively-used coords fresh against the prune
+        return e.m, e.x, e.y
+    end
 end
 
 local function cacheSet(questID, mapID, x, y)
     if not (questID and mapID and x and y) then return end
     local t = cacheTable()
-    if t then t[questID] = { m = mapID, x = x, y = y } end
+    if t then t[questID] = { m = mapID, x = x, y = y, lastSeen = time() } end
+end
+
+-- Prune coordinate entries not used within `ttl` seconds. Coords are always
+-- re-derivable (static table → C_QuestLine → GetNextWaypoint → re-harvest on
+-- the next accept), so dropping a stale entry is invisible to the player. A
+-- legacy entry with no lastSeen is stamped on this pass (grace) rather than
+-- wiped, so a player's hand-harvested coords aren't cleared wholesale the first
+-- time the prune runs after updating. Called from DB:MaybePruneChainCache
+-- (throttled, off the login spike). time() is epoch — persists across reboots.
+function W:PruneStaleCoords(now, ttl)
+    local t = cacheTable()
+    if not t then return 0 end
+    local removed = 0
+    for questID, e in pairs(t) do
+        if type(e) == "table" then
+            if not e.lastSeen then
+                e.lastSeen = now
+            elseif now - e.lastSeen > ttl then
+                t[questID] = nil
+                removed = removed + 1
+            end
+        end
+    end
+    return removed
 end
 
 -- ─── Candidate maps for a chain ────────────────────────────────────────
@@ -139,9 +166,7 @@ end
 
 -- ─── Public: go to a quest ─────────────────────────────────────────────
 function W:GoTo(questID, chain)
-    local title = (C_QuestLog and C_QuestLog.GetTitleForQuestID
-                   and C_QuestLog.GetTitleForQuestID(questID))
-                  or ("Quest #" .. tostring(questID))
+    local title = ns.Util.QuestTitle(questID, true)
 
     local mapID, x, y = self:Resolve(questID, chain)
     if mapID and x and y then

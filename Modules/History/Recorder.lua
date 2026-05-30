@@ -73,27 +73,14 @@ function R:OnInitialize()
     self._giveUp = {}
 end
 
--- Title resolver: tries multiple Blizzard APIs in order. GetTitleForQuestID
--- is the primary source, but it sometimes returns nil for entries that
--- QuestUtils_GetQuestName or C_TaskQuest can resolve (world quests,
--- partially-cached entries, race conditions where the data has loaded but
--- the title hasn't been promoted to the lookup table yet). Returns nil
--- only when EVERY source comes up empty.
+-- Title resolver: the full multi-API fallback chain (GetTitleForQuestID ->
+-- QuestUtils_GetQuestName -> C_TaskQuest, covering world quests, partially-
+-- cached entries, and races where data loaded before the title promoted to
+-- the lookup table) now lives in Core/Util.lua. Kept as a thin local + the
+-- R._resolveTitle alias for the existing call sites / dev tooling. Returns
+-- nil when every source comes up empty.
 local function resolveTitle(qid)
-    if not qid then return nil end
-    if C_QuestLog and C_QuestLog.GetTitleForQuestID then
-        local t = C_QuestLog.GetTitleForQuestID(qid)
-        if t and t ~= "" then return t end
-    end
-    if QuestUtils_GetQuestName then
-        local t = QuestUtils_GetQuestName(qid)
-        if t and t ~= "" then return t end
-    end
-    if C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID then
-        local t = C_TaskQuest.GetQuestInfoByQuestID(qid)
-        if t and t ~= "" then return t end
-    end
-    return nil
+    return ns.Util.QuestTitle(qid)
 end
 R._resolveTitle = resolveTitle                                                -- exposed for tests / dev tooling
 

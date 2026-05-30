@@ -5,6 +5,25 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-29
+
+### New Features
+
+- **"Recently Added" highlight** — Quests you just picked up now show a "NEW" tag next to their name in the tracker for about an hour, so a fresh quest is easy to spot in a long list. There's also a new "Recently Added" sort order that floats your newest quests to the top. Toggle the tag under Tracker in Options.
+- **Sort your tracker by distance** — A new "Distance" sort order arranges your tracked quests by how close they are, so the next thing you can reach sits at the top. Find it under Sort Order on the Tracker options tab.
+- **"Get Directions" on any quest** — Right-click a quest in the tracker and choose "Get Directions" to drop a map waypoint at the quest and open the map there — using TomTom if you have it, otherwise the game's own waypoint. This is the same routing the Chain Guide uses.
+
+### Improvements
+
+- **Lighter on memory over long play sessions** — Everything Quests' account-wide Chain Guide cache (per-character completions and saved quest locations) now trims entries it no longer needs instead of growing forever. A "Prune stale entries now" button and a cache-size readout were added to the Chain Guide options tab. Everything pruned is rebuilt automatically when needed, so nothing is lost.
+- **World quests and just-loaded quests show their real names** — Places that previously showed "Quest #12345" for a moment (world quests, and quests whose names hadn't arrived from the server yet) now resolve the proper title wherever the game makes it available.
+
+### Bug Fixes
+
+- **No more "blocked action" errors from the tracker in combat** — Hiding the tracker in combat (the "hide in combat" option), and dragging or resizing it during a fight, could trigger a "blocked action" error (ADDON_ACTION_BLOCKED) because those actions touch protected frames mid-combat. Both now wait until combat ends, so the tracker behaves cleanly.
+- **Fixed a world-map slowdown on long sessions** — The world-map quest-pin code was re-hooking itself every time you changed zones or reloaded, slowly piling up duplicate handlers over a session. It now hooks once.
+- **Cached character class is recorded correctly** — The Chain Guide's per-character cache was always storing an empty class because of a code slip; it now records the right class and repairs existing entries.
+
 ## [1.6.2] - 2026-05-25
 
 ### Bug Fixes

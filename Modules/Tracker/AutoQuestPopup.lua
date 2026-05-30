@@ -36,9 +36,7 @@ local function getNum()
 end
 
 local function popupTitle(questID)
-    return (C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(questID))
-        or (QuestUtils_GetQuestName and QuestUtils_GetQuestName(questID))
-        or ("Quest #" .. tostring(questID))
+    return ns.Util.QuestTitle(questID, true)
 end
 
 -- Clicking a box mirrors Blizzard's own action: open the offer / turn-in

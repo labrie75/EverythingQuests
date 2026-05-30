@@ -47,7 +47,7 @@ DB.defaults = {
             maxHeight = 600,
             scale = 1.0,
             simplifyMode = false,
-            sortMode = "zone",        -- zone|status|type|level|distance|manual
+            sortMode = "zone",        -- zone|status|type|level|distance|recent|manual
             manualOrder = {},         -- [questID] = ordinal int
             -- Match Blizzard's default tracker visibility: only show quests
             -- in the watch list. Disable to firehose all quests in the log.
@@ -94,6 +94,7 @@ DB.defaults = {
             scrollBarBgColor     = { r = 0.60, g = 0.60, b = 0.65, a = 0.25 },    -- pale grey, low alpha: barely visible but hints the bar is there
             hideScrollBar        = false,                                        -- hide the scroll bar entirely; mouse wheel still scrolls
             showQuestPopups      = true,                                         -- "Quest Discovered!"/"Quest Complete!" auto-quest popup boxes
+            showRecentlyAddedTag = true,                                         -- "NEW" tag on quests accepted within the last hour
             -- Type-by-type visibility filters. All on by default — the user
             -- opts INTO hiding categories rather than opting in to seeing them.
             filters = {
@@ -209,5 +210,48 @@ function DB:OnInitialize()
     local t = self.db and self.db.profile and self.db.profile.tracker
     if Util and Util.ReconcileOrder and t then
         t.manualOrder = Util.ReconcileOrder(t.manualOrder)
+    end
+end
+
+-- ─── Chain-cache hygiene ────────────────────────────────────────────────────
+-- The account-wide EverythingQuestsChainCache accumulates two unbounded,
+-- persisted caches: per-character `completed` records (ChainGuideCharacters)
+-- and harvested `questCoords` (ChainGuideWaypoint). Both are re-derivable, so we
+-- age out stale entries on a throttled timer. The thresholds are deliberately
+-- generous: the record TTL only catches deleted/long-abandoned alts, and coords
+-- re-harvest on the next accept. time() is epoch, so the comparison survives
+-- client reboots (GetTime() would not).
+local PRUNE_INTERVAL = 24 * 60 * 60         -- run at most once per day
+local RECORD_TTL     = 180 * 24 * 60 * 60   -- 180 days: abandoned-alt records
+local COORD_TTL      = 90 * 24 * 60 * 60    -- 90 days: waypoint coordinates
+
+-- Returns (recordsPruned, coordsPruned). Pass force=true to skip the throttle
+-- (the "Prune stale entries now" button in Options uses this).
+function DB:MaybePruneChainCache(force)
+    local cache = self.chainCache
+    if not cache then return 0, 0 end
+    local now = time()
+    if not force and cache.lastPrune and (now - cache.lastPrune) < PRUNE_INTERVAL then
+        return 0, 0
+    end
+
+    local nRec, nCoord = 0, 0
+    local Chars = ns:GetSubsystem("ChainGuideCharacters")
+    if Chars and Chars.PruneStaleRecords then nRec = Chars:PruneStaleRecords(now, RECORD_TTL) or 0 end
+    local WP = ns:GetSubsystem("ChainGuideWaypoint")
+    if WP and WP.PruneStaleCoords then nCoord = WP:PruneStaleCoords(now, COORD_TTL) or 0 end
+
+    cache.lastPrune = now
+    return nRec, nCoord
+end
+
+function DB:OnEnable()
+    -- Defer the prune off the login spike. By the time it fires, every
+    -- subsystem's OnInitialize has run, so the Characters/Waypoint cache refs
+    -- exist. Throttled internally to once a day via chainCache.lastPrune.
+    if C_Timer and C_Timer.After then
+        C_Timer.After(10, function() self:MaybePruneChainCache() end)
+    else
+        self:MaybePruneChainCache()
     end
 end

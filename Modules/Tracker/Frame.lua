@@ -25,6 +25,15 @@ local GRIP_SIZE        = 14   -- bottom-right resize grip
 local _popupSet = {}
 local _visible  = {}
 local _popups   = {}
+-- Distance-sort scratch: [questID] = squared distance to the quest's next
+-- objective. Reused (wipe+refill) like the tables above so the distance sort
+-- adds no per-render garbage; the Sort subsystem holds a reference to this
+-- table via Sort.SetDistances and reads it inside its comparator.
+local _distScratch = {}
+local DIST_TICK     = 2       -- seconds between "did the player move?" checks while in distance mode
+local DIST_MOVE_EPS = 0.0025  -- normalized-map-unit movement below this is ignored (jitter)
+local DIST_MAX_AGE  = 5       -- force a re-harvest at least this often so a late-loading
+                              -- objective POI is picked up even without movement
 local SECTION_H        = 26   -- "Quests" section header band (fits the larger header text)
 local HEADER_FONT_DELTA = 4   -- section headers render this many points larger
                               -- than quest titles so the hierarchy reads right
@@ -170,12 +179,32 @@ function Tracker:BuildFrame()
         dragHint:SetColorTexture(1, 1, 1, 0)
         GameTooltip:Hide()
     end)
+    -- Start/stop move + resize are PROTECTED frame methods on the tracker
+    -- (it owns secure item-button descendants), so calling them during
+    -- InCombatLockdown raises ADDON_ACTION_BLOCKED naming EQ. Guard the
+    -- start; if combat begins mid-drag, defer the (also-protected) stop to
+    -- combat-end so the frame can't get stuck following the cursor. One
+    -- shared _eqDragging flag — you can't move and resize at once.
+    local function stopDrag()
+        if not f._eqDragging then return end
+        if InCombatLockdown() then
+            local Ev = ns:GetSubsystem("Events")
+            if Ev then Ev:RunWhenOutOfCombat("trackerStopDrag", stopDrag) end
+            return
+        end
+        f._eqDragging = nil
+        f:StopMovingOrSizing()
+        self:PersistPositionAndSize()
+    end
+
     drag:SetScript("OnDragStart", function()
+        if InCombatLockdown() then return end
         local DBs = ns:GetSubsystem("DB")
         if DBs and DBs.db.profile.general and DBs.db.profile.general.lockTracker then return end
         f:StartMoving()
+        f._eqDragging = true
     end)
-    drag:SetScript("OnDragStop", function() f:StopMovingOrSizing(); self:PersistPositionAndSize() end)
+    drag:SetScript("OnDragStop", stopDrag)
 
     -- Bottom-right resize grip: three short white lines forming a diagonal,
     -- drawn with SetColorTexture so we don't depend on a specific texture
@@ -189,8 +218,12 @@ function Tracker:BuildFrame()
         g:SetSize(len, 1)
         g:SetPoint("BOTTOMRIGHT", -2, 2 + (i - 1) * 3)
     end
-    grip:SetScript("OnMouseDown", function() f:StartSizing("BOTTOMRIGHT")                  end)
-    grip:SetScript("OnMouseUp",   function() f:StopMovingOrSizing(); self:PersistPositionAndSize() end)
+    grip:SetScript("OnMouseDown", function()
+        if InCombatLockdown() then return end
+        f:StartSizing("BOTTOMRIGHT")
+        f._eqDragging = true
+    end)
+    grip:SetScript("OnMouseUp", stopDrag)
 
     -- Scenario container — anchored just below the drag strip. Stays at
     -- height 1 when no scenario is active; the Scenario subsystem grows it
@@ -609,6 +642,108 @@ local function setScrollBarHidden(sf, hidden)
     end
 end
 
+-- ── Distance sort support ─────────────────────────────────────────────
+-- Sample the player's normalized position on their current map. Returns
+-- (mapID, x, y); x/y are nil where the client can't resolve a position
+-- (some instances/arenas), in which case distance sort degrades to zone
+-- order anyway. Allocation: GetPlayerMapPosition returns a reusable vector
+-- object; we read it via GetXY and keep only numbers, so nothing is retained.
+local function samplePlayerPos()
+    local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    if not (mapID and C_Map.GetPlayerMapPosition) then return mapID, nil, nil end
+    local pos = C_Map.GetPlayerMapPosition(mapID, "player")
+    if not pos then return mapID, nil, nil end
+    local x, y = pos:GetXY()
+    return mapID, x, y
+end
+
+-- Has the player moved enough since the last distance harvest to warrant a
+-- re-sort? A map change always counts; otherwise compare normalized coords
+-- past a small epsilon. When the current position is unknown we report "not
+-- moved" so a no-position context (instance) doesn't drive perpetual refreshes.
+function Tracker:_DistanceMoved(mapID, x, y)
+    if mapID ~= self._distMapID then return true end
+    if not (x and y) then return false end
+    if not (self._distX and self._distY) then return true end
+    return math.abs(x - self._distX) > DIST_MOVE_EPS
+        or math.abs(y - self._distY) > DIST_MOVE_EPS
+end
+
+-- Harvest squared distances for the current quest set into _distScratch and
+-- hand the map to the Sort subsystem. Called once at the top of every Render.
+-- Re-harvests only when the player moved, nothing has been harvested yet, or
+-- the last harvest is stale (DIST_MAX_AGE) — otherwise it reuses the existing
+-- map (cheap ref re-set), so the constant non-positional renders (section
+-- collapse, resize, QUEST_LOG_UPDATE) don't each trigger ~50 C API calls.
+-- Off-continent / no-position / completed quests are omitted, so cmpDistance
+-- sinks them to the bottom via its INF sentinel and orders them by zone.
+function Tracker:_UpdateDistanceSort(sortMode)
+    local Sort = ns:GetSubsystem("TrackerSort")
+    if not Sort then return end
+    if sortMode ~= "distance" or not (C_QuestLog and C_QuestLog.GetDistanceSqToQuest) then
+        Sort.SetDistances(nil)
+        return
+    end
+
+    local mapID, px, py = samplePlayerPos()
+    local stale = (GetTime() - (self._distStamp or 0)) >= DIST_MAX_AGE
+    if self._distHarvested and not stale and not self:_DistanceMoved(mapID, px, py) then
+        Sort.SetDistances(_distScratch)          -- reuse the last harvest
+        return
+    end
+
+    wipe(_distScratch)
+    local Cache = ns:GetSubsystem("Cache")
+    if Cache and Cache.All then
+        for id, q in pairs(Cache:All()) do
+            -- Completed quests have no "distance to objective"; skip the API
+            -- call. Squared distance is used directly (ordering by d^2 == by d).
+            if not q.isComplete then
+                local distSq, onContinent = C_QuestLog.GetDistanceSqToQuest(id)
+                -- distSq==distSq rejects NaN; cmpDistance's strict-weak-order
+                -- safety depends on _distScratch holding only finite numbers.
+                if distSq and onContinent and distSq == distSq then
+                    _distScratch[id] = distSq
+                end
+            end
+        end
+    end
+    self._distHarvested = true
+    self._distStamp     = GetTime()
+    self._distMapID, self._distX, self._distY = mapID, px, py
+    Sort.SetDistances(_distScratch)
+end
+
+-- One periodic timer (only while in distance mode) that nudges a Refresh when
+-- the player has actually moved. Everything else — sort-mode changes, the
+-- tracker being hidden (combat alpha-0 / instance Hide), and combat — is
+-- handled inside the tick so a hidden or idle tracker does no work. The tick
+-- re-reads sortMode LIVE each fire, so it self-cancels even if no Render runs.
+function Tracker:_EnsureDistanceTicker(sortMode)
+    if sortMode == "distance" then
+        if not self._distTicker then
+            self._distTicker = C_Timer.NewTicker(DIST_TICK, function()
+                local DB = ns:GetSubsystem("DB")
+                local mode = DB and DB.db.profile.tracker and DB.db.profile.tracker.sortMode
+                if mode ~= "distance" then
+                    self:_EnsureDistanceTicker(nil)   -- live self-cancel
+                    return
+                end
+                local f = self.frame
+                if not (f and f:IsShown() and f:GetAlpha() > 0) then return end  -- hidden: skip
+                if InCombatLockdown and InCombatLockdown() then return end       -- combat: skip
+                local mapID, px, py = samplePlayerPos()
+                if self:_DistanceMoved(mapID, px, py) then
+                    self:Refresh()
+                end
+            end)
+        end
+    elseif self._distTicker then
+        self._distTicker:Cancel()
+        self._distTicker = nil
+    end
+end
+
 function Tracker:Render()
     local f = self.frame
     if not f then return end
@@ -693,6 +828,17 @@ function Tracker:Render()
 
     local y = 0
     local sections = self.sectionList or {}
+
+    -- Distance sort: harvest each quest's squared distance ONCE here (before
+    -- the section loop runs the Campaign + Quests sorts, so both reuse the
+    -- same map), and keep the order fresh as the player moves via a gated
+    -- ticker. Both are no-ops / self-clearing when sortMode isn't "distance".
+    do
+        local sortMode = self.frame and DB and DB.db.profile.tracker
+                         and DB.db.profile.tracker.sortMode
+        self:_UpdateDistanceSort(sortMode)
+        self:_EnsureDistanceTicker(sortMode)
+    end
 
     -- Per-section visibility toggles. The user can hide entire sections
     -- (Profession, World Quests) if they don't use those features. When a
@@ -1097,9 +1243,7 @@ function Tracker:ShowBlockMenu(block, questID)
                     and C_QuestLog.GetQuestWatchType(questID) ~= nil
     local focused = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
                     and C_SuperTrack.GetSuperTrackedQuestID() == questID
-    local title   = (C_QuestLog and C_QuestLog.GetTitleForQuestID
-                     and C_QuestLog.GetTitleForQuestID(questID))
-                    or ("Quest #" .. tostring(questID))
+    local title   = ns.Util.QuestTitle(questID, true)
 
     if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
 
@@ -1142,6 +1286,19 @@ function Tracker:ShowBlockMenu(block, questID)
                 end
             end)
         end
+
+        -- Drop a waypoint at the quest and open the world map there. Reuses
+        -- the Chain Guide's resolver (cache -> bundled coords -> questline API
+        -- -> next-objective waypoint) and its TomTom-or-Blizzard waypoint, so
+        -- a tracked quest becomes "arrow me there" with no new dependency. No
+        -- chain context here, which is fine: GoTo falls back to the player's
+        -- current map and GetNextWaypoint, which resolves for any active quest;
+        -- if no location is known yet it super-tracks + opens the zone and says
+        -- so rather than dead-clicking. All insecure calls — no taint.
+        root:CreateButton("Get Directions", function()
+            local WP = ns:GetSubsystem("ChainGuideWaypoint")
+            if WP and WP.GoTo then WP:GoTo(questID) end
+        end)
 
         root:CreateButton("Show in Quest Log", function()
             if C_AddOns and C_AddOns.LoadAddOn then

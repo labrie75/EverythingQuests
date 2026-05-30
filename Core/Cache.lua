@@ -36,6 +36,13 @@ Cache.dirtyObjectives = false  -- needs lightweight objectives/state refresh
 -- zero hot-path cost — one extra number field on tables we already build.
 local firstSeen = {}
 
+-- One-shot session baseline. firstSeen resets each session, so without this
+-- every quest present at login would look "recently added". The FIRST
+-- fullRebuild stamps the at-login set with 0 ("present at login, not new"); only
+-- quests that first appear in a LATER rebuild (i.e. freshly accepted) get a real
+-- time() and count as new for the tracker's "Recently Added" highlight.
+local baselined = false
+
 -- isCampaign source. On a COLD client start C_QuestLog.GetInfo's
 -- campaignID isn't populated yet at the first cache build, so a campaign
 -- quest would wrongly land in the regular Quests section until a
@@ -96,7 +103,10 @@ local function fullRebuild()
             else
                 local id = info.questID
                 local fs = firstSeen[id]
-                if not fs then fs = time(); firstSeen[id] = fs end
+                if not fs then
+                    fs = baselined and time() or 0   -- 0 = present at login, not "new"
+                    firstSeen[id] = fs
+                end
                 local q = {
                     questID        = id,
                     firstSeen      = fs,                                           -- epoch secs first cached; survives rebuilds
@@ -143,6 +153,7 @@ local function fullRebuild()
     for qid in pairs(firstSeen) do
         if not Cache.quests[qid] then firstSeen[qid] = nil end
     end
+    baselined = true   -- later rebuilds stamp newly-appeared quests with a real time()
     Cache.dirtyAll        = false
     Cache.dirtyObjectives = false
 end

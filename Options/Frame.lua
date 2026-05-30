@@ -12,11 +12,11 @@ local Options = ns:RegisterSubsystem("Options", {})
 Options.tabs = {}
 Options.tabOrder = {}
 
-local TAB_BG_ACTIVE   = { 0.43, 0.02, 0.00, 1.00 }
-local TAB_BG_INACTIVE = { 0.10, 0.10, 0.10, 0.85 }
-local FRAME_BG        = { 0.00, 0.00, 0.00, 0.95 }
-local HEADER_RED      = { 0.43, 0.02, 0.00 }
-local YELLOW          = { 0.92, 0.72, 0.02 }
+local TAB_BG_ACTIVE   = ns.Util.color.tabActive    -- #6D0501
+local TAB_BG_INACTIVE = ns.Util.color.tabInactive
+local FRAME_BG        = ns.Util.color.optionsBg
+local HEADER_RED      = ns.Util.color.headerRed    -- #6D0501
+local YELLOW          = ns.Util.color.buttonYellow -- #EBB706
 local TAB_HEIGHT      = 28
 local TAB_PADDING_X   = 18
 
@@ -64,7 +64,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.6.2"))
+    f.version:SetText("v" .. (ns.VERSION or "1.7.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)

@@ -30,8 +30,8 @@ local _, ns = ...
 
 local Dialog = ns:RegisterSubsystem("Dialog", {})
 
-local RED    = { 0.427, 0.020, 0.004 }     -- #6D0501
-local YELLOW = { 0.92, 0.72, 0.02 }
+local RED    = ns.Util.color.brandRed      -- #6D0501
+local YELLOW = ns.Util.color.buttonYellow  -- #EBB706
 
 local function makeButton(parent)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")

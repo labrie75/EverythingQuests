@@ -140,9 +140,7 @@ function AC:GetActivePopups()
     for i = 1, GetNumAutoQuestPopUps() do
         local qid, popType = GetAutoQuestPopUp(i)
         if qid and popType == "COMPLETE" then
-            local title = (C_QuestLog and C_QuestLog.GetTitleForQuestID
-                           and C_QuestLog.GetTitleForQuestID(qid))
-                          or ("Quest #" .. tostring(qid))
+            local title = ns.Util.QuestTitle(qid, true)
             out[#out + 1] = { questID = qid, title = title }
         end
     end

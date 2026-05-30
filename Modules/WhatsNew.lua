@@ -11,28 +11,32 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
-local FEATURE_POPUP_VERSION = "1.6.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.6.0"
+local FEATURE_POPUP_VERSION = "1.7.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.7.0"
 
 local POPUP_BODY = [[
-|cffEBB706Quest icons on nameplates|r |cffaaaaaa(new feature)|r
-Quest objective enemies now show a "|cffEBB706!|r" right on their nameplate, with the amount you still need (a count like |cffffffff3|r, or |cffffffff76%|r for progress objectives). See at a glance which mobs count for your quests instead of guessing. On by default; toggle it under |cffffffffGeneral|r in Options. If you also run ElvUI (which has its own version), EQ asks once which you'd like to use so you don't get doubles.
+|cffEBB706"Recently Added" quests|r |cffaaaaaa(new feature)|r
+Quests you just picked up now show a |cffffffffNEW|r tag in the tracker for about an hour, so a fresh quest is easy to spot in a long list. There's also a new |cffffffffRecently Added|r sort order that floats your newest quests to the top. Toggle the tag under |cffffffffTracker|r in Options.
 
-|cffEBB706"Quest Discovered!" boxes|r |cffaaaaaa(new feature)|r
-Newly discovered and ready-to-complete quests now show a clickable callout box at the top of the Quests section of the tracker, matching the game's default behavior. Toggle under |cffffffffTracker|r in Options.
+|cffEBB706Sort by distance|r |cffaaaaaa(new feature)|r
+A new |cffffffffDistance|r sort order arranges your tracked quests by how close they are, so the next thing you can reach sits at the top. Find it under Sort Order on the |cffffffffTracker|r tab.
 
-|cffEBB706Directions on ready-to-turn-in quests|r
-"Go talk to someone" quests that have no checklist objectives used to show a bare title. They now show where to go — e.g. |cffffffffSpeak to Mothkeeper Wew'tam in the Den.|r — so you're never left guessing.
+|cffEBB706Get Directions|r |cffaaaaaa(new feature)|r
+Right-click any quest in the tracker and choose |cffffffffGet Directions|r to drop a map waypoint at the quest and open the map there — TomTom if you have it, otherwise the game's own waypoint.
+
+|cffEBB706Lighter on memory|r
+The Chain Guide's account-wide cache now trims data it no longer needs instead of growing forever. Everything it removes is rebuilt automatically when needed, so nothing is lost.
 
 |cffEBB706Fixes|r
-    - Usable quest-item buttons no longer trigger a "blocked action" error in combat
-    - Hardened EQ's popups so they can't be blamed for a quit-time error
+    - No more "blocked action" errors when hiding, dragging, or resizing the tracker in combat
+    - Fixed a world-map slowdown that built up over long sessions
+    - World quests and just-loaded quests now show their real names instead of "Quest #12345"
 ]]
 -- ──────────────────────────────────────────────────────────────────────
 
-local YELLOW     = { 0.92, 0.72, 0.02 }
-local HEADER_RED = { 0.42, 0.02, 0.02 }
-local MUTED      = { 0.70, 0.70, 0.70 }
+local YELLOW     = ns.Util.color.buttonYellow   -- #EBB706
+local HEADER_RED = ns.Util.color.brandRed        -- #6D0501 (was drifted to {0.42,0.02,0.02})
+local MUTED      = ns.Util.color.muted
 
 local function alreadySeen()
     return ns.db and ns.db.global and ns.db.global.whatsNewSeen == FEATURE_POPUP_VERSION

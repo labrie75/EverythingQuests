@@ -5,14 +5,22 @@ local _, ns = ...
 
 local Util = ns:RegisterSubsystem("Util", {})
 
--- Style tokens (options-UI palette). Reference: project_eq_style memory.
+-- Style tokens (the Everything-suite palette). SINGLE SOURCE OF TRUTH — wire
+-- modules to these instead of re-declaring the literals (which had drifted:
+-- two files shipped #6D0501 as {0.42,0.02,0.02}, a visibly purpler red).
+-- The brand red is exactly #6D0501 = 109/255, 5/255, 1/255 = 0.427,0.020,0.004
+-- (matches Core/DB.lua's borderColor default and Core/Dialog.lua).
 Util.color = {
-    optionsBg     = { 0.00, 0.00, 0.00, 0.95 },
-    tabActive     = { 0.43, 0.02, 0.00, 1.00 },                         -- #6D0501
-    tabText       = { 1.00, 1.00, 1.00, 1.00 },
-    headerRed     = { 0.43, 0.02, 0.00, 1.00 },
-    buttonYellow  = { 0.92, 0.72, 0.02, 1.00 },                         -- #EBB706
-    statYellow    = { 0.92, 0.72, 0.02, 1.00 },
+    optionsBg     = { 0.00,  0.00,  0.00,  0.95 },
+    tabActive     = { 0.427, 0.020, 0.004, 1.00 },                      -- #6D0501
+    tabInactive   = { 0.10,  0.10,  0.10,  0.85 },
+    tabText       = { 1.00,  1.00,  1.00,  1.00 },
+    brandRed      = { 0.427, 0.020, 0.004, 1.00 },                      -- #6D0501 canonical
+    headerRed     = { 0.427, 0.020, 0.004, 1.00 },                      -- = brandRed (section headers)
+    buttonYellow  = { 0.92,  0.72,  0.02,  1.00 },                      -- #EBB706
+    statYellow    = { 0.92,  0.72,  0.02,  1.00 },                      -- = buttonYellow
+    muted         = { 0.70,  0.70,  0.70,  1.00 },                      -- secondary label grey
+    dim           = { 0.50,  0.50,  0.50,  1.00 },                      -- tertiary / disabled grey
 }
 
 -- Format an integer count as "1.2k" / "12.3k" / "1.2m" once it gets big.
@@ -93,6 +101,66 @@ function Util.ReconcileOrder(orderMap)
     local clean = {}
     for i = 1, #list do clean[list[i][1]] = i end
     return clean
+end
+
+-- ── Objective "X/Y" progress colorization (single source of truth) ───
+-- The tracker's quest blocks (Blocks.lua) and the World Quests section
+-- (Tracker/Events.lua) both color the have/need count identically: red at
+-- zero, amber in progress, green when complete. This lived as two hand-synced
+-- copies — and the Events one allocated a fresh gsub closure per objective
+-- line. One implementation here, with a hoisted replacer that captures no
+-- upvalues (reused, so no per-call closure), keeps both surfaces identical
+-- and allocation-light on the render hot path.
+local function progressRepl(have, need)
+    local h, n = tonumber(have), tonumber(need)
+    if not (h and n) then return have .. "/" .. need end
+    local color
+    if h == 0    then color = "|cffff5050"
+    elseif h < n then color = "|cffeeaa00"
+    else              color = "|cff44ff44"
+    end
+    return color .. have .. "/" .. need .. "|r"
+end
+
+function Util.ColorizeProgress(text)
+    if not text or text == "" then return text end
+    return (text:gsub("(%d+)%s*/%s*(%d+)", progressRepl))
+end
+
+-- Strip a leading "X/Y" count from RAW objective text (used when the user
+-- hides objective numbers). Leading-anchored, and meant to run BEFORE any
+-- color escapes are added so it can never eat into a |cAARRGGBB..|r code.
+function Util.StripLeadingCount(text)
+    return (text:gsub("^%s*%d+%s*/%s*%d+%s*", ""))
+end
+
+-- ── Quest title resolver (single source of truth) ────────────────────
+-- Quest titles come from different APIs depending on quest kind and load
+-- state: C_QuestLog.GetTitleForQuestID covers normal log quests, while
+-- QuestUtils_GetQuestName and C_TaskQuest.GetQuestInfoByQuestID fill in
+-- world/task quests and quests whose data is still streaming in. Several call
+-- sites only consulted GetTitleForQuestID and showed a bare "Quest #<id>" for
+-- everything else — this is the shared resolver they should all use.
+--   withNumberFallback truthy -> returns "Quest #<id>" when nothing resolves
+--   withNumberFallback falsy  -> returns nil (so the caller can chain its own
+--                                fallback, e.g. a curated item.name)
+function Util.QuestTitle(questID, withNumberFallback)
+    if questID then
+        if C_QuestLog and C_QuestLog.GetTitleForQuestID then
+            local t = C_QuestLog.GetTitleForQuestID(questID)
+            if t and t ~= "" then return t end
+        end
+        if QuestUtils_GetQuestName then
+            local n = QuestUtils_GetQuestName(questID)
+            if n and n ~= "" then return n end
+        end
+        if C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID then
+            local t = C_TaskQuest.GetQuestInfoByQuestID(questID)
+            if t and t ~= "" then return t end
+        end
+    end
+    if withNumberFallback then return "Quest #" .. tostring(questID) end
+    return nil
 end
 
 ns.Util = Util

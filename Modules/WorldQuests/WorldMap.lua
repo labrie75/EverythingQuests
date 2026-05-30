@@ -282,11 +282,24 @@ end
 
 function M:OnEnable()
     local Events = ns:GetSubsystem("Events")
+
+    -- Hook the map show/hide EXACTLY once. PLAYER_ENTERING_WORLD fires on
+    -- every loading screen (zone/instance/hearth/reload), so hooking inside
+    -- its handler — as this used to — appended a fresh OnShow/OnHide closure
+    -- pair to WorldMapFrame on every entry, accumulating unbounded closures on
+    -- a permanent Blizzard frame over a session. The _mapHooked guard hooks
+    -- once (same pattern as Modules/Tracker/Visibility.lua) with hoisted
+    -- handlers; attach() and the ticker-start still run on every entry.
+    local function startTicker() self:StartTicker() end
+    local function stopTicker()  self:StopTicker()  end
     Events:On("PLAYER_ENTERING_WORLD", function()
         attach(self)
         if WorldMapFrame then
-            WorldMapFrame:HookScript("OnShow", function() self:StartTicker() end)
-            WorldMapFrame:HookScript("OnHide", function() self:StopTicker() end)
+            if not self._mapHooked then
+                self._mapHooked = true
+                WorldMapFrame:HookScript("OnShow", startTicker)
+                WorldMapFrame:HookScript("OnHide", stopTicker)
+            end
             if WorldMapFrame:IsShown() then self:StartTicker() end
         end
     end)

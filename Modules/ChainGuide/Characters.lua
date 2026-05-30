@@ -21,16 +21,27 @@ function C:OnInitialize()
     local DB = ns:GetSubsystem("DB")
     self.cache = DB.chainCache
     self.charKey = charKey()
-    if not self.cache[self.charKey] then
-        local _, classFile = (UnitClass and UnitClass("player")) or nil, nil
-        self.cache[self.charKey] = {
+    -- UnitClass returns (localizedName, classFile, classID); we persist the
+    -- locale-independent classFile ("WARRIOR"). The old one-liner
+    -- `local _, classFile = (UnitClass and UnitClass("player")) or nil, nil`
+    -- truncated the call to its FIRST return via the parens/`or`, so
+    -- classFile was ALWAYS nil and the cached class never persisted.
+    local _, classFile
+    if UnitClass then _, classFile = UnitClass("player") end
+    local rec = self.cache[self.charKey]
+    if not rec then
+        rec = {
             name      = UnitName and UnitName("player"),
             class     = classFile,
             faction   = UnitFactionGroup and UnitFactionGroup("player"),
             completed = {},
         }
+        self.cache[self.charKey] = rec
+    elseif not rec.class then
+        rec.class = classFile          -- self-heal entries written before the fix
     end
-    self.char = self.cache[self.charKey]
+    rec.lastSeen = time()              -- stamp the current char each login so PruneStaleRecords spares it
+    self.char = rec
 end
 
 function C:OnEnable()
@@ -40,6 +51,33 @@ function C:OnEnable()
             self.char.completed[questID] = true
         end
     end)
+end
+
+-- Prune whole character records not seen within `ttl` seconds (deleted or
+-- long-abandoned alts), never the current character. Safe because
+-- IsQuestCompleted checks the live API first and only falls back to the CURRENT
+-- char's set — no other record is read today. We drop WHOLE records, not
+-- individual quest entries: per-quest pruning is wrong-granularity and would
+-- erode the current char's turn-in fallback and the latent cross-char browse. A
+-- record with no lastSeen is stamped this pass (grace) instead of dropped.
+-- Called from DB:MaybePruneChainCache (throttled). time() is epoch.
+function C:PruneStaleRecords(now, ttl)
+    if not self.cache then return 0 end
+    local removed = 0
+    for k, v in pairs(self.cache) do
+        -- Only real character records: a table carrying `completed`. This skips
+        -- the sibling questCoords table and the lastPrune number that share
+        -- this account-wide cache. Never touch the current character.
+        if type(v) == "table" and v.completed ~= nil and k ~= self.charKey then
+            if not v.lastSeen then
+                v.lastSeen = now
+            elseif now - v.lastSeen > ttl then
+                self.cache[k] = nil
+                removed = removed + 1
+            end
+        end
+    end
+    return removed
 end
 
 -- Has this character ever completed `questID`? Prefer the live Blizzard flag

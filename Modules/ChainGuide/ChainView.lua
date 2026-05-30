@@ -196,9 +196,7 @@ end
 
 -- ─── Node behavior ─────────────────────────────────────────────────────
 local function buildQuestTooltip(item, statusKey)
-    local title = (C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(item.id))
-                  or item.name
-                  or ("Quest #" .. tostring(item.id))
+    local title = ns.Util.QuestTitle(item.id) or item.name or ("Quest #" .. tostring(item.id))
     GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR_RIGHT")
     GameTooltip:SetText(title, 1, 0.82, 0)
     if statusKey == "complete" then
@@ -240,7 +238,7 @@ local function onNodeClickQuest(item, chain)
     -- Shift-click → chat link if we know the title. Plain click → drop a
     -- waypoint at the quest and open the map (Modules/ChainGuide/Waypoint).
     if IsShiftKeyDown and IsShiftKeyDown() and ChatEdit_InsertLink then
-        local title = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(item.id)
+        local title = ns.Util.QuestTitle(item.id)
         if title then
             ChatEdit_InsertLink(("[%s]"):format(title))
             return
@@ -438,8 +436,7 @@ function CV:Render(pane, chain)
             subtitle = "View chain →"
             statusKey = "chainnav"
         else
-            local cached = C_QuestLog and C_QuestLog.GetTitleForQuestID
-                            and C_QuestLog.GetTitleForQuestID(resolved.id)
+            local cached = ns.Util.QuestTitle(resolved.id)   -- nil if unresolved
             -- For uncached quests, ask Blizzard to load the data; when the
             -- QUEST_DATA_LOAD_RESULT fires we re-render and the proper name
             -- will be available on the second pass.

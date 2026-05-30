@@ -60,6 +60,10 @@ function Blocks:BeginRenderPass()
     local t     = DB and DB.db.profile.tracker
     local dirty = false
 
+    -- Sampled once per pass for the "Recently Added" recency check, so
+    -- RenderQuest doesn't call time() per block.
+    self._nowTs = time()
+
     local file, size, outline
     if t then
         local Media = ns:GetSubsystem("Media")
@@ -105,6 +109,13 @@ local TITLE_TO_SUB_GAP   = 2     -- title → objectives when no category presen
 local ICON_SIZE          = 26    -- reads like a Blizzard POI button (~24-26 actual icon)
 local ICON_TITLE_GAP     = 4
 local CATEGORY_COLOR     = { 0.42, 0.69, 1.00 }   -- light blue zone subtitle
+
+-- "Recently Added" tag. A quest first cached within NEW_WINDOW seconds (and not
+-- at login — see the firstSeen baseline in Core/Cache.lua) gets a "NEW" title
+-- prefix. Prefix, not suffix, so it survives word-wrap and reads at a glance,
+-- matching the pinned-star convention. Category-blue, no emoji.
+local NEW_WINDOW = 3600
+local NEW_TAG    = "|cff6BAFFFNEW|r "
 
 -- Try an atlas first; if the client doesn't ship it, fall back to the given
 -- texture path. Some atlases (Campaign-QuestLog-LoreBook, QuestDaily, etc.)
@@ -235,35 +246,13 @@ function Blocks:ApplyQuestIcon(iconGlow, icon, iconBang, q, focused)
     applyQuestIcon(iconGlow, icon, iconBang, q, focused)
 end
 
--- Hoisted to file scope: this captures no locals, so the previous inline
--- `function(have,need)` allocated a fresh closure on every colorizeProgress
--- call (once per objective line — ~100/refresh on a big log) for nothing.
--- One shared function reused instead.
-local function progressRepl(have, need)
-    local h, n = tonumber(have), tonumber(need)
-    if not (h and n) then return have .. "/" .. need end
-    local color
-    if h == 0    then color = "|cffff5050"
-    elseif h < n then color = "|cffeeaa00"
-    else              color = "|cff44ff44"
-    end
-    return color .. have .. "/" .. need .. "|r"
-end
-
-local function colorizeProgress(text)
-    if not text or text == "" then return text end
-    return (text:gsub("(%d+)%s*/%s*(%d+)", progressRepl))
-end
-
--- Strip a leading "X/Y" progress count from RAW objective text — used when
--- the user hides objective numbers. Done BEFORE any color/atlas escapes are
--- added (that's the whole point): the old approach regex-stripped a string
--- that already contained |cAARRGGBB..|r codes and could eat into one,
--- leaking the hex as visible text. Leading-anchored so it never touches a
--- number inside a description.
-local function stripLeadingCount(text)
-    return (text:gsub("^%s*%d+%s*/%s*%d+%s*", ""))
-end
+-- Objective "X/Y" colorization + leading-count stripping now live in
+-- Core/Util.lua (Util.ColorizeProgress / Util.StripLeadingCount) so the
+-- tracker blocks and the World Quests section (Tracker/Events.lua) share ONE
+-- implementation instead of two hand-synced copies. Localized here so the hot
+-- render path keeps a plain local call (no per-line table lookup).
+local colorizeProgress  = ns.Util.ColorizeProgress
+local stripLeadingCount = ns.Util.StripLeadingCount
 
 -- Build the multi-line objective string for a quest. Includes BOTH complete
 -- and incomplete objectives so the user sees full progress (matches the
@@ -466,6 +455,7 @@ function Blocks:Sweep()
         b._rClass = nil
         b._rZone  = nil
         b._rPin   = nil
+        b._rNew   = nil
         b._rFoc   = nil
         b._rSimp  = nil
         b._rWidth = nil
@@ -491,6 +481,10 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     local DB  = ns:GetSubsystem("DB")
     local cfg = DB and DB.db.profile.tracker or {}
     local isPinned = (DB and DB.char.pinned and DB.char.pinned[qid]) and true or false
+    -- "Recently Added": gate the showRecentlyAddedTag option INTO this value so
+    -- toggling it flips _rNew and repaints instantly (no _renderGen plumbing).
+    local isNew = (cfg.showRecentlyAddedTag and questData.firstSeen and questData.firstSeen > 0
+                   and self._nowTs and (self._nowTs - questData.firstSeen) < NEW_WINDOW) and true or false
 
     -- ── Change detection ─────────────────────────────────────────────
     -- Skip the allocation-heavy content rebuild when nothing this block
@@ -512,6 +506,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         or block._rClass ~= questData.classification
         or block._rZone  ~= questData.zone
         or block._rPin   ~= isPinned
+        or block._rNew   ~= isNew
         or block._rFoc   ~= focused
         or block._rSimp  ~= (simplifyMode and true or false)
         or block._rWidth ~= curW
@@ -541,6 +536,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         titleText = titleText .. (" |cff666666(#%d)|r"):format(qid)
     end
     if isPinned then titleText = "|cffEBB706★|r " .. titleText end
+    if isNew    then titleText = NEW_TAG .. titleText end
     block.title:SetText(titleText)
 
     local colorByDifficulty = cfg.colorByDifficulty ~= false
@@ -637,6 +633,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     block._rClass = questData.classification
     block._rZone  = questData.zone
     block._rPin   = isPinned
+    block._rNew   = isNew
     block._rFoc   = focused
     block._rSimp  = simplifyMode and true or false
     block._rWidth = curW

@@ -31,14 +31,34 @@ local function shouldHide()
     return false
 end
 
+-- Show/hide the tracker WITHOUT tainting. The tracker frame owns secure
+-- item-button descendants (Modules/Tracker/ItemButtons.lua), so Hide()/Show()
+-- on it are PROTECTED frame methods, blocked while InCombatLockdown() with an
+-- ADDON_ACTION_BLOCKED that names EQ. This module is wired to
+-- PLAYER_REGEN_DISABLED, where lockdown is already active, and the
+-- hideInCombat rule by definition wants the hide DURING combat — so the
+-- usual "defer to PLAYER_REGEN_ENABLED" pattern is inverted here (by then
+-- shouldHide() is false and we'd show instead). Out of combat: use the real
+-- Hide()/Show() (and undo any in-combat alpha damping). In combat: fall back
+-- to a non-protected visual hide (alpha 0); the next out-of-combat Apply()
+-- reconciles to the real Shown state.
+local function setVisible(frame, visible)
+    if InCombatLockdown and InCombatLockdown() then
+        frame:SetAlpha(visible and 1 or 0)
+        frame._eqCombatHidden = (not visible) or nil
+        return
+    end
+    if frame._eqCombatHidden then
+        frame:SetAlpha(1)
+        frame._eqCombatHidden = nil
+    end
+    if visible then frame:Show() else frame:Hide() end
+end
+
 function V:Apply()
     local Tracker = ns:GetSubsystem("Tracker")
     if not (Tracker and Tracker.frame) then return end
-    if shouldHide() then
-        Tracker.frame:Hide()
-    else
-        Tracker.frame:Show()
-    end
+    setVisible(Tracker.frame, not shouldHide())
 end
 
 function V:OnEnable()

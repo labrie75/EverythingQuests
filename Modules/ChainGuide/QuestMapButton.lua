@@ -110,9 +110,7 @@ local function onClick()
     -- No chain in EQ's data yet — show the Wowhead reference so the click
     -- still gives the player something useful (cmnd-/ctrl-click to select
     -- the URL in chat to copy).
-    local title = (C_QuestLog and C_QuestLog.GetTitleForQuestID
-                   and C_QuestLog.GetTitleForQuestID(qid))
-                  or ("Quest #" .. tostring(qid))
+    local title = ns.Util.QuestTitle(qid, true)
     local url = "https://www.wowhead.com/quest=" .. tostring(qid)
     DEFAULT_CHAT_FRAME:AddMessage(
         ("|cffEBB706EQ:|r no chain yet for |cffffffff%s|r — |cffaaccff%s|r")

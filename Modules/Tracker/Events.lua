@@ -97,9 +97,7 @@ local function buildHeader(parent)
             if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
             local Watch = ns:GetSubsystem("WQWatchPersist")
             local tracked = Watch and Watch.IsTracked and Watch:IsTracked(self.questID)
-            local title = (C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID
-                           and C_TaskQuest.GetQuestInfoByQuestID(self.questID))
-                          or "World Quest"
+            local title = ns.Util.QuestTitle(self.questID) or "World Quest"
             MenuUtil.CreateContextMenu(self, function(_, root)
                 root:CreateTitle(title)
                 if tracked then
@@ -330,32 +328,14 @@ local function getActiveWorldQuests()
 end
 
 -- "X/Y" prefix turns red while at zero, amber while in progress, green when
--- complete. Match Modules/Tracker/Blocks.lua so the WQ section reads the
--- same way as the regular Quests section.
-local function colorizeProgress(text)
-    if not text or text == "" then return text end
-    return (text:gsub("(%d+)%s*/%s*(%d+)", function(have, need)
-        local h, n = tonumber(have), tonumber(need)
-        if not (h and n) then return have .. "/" .. need end
-        local color
-        if h == 0      then color = "|cffff5050"
-        elseif h < n   then color = "|cffeeaa00"
-        else                color = "|cff44ff44"
-        end
-        return color .. have .. "/" .. need .. "|r"
-    end))
-end
+-- complete. Shared with Modules/Tracker/Blocks.lua via Core/Util.lua so the
+-- WQ section reads identically to the regular Quests section. (This used to
+-- be a hand-synced copy that also allocated a fresh gsub closure per
+-- objective line on the render path — the shared version is hoisted.)
+local colorizeProgress = ns.Util.ColorizeProgress
 
 local function questTitle(questID)
-    if C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID then
-        local t = C_TaskQuest.GetQuestInfoByQuestID(questID)
-        if t and t ~= "" then return t end
-    end
-    if QuestUtils_GetQuestName then
-        local n = QuestUtils_GetQuestName(questID)
-        if n and n ~= "" then return n end
-    end
-    return "Quest #" .. tostring(questID)
+    return ns.Util.QuestTitle(questID, true)
 end
 
 

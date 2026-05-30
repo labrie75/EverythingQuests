@@ -96,23 +96,56 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
     clear:SetSize(180, 24)
     clear:SetPoint("TOPLEFT", cacheHint, "BOTTOMLEFT", 0, -12)
 
-    -- Stats — read straight from the database; refresh-on-show via the
-    -- closure so re-opening this tab reflects newly registered chains.
+    -- Cache readout text. Created here, populated by refreshStats() below, and
+    -- positioned beneath the buttons once they exist.
     local stats = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    stats:SetPoint("TOPLEFT", clear, "BOTTOMLEFT", 0, -16)
     stats:SetWidth(380)
     stats:SetJustifyH("LEFT")
     stats:SetTextColor(0.92, 0.72, 0.02)
 
+    -- Read straight from the saved cache + chain database; called on tab show so
+    -- re-opening reflects current counts. Defined before the button below that
+    -- calls it (plain local function — no forward-decl needed).
     local function refreshStats()
-        local DB = ns:GetSubsystem("ChainGuideDatabase")
-        local nCats, nChains = 0, 0
-        if DB then
-            for _ in pairs(DB.categories) do nCats = nCats + 1 end
-            for _ in pairs(DB.chains)     do nChains = nChains + 1 end
+        local cache = _G.EverythingQuestsChainCache or {}
+        local nChars, nCoords = 0, 0
+        for _, v in pairs(cache) do
+            if type(v) == "table" and v.completed ~= nil then nChars = nChars + 1 end
         end
-        stats:SetText(("|cffffffff%d|r chains across |cffffffff%d|r categories"):format(nChains, nCats))
+        local qc = cache.questCoords
+        if qc then for _ in pairs(qc) do nCoords = nCoords + 1 end end
+
+        local CDB = ns:GetSubsystem("ChainGuideDatabase")
+        local nCats, nChains = 0, 0
+        if CDB then
+            for _ in pairs(CDB.categories) do nCats = nCats + 1 end
+            for _ in pairs(CDB.chains)     do nChains = nChains + 1 end
+        end
+
+        local text = ("Cached: |cffffffff%d|r characters, |cffffffff%d|r waypoint locations\n|cffffffff%d|r chains across |cffffffff%d|r categories")
+            :format(nChars, nCoords, nChains, nCats)
+        if cache.lastPrune and cache.lastPrune > 0 then
+            local days = math.floor((time() - cache.lastPrune) / 86400)
+            local when = (days <= 0 and "today") or (days == 1 and "1 day ago") or (("%d days ago"):format(days))
+            text = text .. "\n|cffaaaaaaLast pruned: " .. when .. "|r"
+        end
+        stats:SetText(text)
     end
+
+    -- Soft alternative to the wipe above: drop only stale entries (deleted-alt
+    -- records + waypoints unused past their TTL). Everything dropped is
+    -- re-derivable, so no reload is needed.
+    local prune = Options:CreateYellowButton(content, "Prune stale entries now", function()
+        local DB = ns:GetSubsystem("DB")
+        if not (DB and DB.MaybePruneChainCache) then return end
+        local nRec, nCoord = DB:MaybePruneChainCache(true)
+        refreshStats()
+        print(("|cffEBB706EQ|r: pruned |cffffffff%d|r stale character record(s) and |cffffffff%d|r waypoint(s)."):format(nRec or 0, nCoord or 0))
+    end)
+    prune:SetSize(180, 24)
+    prune:SetPoint("TOPLEFT", clear, "BOTTOMLEFT", 0, -8)
+
+    stats:SetPoint("TOPLEFT", prune, "BOTTOMLEFT", 0, -16)
     refreshStats()
     content:HookScript("OnShow", refreshStats)
 end)

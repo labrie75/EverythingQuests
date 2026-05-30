@@ -45,6 +45,7 @@ local SORT_OPTIONS = {
     { value = "type",     label = "Type"     },
     { value = "level",    label = "Level"    },
     { value = "distance", label = "Distance" },
+    { value = "recent",   label = "Recently Added" },
     { value = "manual",   label = "Manual"   },
 }
 
@@ -194,13 +195,19 @@ Options:AddTab("tracker", "Tracker", function(content)
         popupGet, popupSet)
     popupCheck:SetPoint("TOPLEFT", hideBarCheck, "BOTTOMLEFT", 0, -2)
 
+    local newTagGet, newTagSet = trackerSetting("showRecentlyAddedTag")
+    local newTagCheck = Options:CreateCheckbox(content,
+        "Show NEW tag on recently accepted quests  |cffaaaaaa(for about an hour after accepting)|r",
+        newTagGet, newTagSet)
+    newTagCheck:SetPoint("TOPLEFT", popupCheck, "BOTTOMLEFT", 0, -2)
+
     local Media = ns:GetSubsystem("Media")
     local soundGet, soundSet = trackerSetting("questSoundEnabled")
     local soundCheck = Options:CreateCheckbox(
         content,
         "Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r",
         soundGet, soundSet)
-    soundCheck:SetPoint("TOPLEFT", popupCheck, "BOTTOMLEFT", 0, -8)
+    soundCheck:SetPoint("TOPLEFT", newTagCheck, "BOTTOMLEFT", 0, -8)
 
     local soundList = (Media and Media.GetSoundList and Media:GetSoundList()) or {}
     local sndChoiceGet, sndChoiceSet = trackerSetting("questCompleteSound")

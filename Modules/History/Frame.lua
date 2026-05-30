@@ -26,10 +26,10 @@ local HEATMAP_COLS = 13
 local CELL_SIZE    = 16
 local CELL_GAP     = 3
 
-local YELLOW      = { 0.92, 0.72, 0.02 }
-local HEADER_RED  = { 0.42, 0.02, 0.02 }
-local MUTED       = { 0.70, 0.70, 0.70 }
-local DIM         = { 0.50, 0.50, 0.50 }
+local YELLOW      = ns.Util.color.buttonYellow   -- #EBB706
+local HEADER_RED  = ns.Util.color.brandRed        -- #6D0501 (was drifted to {0.42,0.02,0.02})
+local MUTED       = ns.Util.color.muted
+local DIM         = ns.Util.color.dim
 
 -- Arial Narrow is a Blizzard-bundled font noticeably thinner than the
 -- default Friz Quadrata used by GameFont* objects. We keep each
@@ -736,10 +736,7 @@ function HF:_renderTimeline()
                     sub:SetPoint("TOPLEFT",  pane._canvas, "TOPLEFT",  24, -y)
                     sub:SetPoint("TOPRIGHT", pane._canvas, "TOPRIGHT", 0, -y)
                     local t = completion[it.id]
-                    local title = (C_QuestLog and C_QuestLog.GetTitleForQuestID
-                                   and C_QuestLog.GetTitleForQuestID(it.id))
-                                  or it.name
-                                  or ("Quest #" .. tostring(it.id))
+                    local title = ns.Util.QuestTitle(it.id) or it.name or ("Quest #" .. tostring(it.id))
                     sub.title:SetText(title)
                     sub.meta:SetText("ID " .. tostring(it.id))
                     if t and t ~= nil then
@@ -1158,9 +1155,7 @@ function HF:_exportTimeline()
             local it = rec.chain.items[j]
             if it and it.type == "quest" then
                 local t = completion[it.id]
-                local title = (C_QuestLog and C_QuestLog.GetTitleForQuestID
-                               and C_QuestLog.GetTitleForQuestID(it.id))
-                              or it.name or ("Quest #" .. tostring(it.id))
+                local title = ns.Util.QuestTitle(it.id) or it.name or ("Quest #" .. tostring(it.id))
                 local when = t and ((t > 0 and date("%Y-%m-%d", t)) or "(before tracking)") or "—"
                 lines[#lines + 1] = ("  - %s [%s]"):format(title, when)
             end
