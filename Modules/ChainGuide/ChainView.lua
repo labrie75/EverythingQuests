@@ -433,7 +433,7 @@ function CV:Render(pane, chain)
         if resolved.type == "chain" then
             local sub = Database.chains[resolved.id]
             title    = (sub and sub.name) or ("Chain #" .. tostring(resolved.id))
-            subtitle = "View chain →"
+            subtitle = "View chain >"
             statusKey = "chainnav"
         else
             local cached = ns.Util.QuestTitle(resolved.id)   -- nil if unresolved

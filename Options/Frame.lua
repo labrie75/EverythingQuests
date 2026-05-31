@@ -69,7 +69,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.8.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.8.1"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -275,7 +275,7 @@ end
 -- options: array of { value=string|number, label=string }
 -- Setter is called on each click; visual state updates locally so callers
 -- don't have to re-render the group.
-function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWidth)
+function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWidth, pad)
     local container = CreateFrame("Frame", nil, parent)
 
     local labelFS
@@ -304,6 +304,11 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
     -- once the next button would overflow it — keeps a long option list (e.g.
     -- the tracker's 7 sort modes) from spilling into the adjacent column.
     local BTN_H, ROW_GAP, BTN_GAP = 24, 4, 4
+    -- Horizontal text padding per button. Default 18; callers with a tight,
+    -- many-option row (the tracker's 7 sort modes) can pass a smaller value so
+    -- the row fits one line at wider stock fonts instead of orphaning the last
+    -- button onto a second row.
+    local PAD = pad or 18
     local rowAnchor  = labelFS or container
     local rowOffsetY = labelFS and -4 or 0
     local x, y, maxX = 0, 0, 0
@@ -315,7 +320,7 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
         local txt = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         txt:SetPoint("CENTER")
         txt:SetText(opt.label)
-        local w = math.max(40, txt:GetStringWidth() + 18)
+        local w = math.max(40, txt:GetStringWidth() + PAD)
         btn:SetWidth(w)
         if maxWidth and x > 0 and (x + w) > maxWidth then   -- wrap to next row
             x, y = 0, y + BTN_H + ROW_GAP
@@ -697,6 +702,13 @@ local function eqSlashHandler(msg)
         local HF = ns:GetSubsystem("HistoryFrame")
         if HF and HF.Toggle then HF:Toggle() end
         return
+    elseif msg == "whatsnew" or msg == "changes" then
+        -- Re-open the "What's New" popup on demand (it otherwise auto-shows
+        -- once per major release). Always shows, regardless of the one-shot
+        -- seen flag, since the user explicitly asked for it.
+        local WN = ns:GetSubsystem("WhatsNew")
+        if WN and WN.Show then WN:Show() end
+        return
     elseif msg:match("^discover") then
         local hint = msg:match("^discover%s+(.+)$")
         local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
@@ -993,7 +1005,7 @@ function Options:DumpDirections()
 
     local W = ns:GetSubsystem("ChainGuideWaypoint")
     if logIdx then
-        p("  => WINNER:           super-track the quest \226\134\146 Blizzard's live objective / turn-in POI"
+        p("  => WINNER:           super-track the quest -> Blizzard's live objective / turn-in POI"
           .. (TomTom and " (+ TomTom pin at the live objective, or turn-in via GetQuestsOnMap)" or ""))
     elseif W and W.Resolve then
         line("=> WINNER", W:Resolve(questID))

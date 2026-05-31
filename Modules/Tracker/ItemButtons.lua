@@ -203,6 +203,18 @@ local function applySecure(questID)
     end
 end
 
+-- True once any secure item button has been built this session (live OR
+-- pooled). While true, the tracker frame / scroll / content are PARENT-CHAIN
+-- ancestors of a live SecureActionButton, so their SetHeight/SetSize are
+-- PROTECTED frame methods and must not be called while InCombatLockdown().
+-- Buttons are never destroyed -- retiring one only Hides it and returns it to
+-- `pool`, still parented under `content` -- so the protection (and this flag)
+-- is one-way: once true it stays true for the session. Tracker:Render reads
+-- this to decide whether to defer its content/scroll resize in combat.
+function IB:HasSecureButtons()
+    return next(self.buttons) ~= nil or #pool > 0
+end
+
 -- Called at the very end of Tracker:Render (after Sweep), so Blocks.byID
 -- reflects this pass's visible quests. Decides which quests want a button,
 -- applies secure changes (now or deferred), and refreshes non-secure

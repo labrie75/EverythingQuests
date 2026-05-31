@@ -5,6 +5,21 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-05-31
+
+### Bug Fixes
+
+- **Tracker no longer throws a "blocked action" error in combat** — With a usable quest-item button showing in the tracker, entering combat could repeatedly trigger an `ADDON_ACTION_BLOCKED` error as the tracker tried to resize itself — a protected action while in combat. The tracker now holds that resize until combat ends and catches up automatically, so the error spam is gone. Your quest blocks still update live during the fight.
+- **Fixed an empty box appearing in a few hints** — A right-arrow symbol used in the locked-tracker tooltip, a Chain Guide label, and the `/eqs dir` diagnostic showed as a missing-glyph box in the default game font. They now use plain text that renders everywhere.
+
+### New Features
+
+- **`/eqs whatsnew`** — Type `/eqs whatsnew` (or `/eqs changes`) at any time to reopen the "What's New" summary. It's also listed under Slash Commands in the General options tab.
+
+### Improvements
+
+- **Sort Order buttons fit on one row** — At the default UI font the tracker's Sort Order options used to wrap the "Manual" button onto a lonely second row. The row is now spaced to stay on a single line (the "Recently Added" sort is labeled "Recent"), so it reads as one clean line.
+
 ## [1.8.0] - 2026-05-30
 
 ### New Features

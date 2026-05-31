@@ -45,7 +45,7 @@ local SORT_OPTIONS = {
     { value = "type",     label = "Type"     },
     { value = "level",    label = "Level"    },
     { value = "distance", label = "Distance" },
-    { value = "recent",   label = "Recently Added" },
+    { value = "recent",   label = "Recent"   },
     { value = "manual",   label = "Manual"   },
 }
 
@@ -105,7 +105,10 @@ Options:AddTab("tracker", "Tracker", function(content)
         content, "Sort Order",
         SORT_OPTIONS, sortGet,
         function(v) sortSet(v); syncManualHint(v) end,
-        440)   -- wrap before the right "Options" column (it starts at header +460)
+        440, 14)   -- maxWidth 440 = wrap before the right "Options" column (starts at
+                   -- header+460). pad 14 (vs default 18) + the short "Recent" label keep
+                   -- all 7 sort modes on ONE row even at the wider stock UI font, instead
+                   -- of orphaning "Manual" onto a lonely second row.
     sort:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -20)
 
     manualHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")

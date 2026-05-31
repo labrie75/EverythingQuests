@@ -6,7 +6,7 @@ local addonName, ns = ...
 
 _G.EverythingQuests = ns
 ns.NAME = addonName
-ns.VERSION = "1.8.0"
+ns.VERSION = "1.8.1"
 
 ns.subsystems = {}
 ns.subsystemOrder = {}

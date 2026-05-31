@@ -29,6 +29,8 @@ For a quest you're already on, Get Directions now leads to your current objectiv
 
 |cffEBB706Your quest history is safer|r
 Everything Quests now keeps rolling backups of your account-wide quest history and restores it automatically if it ever loads empty, so a stray reset can't wipe your records.
+
+|cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]
 -- ──────────────────────────────────────────────────────────────────────
 

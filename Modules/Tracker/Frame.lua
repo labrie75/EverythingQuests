@@ -207,7 +207,7 @@ function Tracker:BuildFrame()
         GameTooltip:SetText("Everything Quests", 0.92, 0.72, 0.02)
         if locked then
             GameTooltip:AddLine("Tracker locked", 1, 0.3, 0.3)
-            GameTooltip:AddLine('Move and resize are off. Uncheck "Lock tracker" in /eqs \226\134\146 General.', 0.8, 0.8, 0.8, true)
+            GameTooltip:AddLine('Move and resize are off. Uncheck "Lock tracker" in /eqs > General.', 0.8, 0.8, 0.8, true)
         else
             GameTooltip:AddLine("Drag to move the tracker", 1, 1, 1)
             GameTooltip:AddLine("/eqs for options", 0.8, 0.8, 0.8)
@@ -1003,7 +1003,31 @@ function Tracker:Render()
     end
 
     local questContentH = y
-    content:SetHeight(math.max(1, questContentH))
+    -- content / f.scroll / EQTrackerFrame are PARENT-CHAIN ancestors of the
+    -- secure quest-item buttons (ItemButtons.lua), so SetHeight/SetSize on
+    -- them are PROTECTED frame methods: calling them while InCombatLockdown()
+    -- raises ADDON_ACTION_BLOCKED (the same class as the f:SetScale guard
+    -- above). The hierarchy is only protected once a secure button actually
+    -- exists, so we gate on that too -- a user with no usable-item quest still
+    -- resizes live in combat. When locked we SKIP the resize and queue exactly
+    -- ONE combat-end re-render so the layout catches up (there is no
+    -- PLAYER_REGEN_ENABLED -> render otherwise). Blocks/headers are NOT on the
+    -- secure parent chain, so they keep reflowing live in combat; only the
+    -- scroll viewport size + scroll range freeze until combat ends. (The WQ
+    -- region, scenario banner and quest blocks are sibling subtrees, not
+    -- ancestors of the buttons, so their own sizing is unaffected.)
+    local _IB = ns:GetSubsystem("TrackerItemButtons")
+    local secureLocked = InCombatLockdown()
+        and _IB and _IB.HasSecureButtons and _IB:HasSecureButtons()
+    if secureLocked then
+        local Ev = ns:GetSubsystem("Events")
+        if Ev and Ev.RunWhenOutOfCombat then
+            self._deferredRender = self._deferredRender or function() self:Render() end
+            Ev:RunWhenOutOfCombat("trackerDeferredRender", self._deferredRender)
+        end
+    else
+        content:SetHeight(math.max(1, questContentH))
+    end
 
     -- Render the WQ region; it returns its own height so we can size the
     -- main scroll to the quest content but no taller than the room left
@@ -1012,7 +1036,10 @@ function Tracker:Render()
     -- the quests scroll above a bottom-resting WQ region.
     local wqRegionH = self:_RenderPinnedEvents(eventsCap) or 0
 
-    if f.scroll then
+    -- f.scroll:SetSize is the SAME protected-method case as content:SetHeight
+    -- above (f.scroll is a secure-button ancestor), so it's skipped under the
+    -- same combat lock; the queued combat-end re-render re-sizes it.
+    if f.scroll and not secureLocked then
         local scrollW = math.max(1, (f:GetWidth() or 0) - 26)
         local scrollH = math.min(questContentH, available - wqRegionH)
         if scrollH < 1 then scrollH = 1 end
@@ -1038,8 +1065,8 @@ function Tracker:Render()
     if _Blocks and _Blocks.Sweep then _Blocks:Sweep() end
 
     -- Usable quest-item buttons track block positions; reposition them
-    -- AFTER Sweep so Blocks.byID reflects exactly this pass's quests.
-    local _IB = ns:GetSubsystem("TrackerItemButtons")
+    -- AFTER Sweep so Blocks.byID reflects exactly this pass's quests. (_IB was
+    -- resolved above for the secure-lock check; reuse it.)
     if _IB and _IB.Reposition then _IB:Reposition() end
 end
 
