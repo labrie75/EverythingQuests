@@ -34,7 +34,12 @@ end
 function Options:Build()
     if self.frame then return end
     local f = CreateFrame("Frame", "EQOptionsFrame", UIParent, "BackdropTemplate")
-    f:SetSize(900, 600)
+    -- 1020 wide (was 900): the right "Options" column starts at header+460 and
+    -- several checkbox hint strings ("…/ completed quests)", "…after accepting)")
+    -- ran off the right edge at 900. Labels are left-aligned, so the extra room
+    -- just reads as normal ragged-right whitespace. Everything is anchored to
+    -- the left, the top-right, or both sides, so only right-side room is added.
+    f:SetSize(1020, 600)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -64,7 +69,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.7.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.8.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -270,7 +275,7 @@ end
 -- options: array of { value=string|number, label=string }
 -- Setter is called on each click; visual state updates locally so callers
 -- don't have to re-render the group.
-function Options:CreateRadioGroup(parent, label, options, getter, setter)
+function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWidth)
     local container = CreateFrame("Frame", nil, parent)
 
     local labelFS
@@ -295,29 +300,41 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter)
         end
     end
 
-    local x, rowAnchor = 0, labelFS or container
+    -- Lay buttons left-to-right. When maxWidth is given, wrap to a new row
+    -- once the next button would overflow it — keeps a long option list (e.g.
+    -- the tracker's 7 sort modes) from spilling into the adjacent column.
+    local BTN_H, ROW_GAP, BTN_GAP = 24, 4, 4
+    local rowAnchor  = labelFS or container
     local rowOffsetY = labelFS and -4 or 0
+    local x, y, maxX = 0, 0, 0
     for _, opt in ipairs(options) do
         local btn = CreateFrame("Button", nil, container, "BackdropTemplate")
-        btn:SetHeight(24)
+        btn:SetHeight(BTN_H)
         local bg = btn:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints()
         local txt = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         txt:SetPoint("CENTER")
         txt:SetText(opt.label)
-        btn:SetWidth(math.max(40, txt:GetStringWidth() + 18))
-        btn:SetPoint("TOPLEFT", rowAnchor, labelFS and "BOTTOMLEFT" or "TOPLEFT", x, rowOffsetY)
+        local w = math.max(40, txt:GetStringWidth() + 18)
+        btn:SetWidth(w)
+        if maxWidth and x > 0 and (x + w) > maxWidth then   -- wrap to next row
+            x, y = 0, y + BTN_H + ROW_GAP
+        end
+        btn:SetPoint("TOPLEFT", rowAnchor, labelFS and "BOTTOMLEFT" or "TOPLEFT", x, rowOffsetY - y)
         btn.bg, btn.txt, btn.value = bg, txt, opt.value
         btn:SetScript("OnClick", function(b)
             if setter then setter(b.value) end
             paint(b.value)
         end)
-        x = x + btn:GetWidth() + 4
+        x = x + w + BTN_GAP
+        if x > maxX then maxX = x end
         buttons[#buttons + 1] = btn
     end
 
     paint(getter and getter())
-    container:SetSize(x, 50)
+    -- Keep the original single-row height (50); add one row's worth per wrap so
+    -- anything anchored to the container's BOTTOMLEFT clears the last row.
+    container:SetSize(maxWidth or maxX, 50 + y)
     return container
 end
 
@@ -697,6 +714,9 @@ local function eqSlashHandler(msg)
     elseif msg == "autopopup" then
         Options:DumpAutoQuestPopups()
         return
+    elseif msg == "dir" then
+        Options:DumpDirections()
+        return
     elseif msg:match("^profile") then
         -- /eqs profile [show|reset|mem on|mem off]
         local rest = msg:match("^profile%s*(.*)$") or ""
@@ -867,6 +887,117 @@ function Options:DumpQuestObjectives()
         C_QuestLog.SetSelectedQuest(savedID)
     end
     if shown == 0 then p("no watched quests found") end
+end
+
+-- /eqs dir — diagnoses "Get Directions". Prints every coordinate source the
+-- Chain Guide waypoint resolver consults for the super-tracked (or first
+-- watched) quest, each as map + normalized coords + straight-line yards from
+-- the player, then the source Resolve() actually picks. Tells us at a glance
+-- whether the waypoint lands wrong because the quest isn't seen as active, a
+-- stale harvested giver coord is winning, or GetNextWaypoint itself points far.
+function Options:DumpDirections()
+    local function p(s) print("|cffEBB706EQ Dir|r " .. s) end
+    if not C_Map then p("C_Map unavailable"); return end
+
+    local pMap   = C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    local pPos   = pMap and C_Map.GetPlayerMapPosition and C_Map.GetPlayerMapPosition(pMap, "player")
+    local ppx, ppy
+    if pPos then ppx, ppy = pPos:GetXY() end
+    local pCont, pWorld
+    if pPos and C_Map.GetWorldPosFromMapPos then
+        pCont, pWorld = C_Map.GetWorldPosFromMapPos(pMap, pPos)
+    end
+
+    -- Straight-line yards from the player to a (mapID, x, y); nil when the
+    -- target is on a different continent or world pos is unavailable.
+    local function yards(mapID, x, y)
+        if not (pWorld and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return nil end
+        local c, w = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(x, y))
+        if not w or c ~= pCont then return nil end
+        local wx, wy = w:GetXY()
+        local px, py = pWorld:GetXY()
+        local dx, dy = px - wx, py - wy
+        return math.sqrt(dx * dx + dy * dy)
+    end
+
+    local function line(label, mapID, x, y)
+        if not (mapID and x and y) then
+            p(("  %-20s |cffff5555none|r"):format(label))
+            return
+        end
+        local d = yards(mapID, x, y)
+        p(("  %-20s map %d  %.1f, %.1f%s"):format(
+            label, mapID, x * 100, y * 100,
+            d and ("  |cff88ff88%.0f yds|r"):format(d) or "  |cff888888(off-continent)|r"))
+    end
+
+    -- Diagnose the super-tracked quest first, else the first watched quest.
+    local questID = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
+                    and C_SuperTrack.GetSuperTrackedQuestID()
+    if (not questID or questID == 0) and C_QuestLog and C_QuestLog.GetQuestIDForQuestWatchIndex
+       and C_QuestLog.GetNumQuestWatches and C_QuestLog.GetNumQuestWatches() > 0 then
+        questID = C_QuestLog.GetQuestIDForQuestWatchIndex(1)
+    end
+    if not questID or questID == 0 then
+        p("no super-tracked or watched quest — super-track the quest you're testing, then re-run")
+        return
+    end
+
+    local title = (ns.Util and ns.Util.QuestTitle and ns.Util.QuestTitle(questID, true)) or tostring(questID)
+    p(("|cffffffff%s|r (id %d)"):format(title, questID))
+    p(("  %-20s map %s  %.1f, %.1f"):format("player at", tostring(pMap), (ppx or 0) * 100, (ppy or 0) * 100))
+
+    local logIdx = C_QuestLog and C_QuestLog.GetLogIndexForQuestID
+                   and C_QuestLog.GetLogIndexForQuestID(questID)
+    p("  active in log:       " .. (logIdx and "YES (live objective wins)" or "no (giver coords only)"))
+
+    if C_QuestLog and C_QuestLog.GetNextWaypoint then
+        line("GetNextWaypoint", C_QuestLog.GetNextWaypoint(questID))
+    end
+    if pMap and C_QuestLog and C_QuestLog.GetNextWaypointForMap then
+        local fx, fy = C_QuestLog.GetNextWaypointForMap(questID, pMap)
+        line("NextWaypointForMap", pMap, fx, fy)
+    end
+
+    local st = ns.CHAINGUIDE_QUEST_COORDS and ns.CHAINGUIDE_QUEST_COORDS[questID]
+    line("bundled coords", st and st.m, st and st.x, st and st.y)
+
+    local DB = ns:GetSubsystem("DB")
+    local ce = DB and DB.chainCache and DB.chainCache.questCoords and DB.chainCache.questCoords[questID]
+    line("harvested cache", ce and ce.m, ce and ce.x, ce and ce.y)
+
+    -- Turn-in probes. When GetNextWaypoint is empty (a complete quest) these
+    -- are the candidate sources for a hand-in coordinate we could feed TomTom.
+    local complete = C_QuestLog and C_QuestLog.IsComplete and C_QuestLog.IsComplete(questID)
+    local ready    = C_QuestLog and C_QuestLog.ReadyForTurnIn and C_QuestLog.ReadyForTurnIn(questID)
+    p(("  state:               complete=%s readyForTurnIn=%s"):format(tostring(complete), tostring(ready)))
+
+    local poiFn = _G["QuestPOIGetIconInfo"]   -- legacy global; string index so the
+    if poiFn then                             -- linter doesn't flag a maybe-absent field
+        local _, px, py = poiFn(questID)
+        line("QuestPOIGetIconInfo", px and pMap, px, py)   -- posX/posY are on the current map
+    else
+        p("  QuestPOIGetIconInfo  |cff888888(API absent)|r")
+    end
+
+    if C_QuestLog and C_QuestLog.GetQuestsOnMap and pMap then
+        local hit
+        for _, e in ipairs(C_QuestLog.GetQuestsOnMap(pMap) or {}) do
+            if e.questID == questID then hit = e; break end
+        end
+        if hit then line("GetQuestsOnMap", pMap, hit.x, hit.y)
+        else p("  GetQuestsOnMap       |cff888888(quest not listed on this map)|r") end
+    else
+        p("  GetQuestsOnMap       |cff888888(API absent)|r")
+    end
+
+    local W = ns:GetSubsystem("ChainGuideWaypoint")
+    if logIdx then
+        p("  => WINNER:           super-track the quest \226\134\146 Blizzard's live objective / turn-in POI"
+          .. (TomTom and " (+ TomTom pin at the live objective, or turn-in via GetQuestsOnMap)" or ""))
+    elseif W and W.Resolve then
+        line("=> WINNER", W:Resolve(questID))
+    end
 end
 
 -- /eqs autopopup — confirms the auto-quest-popup API surface ("Quest

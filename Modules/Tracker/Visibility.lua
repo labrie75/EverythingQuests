@@ -1,6 +1,7 @@
 -- Modules/Tracker/Visibility.lua
 -- Implements General-tab visibility toggles for the on-screen tracker:
---   • lockTracker      → block drag-to-move
+--   • lockTracker      → block drag-to-move and resize (hides the resize grip;
+--                         the Tracker module owns the grip, this is just a note)
 --   • hideInCombat     → hide while PLAYER_REGEN_DISABLED, show on _ENABLED
 --   • hideInInstances  → hide whenever IsInInstance() is true
 --   • hideOnMapOpen    → hide when WorldMapFrame:IsShown()

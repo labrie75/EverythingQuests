@@ -42,6 +42,49 @@ local function ensureSV()
     return sv
 end
 
+-- ─── Safety net storage ────────────────────────────────────────────────
+-- Backups live in their OWN top-level SavedVariable so a logical reset of
+-- the main history table (a stray `EverythingQuestsHistory = {}`, or a
+-- failed write that loads empty) can't take the safety copies with it. WoW
+-- writes both into the same physical file, so this guards against logical
+-- loss, not whole-file corruption. Registered in the .toc SavedVariables.
+local MAX_SNAPSHOTS = 3
+local function ensureBackupSV()
+    _G.EverythingQuestsHistoryBackups = _G.EverythingQuestsHistoryBackups or {}
+    local b = _G.EverythingQuestsHistoryBackups
+    b.snapshots      = b.snapshots      or {}   -- newest first, capped at MAX_SNAPSHOTS
+    b.lastKnownCount = b.lastKnownCount or 0     -- total entries at last non-empty save
+    b.lastCounts     = b.lastCounts     or {}    -- [charKey] = entries that character had
+    return b
+end
+
+-- Entries are flat scalar-only records; copy each into a fresh table so a
+-- snapshot never shares table identity with the live history (a later wipe
+-- or in-place mutation of the live data must not touch the backup).
+local function copyEntries(src)
+    local out = {}
+    for i = 1, #src do
+        local e = src[i]
+        out[i] = { q = e.q, t = e.t, n = e.n, c = e.c, z = e.z, k = e.k, xp = e.xp, m = e.m }
+    end
+    return out
+end
+
+local function copySet(src)
+    local out = {}
+    if src then for k, v in pairs(src) do out[k] = v end end
+    return out
+end
+
+-- Count entries belonging to one character (account-wide history pivots by c).
+local function countForChar(entries, key)
+    local n = 0
+    for i = 1, #entries do
+        if entries[i].c == key then n = n + 1 end
+    end
+    return n
+end
+
 local function enabled()
     local DB = ns:GetSubsystem("DB")
     return not DB or DB.db.profile.history.enabled ~= false
@@ -55,6 +98,15 @@ end
 
 function R:OnInitialize()
     self.sv = ensureSV()
+    self.backups = ensureBackupSV()
+
+    -- Data-loss guard: if history loaded empty (or THIS character's entries
+    -- vanished) while a non-empty backup exists, restore before anything
+    -- reads the data. The notice is surfaced in OnEnable (we aren't fully
+    -- logged in yet). A deliberate Wipe clears the backups, so it can never
+    -- be silently undone here.
+    self._loadNotice = self:_guardOnLoad()
+
     -- Runtime "questID → latest timestamp" cache for fast lookups (chain
     -- guide tooltip calls this on hover). Built once at init, updated
     -- incrementally on Record / Backfill / Wipe so it never needs a full
@@ -120,6 +172,147 @@ function R:OnEnable()
             self._giveUp[questID] = true
         end
     end)
+
+    -- Persist a rolling backup at logout so a future empty/short load can be
+    -- detected and restored. _snapshotToBackup never overwrites good data
+    -- with an empty history, so the last good state always survives.
+    Events:On("PLAYER_LOGOUT", function()
+        self:_snapshotToBackup()
+    end)
+
+    -- If the load guard recovered data, tell the user once the login noise
+    -- has settled (a silent restore would be as unsettling as the loss).
+    if self._loadNotice then
+        local msg = self._loadNotice
+        self._loadNotice = nil
+        C_Timer.After(5, function()
+            print("|cffEBB706EQ History:|r " .. msg)
+        end)
+    end
+
+    -- First time EQ ever sees a character (with recording on), backfill its
+    -- past completions so an alt is never silently empty. One-shot per
+    -- character; deferred so the quest-completion data is loaded first.
+    C_Timer.After(8, function()
+        if not enabled() then return end
+        local key = charKey()
+        if self.sv.charBackfilled[key] then return end          -- already backfilled
+        if countForChar(self.sv.entries, key) > 0 then          -- already has live data
+            self.sv.charBackfilled[key] = true
+            return
+        end
+        local added = self:Backfill()                            -- sets charBackfilled[key]
+        if added > 0 then
+            self:RequestMissingTitles()
+            print(("|cffEBB706EQ History:|r first time seeing |cffffffff%s|r — added %d past completion%s (no dates; future turn-ins are dated)."):format(
+                key, added, added == 1 and "" or "s"))
+        end
+    end)
+end
+
+-- ─── Data-loss safety net ──────────────────────────────────────────────
+-- Highest-entry-count snapshot (the safest to restore from), or nil.
+function R:_bestSnapshot()
+    local snaps = self.backups and self.backups.snapshots
+    if not snaps then return nil end
+    local best
+    for i = 1, #snaps do
+        local s = snaps[i]
+        if s and s.entries and #s.entries > 0
+           and (not best or #s.entries > #best.entries) then
+            best = s
+        end
+    end
+    return best
+end
+
+-- Restore the live history from a snapshot and rebuild the completion cache.
+local function applySnapshot(self, snap)
+    self.sv.entries        = copyEntries(snap.entries)
+    self.sv.charBackfilled = copySet(snap.charBackfilled)
+    self._completion = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        self:_updateCompletion(entries[i].q, entries[i].t or 0)
+    end
+    return #entries
+end
+
+-- Run once on load (OnInitialize). Returns a notice string if it restored,
+-- else nil. _completion is (re)built by the caller / applySnapshot.
+function R:_guardOnLoad()
+    local b = self.backups
+    local entries = self.sv.entries
+    local loaded = #entries
+    local best = self:_bestSnapshot()
+    if not best then return nil end                              -- nothing to restore from
+
+    -- Full loss: we recorded a non-empty history before, it loaded empty.
+    if (b.lastKnownCount or 0) > 0 and loaded == 0 then
+        local n = applySnapshot(self, best)
+        return ("Quest history loaded empty; restored a backup from %s (%d entries)."):format(
+            date("%Y-%m-%d %H:%M", best.ts or 0), n)
+    end
+
+    -- Per-character loss: THIS character had entries last session but none
+    -- now, and a backup that still contains them exists. Restore the whole
+    -- account snapshot (it carries every character's data).
+    local key = charKey()
+    local hadBefore = (b.lastCounts and b.lastCounts[key]) or 0
+    if hadBefore > 0
+       and countForChar(entries, key) == 0
+       and countForChar(best.entries, key) > 0 then
+        local n = applySnapshot(self, best)
+        return ("Quest history for %s was missing; restored a backup from %s (%d entries)."):format(
+            key, date("%Y-%m-%d %H:%M", best.ts or 0), n)
+    end
+
+    return nil
+end
+
+-- Snapshot the live history into the rolling backup (called on logout).
+-- NEVER snapshots an empty history and NEVER zeroes the known-counts when
+-- empty — so if the data vanished mid-session, the prior non-empty counts +
+-- snapshots survive and the next load detects the drop and restores.
+function R:_snapshotToBackup()
+    local b = self.backups
+    if not b then return end
+    local entries = self.sv.entries
+    local n = #entries
+    if n == 0 then return end                                    -- preserve prior good state
+
+    b.lastKnownCount = n
+    local counts = {}
+    for i = 1, n do
+        local c = entries[i].c
+        if c then counts[c] = (counts[c] or 0) + 1 end
+    end
+    b.lastCounts = counts
+
+    tinsert(b.snapshots, 1, {
+        ts             = (GetServerTime and GetServerTime()) or time(),
+        count          = n,
+        entries        = copyEntries(entries),
+        charBackfilled = copySet(self.sv.charBackfilled),
+    })
+    for i = #b.snapshots, MAX_SNAPSHOTS + 1, -1 do
+        b.snapshots[i] = nil
+    end
+end
+
+-- Manual restore (Options button): replace live history with the best
+-- backup. Returns the count restored (0 if no backup exists).
+function R:RestoreFromBackup()
+    local best = self:_bestSnapshot()
+    if not best then return 0 end
+    return applySnapshot(self, best)
+end
+
+-- Best-backup summary for the Options UI: { count, ts } or nil.
+function R:BackupInfo()
+    local best = self:_bestSnapshot()
+    if not best then return nil end
+    return { count = #best.entries, ts = best.ts or 0 }
 end
 
 -- Look up the now-cached title for a quest and patch every history entry
@@ -321,6 +514,14 @@ function R:Wipe()
     self.sv.entries        = {}
     self.sv.charBackfilled = {}
     self._completion       = {}
+    -- A deliberate wipe must not be auto-undone by the load guard, so clear
+    -- the safety backups too. (The guard keys off lastKnownCount/lastCounts,
+    -- which we zero here.)
+    if self.backups then
+        self.backups.snapshots      = {}
+        self.backups.lastKnownCount = 0
+        self.backups.lastCounts     = {}
+    end
 end
 
 function R:CurrentCharacter()

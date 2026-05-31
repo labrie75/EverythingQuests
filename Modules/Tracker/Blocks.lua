@@ -84,12 +84,14 @@ function Blocks:BeginRenderPass()
     local cZT = (not t) or t.showZoneTag        ~= false
     local cON = (not t) or t.showObjectiveNumbers ~= false
     local cCB = (not t) or t.colorByDifficulty  ~= false
+    local cOG = (not t) or t.overrideCompleteGreen ~= false
     local tco = t and t.titleColorOverride
     local tr, tg, tb = tco and tco.r, tco and tco.g, tco and tco.b
     if cL ~= self._cL or cQI ~= self._cQI or cZT ~= self._cZT
-       or cON ~= self._cON or cCB ~= self._cCB
+       or cON ~= self._cON or cCB ~= self._cCB or cOG ~= self._cOG
        or tr ~= self._cTr or tg ~= self._cTg or tb ~= self._cTb then
         self._cL, self._cQI, self._cZT, self._cON, self._cCB = cL, cQI, cZT, cON, cCB
+        self._cOG = cOG
         self._cTr, self._cTg, self._cTb = tr, tg, tb
         dirty = true
     end
@@ -258,18 +260,22 @@ local stripLeadingCount = ns.Util.StripLeadingCount
 -- and incomplete objectives so the user sees full progress (matches the
 -- Blizzard-style tracker the user wants to emulate). Simplify mode shrinks
 -- to just the first incomplete line.
-local function buildSubText(questData, simplifyMode, hideNumbers)
+local function buildSubText(questData, simplifyMode, hideNumbers, completeHex)
+    -- Completed objective lines are green by default; completeHex (the chosen
+    -- title color, when "use title color for completed quests" is on) recolors
+    -- them. The checkmark icon still marks them done regardless of color.
+    local done = "|cff" .. (completeHex or "44ff44")
     local objs = questData.objectives
     if not objs or #objs == 0 then
         -- No trackable leaderboard objectives (e.g. a "speak to X" quest, or a
         -- ready-to-turn-in quest with no countable goal). Without a fallback
         -- the block is a bare title with nothing underneath. Mirror Blizzard's
         -- and ElvUI's trackers: show the quest's own summary line (the turn-in
-        -- / next-step direction), green when the quest is ready to hand in.
+        -- / next-step direction), recolored when the quest is ready to hand in.
         local fb = questData.fallbackText
         if fb and fb ~= "" then
             if questData.isComplete then
-                return "- |cff44ff44" .. fb .. "|r"
+                return "- " .. done .. fb .. "|r"
             end
             return "- " .. fb
         end
@@ -286,7 +292,7 @@ local function buildSubText(questData, simplifyMode, hideNumbers)
         end
         local last = objs[#objs].text or ""
         if hideNumbers then last = stripLeadingCount(last) end
-        return "|A:common-icon-checkmark:12:12|a |cff44ff44" .. last .. "|r"
+        return "|A:common-icon-checkmark:12:12|a " .. done .. last .. "|r"
     end
 
     local count = 0
@@ -295,7 +301,7 @@ local function buildSubText(questData, simplifyMode, hideNumbers)
         local txt = o.text or ""
         if hideNumbers then txt = stripLeadingCount(txt) end
         if o.finished then
-            txt = "|A:common-icon-checkmark:12:12|a |cff44ff44" .. txt .. "|r"
+            txt = "|A:common-icon-checkmark:12:12|a " .. done .. txt .. "|r"
         else
             txt = "- " .. colorizeProgress(txt)
         end
@@ -541,7 +547,11 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
 
     local colorByDifficulty = cfg.colorByDifficulty ~= false
     local override = cfg.titleColorOverride
-    if questData.isComplete then
+    -- When a title color is set (e.g. the player's class color), let it win
+    -- over the "complete = green" default unless they turn the option off.
+    local recolorComplete = (cfg.overrideCompleteGreen ~= false)
+                            and override and override.r and true or false
+    if questData.isComplete and not recolorComplete then
         block.title:SetTextColor(0.27, 0.85, 0.27)               -- green when ready to turn in
     elseif override and override.r then
         block.title:SetTextColor(override.r, override.g, override.b)
@@ -591,8 +601,17 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     -- (unlike the old post-hoc regex strip) it can never corrupt a |c..|r
     -- color code. showObjectiveNumbers is in the render-gen cfg snapshot,
     -- so toggling it forces a full re-render of every block.
+    -- Completed objectives follow the same recolor rule as the title: the
+    -- chosen color when recolorComplete is on, else the default green (nil hex).
+    local completeHex
+    if recolorComplete then
+        completeHex = ("%02x%02x%02x"):format(
+            math.floor(override.r * 255 + 0.5),
+            math.floor(override.g * 255 + 0.5),
+            math.floor(override.b * 255 + 0.5))
+    end
     local subText = buildSubText(questData, simplifyMode,
-                                 cfg.showObjectiveNumbers == false)
+                                 cfg.showObjectiveNumbers == false, completeHex)
     block.subText:SetText(subText)
 
     -- Force a deterministic wrap width on the multi-line FontStrings.

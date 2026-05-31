@@ -55,9 +55,22 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     qpinsHint:SetJustifyH("LEFT")
     qpinsHint:SetText("These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away.")
 
-    local lockGet, lockSet = generalSetting("lockTracker")
+    -- Lock = no drag-to-move AND no resize. Dedicated setter (not the shared
+    -- generalSetting) so it also reconciles the resize grip: ApplyLockState
+    -- hides + disables it when locked. The grip's own OnMouseDown re-checks
+    -- this flag live too, so resize is blocked even before the next repaint.
+    local function lockGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.general.lockTracker
+    end
+    local function lockSet(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.general.lockTracker = value and true or false end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker and Tracker.ApplyLockState then Tracker:ApplyLockState() end
+    end
     local lock = Options:CreateCheckbox(content,
-        "Lock tracker position  |cffaaaaaa(disable drag-to-move)|r",
+        "Lock tracker  |cffaaaaaa(disable drag-to-move and resize)|r",
         lockGet, lockSet)
     lock:SetPoint("TOPLEFT", qpinsHint, "BOTTOMLEFT", 0, -12)
 

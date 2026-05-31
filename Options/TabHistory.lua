@@ -110,6 +110,42 @@ ns:GetSubsystem("Options"):AddTab("history", "History", function(content)
     rescanHint:SetJustifyH("LEFT")
     rescanHint:SetText("Some quests in the backfilled history show up as \"Quest #12345\" because Blizzard hasn't sent the client their name yet. This button asks the server for every missing one. Quests the server flatly has no data for (retired or internal IDs) will keep their numeric placeholder.")
 
+    -- Restore from the automatic logout backup. EQ keeps a few rolling
+    -- snapshots of your history and self-restores on load if it ever detects
+    -- the data went missing; this button is the manual escape hatch.
+    local restoreBtn = Options:CreateYellowButton(content, "Restore history from backup", function()
+        local R = ns:GetSubsystem("History")
+        if not (R and R.BackupInfo) then return end
+        local info = R:BackupInfo()
+        if not info then
+            print("|cffEBB706EQ History:|r no backup yet — one is saved automatically each time you log out.")
+            return
+        end
+        local Dialog = ns:GetSubsystem("Dialog")
+        if not Dialog then return end
+        Dialog:Show({
+            title   = "Everything Quests",
+            text    = ("Restore quest history from the backup taken %s (%d entries)? This replaces the current history."):format(
+                        date("%Y-%m-%d %H:%M", info.ts), info.count),
+            button1 = "Restore",
+            button2 = "Cancel",
+            onAccept = function()
+                local n = R:RestoreFromBackup()
+                local HF = ns:GetSubsystem("HistoryFrame")
+                if HF and HF.Render then HF:Render() end
+                print(("|cffEBB706EQ History:|r restored %d entr%s from backup."):format(n, n == 1 and "y" or "ies"))
+            end,
+        })
+    end)
+    restoreBtn:SetSize(280, 24)
+    restoreBtn:SetPoint("TOPLEFT", rescanHint, "BOTTOMLEFT", 0, -16)
+
+    local restoreHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    restoreHint:SetPoint("TOPLEFT", restoreBtn, "BOTTOMLEFT", 0, -2)
+    restoreHint:SetWidth(440)
+    restoreHint:SetJustifyH("LEFT")
+    restoreHint:SetText("Everything Quests saves a rolling backup of your history when you log out, and automatically restores it if your history is ever found empty or missing a character on load. Use this button to restore manually.")
+
     local wipeBtn = Options:CreateYellowButton(content, "Wipe history", function()
         local Dialog = ns:GetSubsystem("Dialog")
         if not Dialog then return end
@@ -128,5 +164,5 @@ ns:GetSubsystem("Options"):AddTab("history", "History", function(content)
         })
     end)
     wipeBtn:SetSize(160, 24)
-    wipeBtn:SetPoint("TOPLEFT", rescanHint, "BOTTOMLEFT", 0, -16)
+    wipeBtn:SetPoint("TOPLEFT", restoreHint, "BOTTOMLEFT", 0, -16)
 end)

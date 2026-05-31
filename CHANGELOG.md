@@ -5,6 +5,27 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-05-30
+
+### New Features
+
+- **Color completed quests with your title color** — A new Appearance option, "Use title color for completed quests (instead of green)" (on by default), makes completed quests use your chosen tracker title color (for example your class color) in place of the default "ready to turn in" green — for both the quest title and its completed objective lines, in the main tracker and the World Quests section. The checkmark still marks objectives done. If you haven't set a title color, completed quests stay green.
+- **Lock the tracker's size, not just its position** — The "Lock tracker" option (General) now also locks the tracker's dimensions and hides the resize grip, so a locked tracker can't be resized either. Combat-safe.
+- **Quest history safety net** — Everything Quests now keeps rolling backups of your account-wide quest history in a separate saved file, automatically restores it if the live history ever loads empty or a character's entries go missing (with a one-time notice), and backfills a newly seen character's past completions once so an alt is never silently empty. A deliberate "wipe history" still clears everything, backups included.
+
+### Improvements
+
+- **"Keep focused quest after relog" is now on by default** — The game's waypoint arrow returns to your last focused (super-tracked) quest when you log back in. Toggle it under General.
+- **Options window no longer clips its own text** — Widened the options window, wrapped the Tracker tab's Sort Order buttons to a second row, and bounded the "Manual" sort hint to its column, so long setting descriptions and hints no longer run off the edge or into the next column.
+
+### Bug Fixes
+
+- **"Get Directions" leads to the right place for quests you already have** — For a quest in your log, Get Directions now hands off to the game's own quest navigation, pointing at your current objective — or the turn-in once the quest is complete — instead of the spot where you originally picked the quest up. TomTom users get a pin at the objective (or the turn-in for completed quests).
+
+### Developer
+
+- Added a `/eqs dir` diagnostic that prints every coordinate source the Get Directions resolver consults for the super-tracked quest, each in yards, plus the source it picks.
+
 ## [1.7.0] - 2026-05-29
 
 ### New Features

@@ -348,6 +348,21 @@ function V:Render(content, contentWidth, yStart, collapsed)
     if collapsed or count == 0 then return 0, count end
 
     local Media = ns:GetSubsystem("Media")
+
+    -- Match the main tracker's "use title color for completed quests" rule for
+    -- finished WQ objectives. Computed ONCE per render (not per line) — this
+    -- path is GC-sensitive. Defaults to green when no title color is set.
+    local doneHex = "44ff44"
+    local DB = ns:GetSubsystem("DB")
+    local t  = DB and DB.db and DB.db.profile and DB.db.profile.tracker
+    local ov = t and t.titleColorOverride
+    if t and t.overrideCompleteGreen ~= false and ov and ov.r then
+        doneHex = ("%02x%02x%02x"):format(
+            math.floor(ov.r * 255 + 0.5),
+            math.floor(ov.g * 255 + 0.5),
+            math.floor(ov.b * 255 + 0.5))
+    end
+
     local y = yStart
     for i = 1, count do
         local qid = quests[i]
@@ -429,7 +444,7 @@ function V:Render(content, contentWidth, yStart, collapsed)
                     -- |A:atlas:height:width|a embeds the atlas inline so it
                     -- flows with the wrapped text instead of needing its
                     -- own anchored frame.
-                    txt = "|A:common-icon-checkmark:12:12|a |cff44ff44" .. txt .. "|r"
+                    txt = "|A:common-icon-checkmark:12:12|a |cff" .. doneHex .. txt .. "|r"
                 else
                     txt = "- " .. colorizeProgress(txt)
                 end

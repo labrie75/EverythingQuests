@@ -169,6 +169,17 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     titleHint:SetJustifyH("LEFT")
     titleHint:SetText("When cleared, falls back to difficulty coloring or default yellow.")
 
+    -- Use the chosen title color for completed quests instead of the default
+    -- "ready to turn in" green (recolors the title + completed objective lines;
+    -- the checkmark still marks them done). On by default, but only takes
+    -- effect once a title color is set above — with no color chosen there's
+    -- nothing to override green with, so completed quests stay green.
+    local recolorGet, recolorSet = trackerSetting("overrideCompleteGreen")
+    local recolorCheck = Options:CreateCheckbox(content,
+        "Use title color for completed quests  |cffaaaaaa(instead of green)|r",
+        recolorGet, recolorSet)
+    recolorCheck:SetPoint("TOPLEFT", titleHint, "BOTTOMLEFT", 0, -10)
+
     -- Section header color — overrides the default orange-red.
     local function headerColorGet()
         local DB = ns:GetSubsystem("DB")
@@ -181,7 +192,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         if Tracker then Tracker:Refresh() end
     end
     local headerPicker = Options:CreateColorPicker(content, "Section Header Color", headerColorGet, headerColorSet)
-    headerPicker:SetPoint("TOPLEFT", titleHint, "BOTTOMLEFT", 0, -16)
+    headerPicker:SetPoint("TOPLEFT", recolorCheck, "BOTTOMLEFT", 0, -16)
 
     -- Tracker scale 0.7 - 1.5
     local function scaleGet()

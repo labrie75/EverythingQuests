@@ -30,9 +30,10 @@ DB.defaults = {
             -- Super-track persistence (Modules/Tracker/SuperTrackPersist).
             -- Blizzard restores the previously super-tracked quest on
             -- login, which also revives the in-game waypoint arrow (and
-            -- TomTom's, if installed). OFF by default so a fresh login
-            -- starts clean; flip ON to keep the last focus across logins.
-            restoreSuperTrackOnLogin = false,
+            -- TomTom's, if installed). ON by default so your focused quest
+            -- and its waypoint arrow carry across logins; flip OFF for a
+            -- clean start each login.
+            restoreSuperTrackOnLogin = true,
             -- questNameplateIcons (Modules/Nameplates/QuestIcons.lua) is
             -- intentionally ABSENT from defaults: nil = "auto", which the
             -- module resolves to ON unless ElvUI is loaded (it shows its own
@@ -88,6 +89,7 @@ DB.defaults = {
             -- count (still recolored to match the header).
             showQuestTotal       = true,
             titleColorOverride   = nil,                                          -- {r,g,b,a} when set; nil = use difficulty/yellow
+            overrideCompleteGreen = true,                                        -- when a title color is set, use it for completed quests instead of the "ready to turn in" green
             headerColor          = { r = 0.93, g = 0.32, b = 0.10, a = 1 },     -- section header text color
             blockSpacing         = 2,                                            -- vertical gap between blocks
             scrollBarBg          = true,                                         -- background strip behind the scroll bar

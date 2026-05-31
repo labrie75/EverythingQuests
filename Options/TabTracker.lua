@@ -81,26 +81,43 @@ Options:AddTab("tracker", "Tracker", function(content)
     simplify:SetPoint("TOPLEFT", watched, "BOTTOMLEFT", 0, -2)
 
     local sortGet, sortSet = trackerSetting("sortMode")
-    local manualHint
+    -- Forward-declared so syncManualHint can re-anchor the Filters section. The
+    -- manual-mode hint is width-capped to the left column, so it may wrap to two
+    -- lines — when it's visible the Filters header anchors to the hint's bottom
+    -- (adapting to its actual height); when hidden it tucks back under the sort
+    -- row. Keeps the hint from ever crowding the header or bleeding into Options.
+    local manualHint, filtersHeader, sort
     local function syncManualHint(value)
-        if not manualHint then return end
-        if value == "manual" then manualHint:Show() else manualHint:Hide() end
+        local manual = (value == "manual")
+        if manualHint then
+            if manual then manualHint:Show() else manualHint:Hide() end
+        end
+        if filtersHeader and sort then
+            filtersHeader:ClearAllPoints()
+            if manual and manualHint then
+                filtersHeader:SetPoint("TOPLEFT", manualHint, "BOTTOMLEFT", 0, -10)
+            else
+                filtersHeader:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -24)
+            end
+        end
     end
-    local sort = Options:CreateRadioGroup(
+    sort = Options:CreateRadioGroup(
         content, "Sort Order",
         SORT_OPTIONS, sortGet,
-        function(v) sortSet(v); syncManualHint(v) end)
+        function(v) sortSet(v); syncManualHint(v) end,
+        440)   -- wrap before the right "Options" column (it starts at header +460)
     sort:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -20)
 
     manualHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     manualHint:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -2)
+    manualHint:SetWidth(440)        -- bound to the left column so it can't bleed into Options
+    manualHint:SetJustifyH("LEFT")
     manualHint:SetTextColor(0.92, 0.72, 0.02)
-    manualHint:SetText("|cffaaaaaaManual mode: drag and drop quests in the on-screen tracker to reorder them however you like.|r")
-    syncManualHint(sortGet())
+    manualHint:SetText("|cffaaaaaaDrag and drop the quests in the tracker to reorder them however you like.|r")
 
     -- ─── Filters section ────────────────────────────────────────────────
-    local filtersHeader = Options:CreateSectionHeader(content, "Filters")
-    filtersHeader:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -24)
+    filtersHeader = Options:CreateSectionHeader(content, "Filters")
+    syncManualHint(sortGet())   -- positions filtersHeader for the current sort mode
 
     local prev = filtersHeader
     local filterCheckboxes = {}

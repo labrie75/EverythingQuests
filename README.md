@@ -46,7 +46,7 @@ A native-feeling, draggable, resizable on-screen quest list that replaces Blizza
 - **"Quest Discovered!" callouts** — Clickable boxes at the top of the Quests section for newly discovered and ready-to-complete quests (via `GetAutoQuestPopUp`), with a toggle on the Tracker tab
 - **Turn-in directions** — Ready-to-turn-in quests with no checklist objectives (the "speak to X" kind) show the quest's `objectivesText` so the block is never blank
 - **Quest sound notifications** — Optional sound on quest completion; the chat-text fallback now guards against Midnight's `issecretvalue` system messages
-- **Position lock** — Disable drag-to-move once you've placed the tracker
+- **Lock tracker** — Disable both drag-to-move and resize once you've placed and sized the tracker (also hides the resize grip)
 
 ### Nameplate Quest Icons
 Quest-objective enemies show a `!` (kill objectives get a skull, talk-to objectives a chat bubble, use-item objectives the quest's item icon) right on their nameplate, along with the remaining count or percent.
@@ -138,6 +138,7 @@ LibDataBroker-powered launcher compatible with Titan Panel, ChocolateBar, ElvUI'
 | `/eqs questobj` | Dump every watched quest's objectives, including fallback sources for empty objective lists |
 | `/eqs autopopup` | Probe the auto-quest popup API surface (`GetNumAutoQuestPopUps` etc.) |
 | `/eqs wqdebug` | Dump every data source the World Quests tracker section consults |
+| `/eqs dir` | Diagnose "Get Directions": every waypoint coordinate source for the super-tracked quest, in yards, plus the one the resolver picks |
 | `/eqs profile [show \| reset \| mem on \| mem off \| memhog \| auto on \| auto off \| auto list]` | Built-in profiler with hot-path auto-instrument |
 
 ---
@@ -157,7 +158,7 @@ Bindable from **Esc → Options → Key Bindings → AddOns → Everything Quest
 
 | Tab | Settings |
 |---|---|
-| **General** | Lock tracker position, hide in combat / in instances / when world map open, auto-track accepted quests, auto-accept / auto-turn-in quests, restore super-tracked quest on relog, **quest icons on nameplates**, world-map quest pins, show / hide minimap button, profile management, reset to defaults |
+| **General** | Lock tracker (position & size), hide in combat / in instances / when world map open, auto-track accepted quests, auto-accept / auto-turn-in quests, restore super-tracked quest on relog, **quest icons on nameplates**, world-map quest pins, show / hide minimap button, profile management, reset to defaults |
 | **Tracker** | Simplify mode, sort order, per-type filters, current-zone-only mode, watched-only mode, level prefix / zone tag / objective numbers / quest ID / total counts, **usable quest-item buttons**, **hide scroll bar**, **"Quest Discovered!" popups**, quest-complete sound + sound picker, per-section visibility (Profession, World Quests) |
 | **World Quests** | Show / hide pins, per-reward filters, per-faction filters |
 | **Appearance** | Font picker (LibSharedMedia), font size (8–24pt), background texture picker, background alpha, border, header color, title color override, block spacing, tracker scale |

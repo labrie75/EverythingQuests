@@ -11,26 +11,24 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
-local FEATURE_POPUP_VERSION = "1.7.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.7.0"
+local FEATURE_POPUP_VERSION = "1.8.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.8.0"
 
 local POPUP_BODY = [[
-|cffEBB706"Recently Added" quests|r |cffaaaaaa(new feature)|r
-Quests you just picked up now show a |cffffffffNEW|r tag in the tracker for about an hour, so a fresh quest is easy to spot in a long list. There's also a new |cffffffffRecently Added|r sort order that floats your newest quests to the top. Toggle the tag under |cffffffffTracker|r in Options.
+|cffEBB706Color completed quests your way|r |cffaaaaaa(new option)|r
+If you've set a tracker title color (like your class color), completed quests can now use it instead of the default green — the title and its objective lines both. On by default; find it under |cffffffffAppearance|r in Options.
 
-|cffEBB706Sort by distance|r |cffaaaaaa(new feature)|r
-A new |cffffffffDistance|r sort order arranges your tracked quests by how close they are, so the next thing you can reach sits at the top. Find it under Sort Order on the |cffffffffTracker|r tab.
+|cffEBB706Lock the tracker's size too|r |cffaaaaaa(new)|r
+The |cffffffffLock tracker|r option now pins the tracker's size and hides the resize grip, not just its position. It's under |cffffffffGeneral|r in Options.
 
-|cffEBB706Get Directions|r |cffaaaaaa(new feature)|r
-Right-click any quest in the tracker and choose |cffffffffGet Directions|r to drop a map waypoint at the quest and open the map there — TomTom if you have it, otherwise the game's own waypoint.
+|cffEBB706Keep your focused quest after relog|r |cffaaaaaa(now on by default)|r
+Your focused quest and its waypoint arrow now return when you log back in. Toggle it under |cffffffffGeneral|r.
 
-|cffEBB706Lighter on memory|r
-The Chain Guide's account-wide cache now trims data it no longer needs instead of growing forever. Everything it removes is rebuilt automatically when needed, so nothing is lost.
+|cffEBB706Smarter "Get Directions"|r |cffaaaaaa(fix)|r
+For a quest you're already on, Get Directions now leads to your current objective — or the turn-in once it's complete — instead of where you first picked the quest up.
 
-|cffEBB706Fixes|r
-    - No more "blocked action" errors when hiding, dragging, or resizing the tracker in combat
-    - Fixed a world-map slowdown that built up over long sessions
-    - World quests and just-loaded quests now show their real names instead of "Quest #12345"
+|cffEBB706Your quest history is safer|r
+Everything Quests now keeps rolling backups of your account-wide quest history and restores it automatically if it ever loads empty, so a stray reset can't wipe your records.
 ]]
 -- ──────────────────────────────────────────────────────────────────────
 

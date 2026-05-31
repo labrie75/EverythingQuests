@@ -116,6 +116,45 @@ function Tracker:PersistPositionAndSize()
     self:_ApplyPosition(cfg.anchor, cfg.relativePoint, cfg.xOffset, cfg.yOffset)
 end
 
+-- Apply the locked/unlocked state to the resize grip. Locked => hide the grip
+-- and make it non-interactive, so the frame's size is pinned to match its
+-- locked position (the grip is the only thing that starts a resize).
+--
+-- The grip lives in the tracker's frame hierarchy, which owns secure
+-- item-button descendants, so we treat grip mutations as combat-protected and
+-- defer them to combat-end — the same discipline stopDrag / the tracker
+-- SetScale / the Visibility module already use. Resize is still blocked the
+-- instant you lock, regardless of the deferral: the grip's OnMouseDown
+-- re-checks lockTracker live and StartSizing is itself protected in combat.
+-- Only the grip's visual + mouse state waits for combat to end.
+function Tracker:ApplyLockState()
+    local f = self.frame
+    if not (f and f.grip) then return end
+    if InCombatLockdown() then
+        local Ev = ns:GetSubsystem("Events")
+        if Ev then
+            -- Memoized so repeated in-combat toggles don't allocate a closure
+            -- each time (RunWhenOutOfCombat coalesces by key anyway).
+            self._applyLockDeferred = self._applyLockDeferred
+                or function() self:ApplyLockState() end
+            Ev:RunWhenOutOfCombat("trackerApplyLock", self._applyLockDeferred)
+        end
+        return
+    end
+    local DB = ns:GetSubsystem("DB")
+    local locked = DB and DB.db and DB.db.profile.general
+                   and DB.db.profile.general.lockTracker
+    -- Locking mid-drag/resize: abort it first so _eqDragging can't get stuck
+    -- true once we disable the grip's mouse (which would swallow the OnMouseUp
+    -- that normally clears the flag).
+    if locked and f._eqDragging then
+        f:StopMovingOrSizing()
+        f._eqDragging = nil
+    end
+    f.grip:SetAlpha(locked and 0 or 1)
+    f.grip:EnableMouse(not locked)
+end
+
 function Tracker:BuildFrame()
     local DB = ns:GetSubsystem("DB")
     local cfg = DB.db.profile.tracker
@@ -167,8 +206,8 @@ function Tracker:BuildFrame()
         GameTooltip:SetOwner(drag, "ANCHOR_BOTTOM")
         GameTooltip:SetText("Everything Quests", 0.92, 0.72, 0.02)
         if locked then
-            GameTooltip:AddLine("Position locked", 1, 0.3, 0.3)
-            GameTooltip:AddLine('Uncheck "Lock tracker position" in /eqs \226\134\146 General.', 0.8, 0.8, 0.8, true)
+            GameTooltip:AddLine("Tracker locked", 1, 0.3, 0.3)
+            GameTooltip:AddLine('Move and resize are off. Uncheck "Lock tracker" in /eqs \226\134\146 General.', 0.8, 0.8, 0.8, true)
         else
             GameTooltip:AddLine("Drag to move the tracker", 1, 1, 1)
             GameTooltip:AddLine("/eqs for options", 0.8, 0.8, 0.8)
@@ -220,6 +259,8 @@ function Tracker:BuildFrame()
     end
     grip:SetScript("OnMouseDown", function()
         if InCombatLockdown() then return end
+        local DBs = ns:GetSubsystem("DB")
+        if DBs and DBs.db.profile.general and DBs.db.profile.general.lockTracker then return end
         f:StartSizing("BOTTOMRIGHT")
         f._eqDragging = true
     end)
@@ -338,6 +379,8 @@ function Tracker:BuildFrame()
     f.drag    = drag
     f.grip    = grip
     self.frame = f
+
+    self:ApplyLockState()   -- hide/disable the resize grip if locked at build time
 
     self:BuildSectionHeaders(content)
 end
