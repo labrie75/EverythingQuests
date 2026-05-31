@@ -128,6 +128,7 @@ LibDataBroker-powered launcher compatible with Titan Panel, ChocolateBar, ElvUI'
 | `/everythingquests` | Toggle Options (alias) |
 | `/eqs chain` | Toggle the Chain Guide window |
 | `/eqs history` | Toggle the Quest History window |
+| `/eqs session` | Show a recap of your current play session (quests, XP, gold, time) |
 | `/eqs whatsnew` | Show the "What's New" summary for the latest update (also `/eqs changes`) |
 | `/eqs discover [zone]` | Print quest-line discovery info for the current zone (optional hint) |
 

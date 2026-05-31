@@ -89,11 +89,7 @@ local function buildRow(parent)
 end
 
 local function acquireRow(parent)
-    local r = tremove(HF._rowPool) or buildRow(parent)
-    r:SetParent(parent)
-    r:Show()
-    HF._rowActive[#HF._rowActive + 1] = r
-    return r
+    return ns.Util.AcquirePooled(HF._rowPool, HF._rowActive, parent, buildRow)
 end
 
 local function releaseAllRows()
@@ -203,7 +199,7 @@ function HF:Build()
     self._tabs = {}
     local function makeTab(id, label)
         local b = CreateFrame("Button", nil, tabRow)
-        b:SetSize(125, TAB_BAR_H - 4)                                          -- 125px × 5 tabs + gaps fits 700px window
+        b:SetSize(110, TAB_BAR_H - 4)                                          -- 110px × 6 tabs + gaps fits 700px window
         b.bg = b:CreateTexture(nil, "BACKGROUND")
         b.bg:SetAllPoints()
         b.bg:SetColorTexture(0, 0, 0, 0.5)
@@ -223,11 +219,13 @@ function HF:Build()
     self._tabs.timeline = makeTab("timeline", "Chain Timeline")
     self._tabs.activity = makeTab("activity", "Activity")
     self._tabs.totals   = makeTab("totals",   "Totals")
+    self._tabs.session  = makeTab("session",  "This Session")
     self._tabs.quests:SetPoint("LEFT", tabRow, "LEFT", 0, 0)
     self._tabs.streak:SetPoint("LEFT", self._tabs.quests, "RIGHT", 4, 0)
     self._tabs.timeline:SetPoint("LEFT", self._tabs.streak, "RIGHT", 4, 0)
     self._tabs.activity:SetPoint("LEFT", self._tabs.timeline, "RIGHT", 4, 0)
     self._tabs.totals:SetPoint("LEFT", self._tabs.activity, "RIGHT", 4, 0)
+    self._tabs.session:SetPoint("LEFT", self._tabs.totals, "RIGHT", 4, 0)
 
     -- Content area shared by all tabs
     local content = CreateFrame("Frame", nil, f)
@@ -248,6 +246,7 @@ function HF:_buildPanes(content)
         timeline = self:_buildTimelinePane(content),
         activity = self:_buildHeatmapPane(content),
         totals   = self:_buildTotalsPane(content),
+        session  = self:_buildSessionPane(content),
     }
 end
 
@@ -1051,6 +1050,66 @@ function HF:_renderTotals()
     end
 end
 
+-- ─── Pane: This Session ────────────────────────────────────────────────
+-- Quest activity for the current play session, read from the Session
+-- subsystem (Modules/History/Session.lua). Mirrors the Totals pane layout.
+function HF:_buildSessionPane(parent)
+    local pane = CreateFrame("Frame", nil, parent)
+    pane:SetAllPoints()
+    pane:Hide()
+
+    pane._intro = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    pane._intro:SetPoint("TOPLEFT",  30, -12)
+    pane._intro:SetPoint("TOPRIGHT", -30, -12)
+    pane._intro:SetJustifyH("LEFT")
+    pane._intro:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    pane._intro:SetText("Your quest activity this play session. A session starts when you log in and continues across /reload; it resets the next time you log in fresh.")
+    thin(pane._intro)
+
+    local function pairBlock(yOffset, labelText)
+        local label = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        label:SetPoint("TOPLEFT", 30, yOffset)
+        label:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+        label:SetText(labelText)
+        thin(label)
+        local value = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
+        value:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
+        thin(value)
+        return value
+    end
+
+    pane._played = pairBlock(-46,  "Played this session")
+    pane._quests = pairBlock(-100, "Quests completed")
+    pane._xp     = pairBlock(-154, "Quest XP earned")
+    pane._gold   = pairBlock(-208, "Quest gold earned")
+    pane._levels = pairBlock(-262, "Level-ups")
+
+    return pane
+end
+
+function HF:_renderSession()
+    local pane = self._panes.session
+    local Sess = ns:GetSubsystem("Session")
+    if not (pane and Sess and Sess.Summary) then return end
+    local sm = Sess:Summary()
+
+    pane._played:SetText(ns.Util.FmtDuration(sm.played))
+
+    local rate = sm.perHour and ("   |cffaaaaaa(%.1f / hour)|r"):format(sm.perHour) or ""
+    pane._quests:SetText(fmtBigNumber(sm.quests) .. rate)
+
+    pane._xp:SetText(fmtBigNumber(sm.xp) .. " XP")
+    pane._gold:SetText(fmtMoney(sm.gold))
+
+    if sm.levelUps > 0 then
+        pane._levels:SetText(("%d   |cffaaaaaa(%d to %d)|r"):format(
+            sm.levelUps, sm.startLevel, sm.curLevel))
+    else
+        pane._levels:SetText("0")
+    end
+end
+
 -- ─── Dispatch ──────────────────────────────────────────────────────────
 function HF:Render()
     if not self.frame or not self.frame:IsShown() then return end
@@ -1060,6 +1119,7 @@ function HF:Render()
     if t == "timeline" then self:_renderTimeline() end
     if t == "activity" then self:_renderHeatmap() end
     if t == "totals"   then self:_renderTotals() end
+    if t == "session"  then self:_renderSession() end
 end
 
 function HF:Toggle()
@@ -1209,12 +1269,33 @@ function HF:_exportTotals()
     return table.concat(lines, "\n")
 end
 
+function HF:_exportSession()
+    local Sess = ns:GetSubsystem("Session")
+    if not (Sess and Sess.Summary) then return "(session unavailable)" end
+    local sm = Sess:Summary()
+    local lines = {
+        "Everything Quests - This Session",
+        "",
+        ("Played: %s"):format(ns.Util.FmtDuration(sm.played)),
+        ("Quests completed: %d%s"):format(sm.quests,
+            sm.perHour and ((" (%.1f/hour)"):format(sm.perHour)) or ""),
+        ("Quest XP earned: %d"):format(sm.xp),
+        ("Quest gold earned: %s"):format(fmtMoneyText(sm.gold)),
+    }
+    if sm.levelUps > 0 then
+        lines[#lines + 1] = ("Level-ups: %d (%d to %d)"):format(
+            sm.levelUps, sm.startLevel, sm.curLevel)
+    end
+    return table.concat(lines, "\n")
+end
+
 function HF:_exportForTab(tabId)
     if tabId == "quests"   then return self:_exportQuests()   end
     if tabId == "streak"   then return self:_exportStreak()   end
     if tabId == "timeline" then return self:_exportTimeline() end
     if tabId == "activity" then return self:_exportActivity() end
     if tabId == "totals"   then return self:_exportTotals()   end
+    if tabId == "session"  then return self:_exportSession()  end
     return "(nothing to export)"
 end
 

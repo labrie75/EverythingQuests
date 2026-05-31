@@ -11,24 +11,15 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
-local FEATURE_POPUP_VERSION = "1.8.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.8.0"
+local FEATURE_POPUP_VERSION = "1.9.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.9.0"
 
 local POPUP_BODY = [[
-|cffEBB706Color completed quests your way|r |cffaaaaaa(new option)|r
-If you've set a tracker title color (like your class color), completed quests can now use it instead of the default green — the title and its objective lines both. On by default; find it under |cffffffffAppearance|r in Options.
+|cffEBB706See how your session is going|r |cffaaaaaa(new)|r
+A new "This Session" view recaps your current play session: quests completed, quest XP and gold earned, time played, quests per hour, and any level-ups. Type |cffffffff/eqs session|r for a quick chat recap, or open the new "This Session" tab in the Quest History window (|cffffffff/eqs history|r).
 
-|cffEBB706Lock the tracker's size too|r |cffaaaaaa(new)|r
-The |cffffffffLock tracker|r option now pins the tracker's size and hides the resize grip, not just its position. It's under |cffffffffGeneral|r in Options.
-
-|cffEBB706Keep your focused quest after relog|r |cffaaaaaa(now on by default)|r
-Your focused quest and its waypoint arrow now return when you log back in. Toggle it under |cffffffffGeneral|r.
-
-|cffEBB706Smarter "Get Directions"|r |cffaaaaaa(fix)|r
-For a quest you're already on, Get Directions now leads to your current objective — or the turn-in once it's complete — instead of where you first picked the quest up.
-
-|cffEBB706Your quest history is safer|r
-Everything Quests now keeps rolling backups of your account-wide quest history and restores it automatically if it ever loads empty, so a stray reset can't wipe your records.
+|cffEBB706It picks up where you left off|r
+Your session keeps counting across a |cffffffff/reload|r and only resets the next time you log in fresh, so a quick reload won't lose your tally.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

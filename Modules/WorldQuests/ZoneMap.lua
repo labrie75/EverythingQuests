@@ -106,12 +106,7 @@ local function buildRow(parent)
 end
 
 local function acquireRow(parent)
-    local r = tremove(Z.rowPool)
-    if not r then r = buildRow(parent) end
-    r:SetParent(parent)
-    r:Show()
-    Z.activeRows[#Z.activeRows + 1] = r
-    return r
+    return ns.Util.AcquirePooled(Z.rowPool, Z.activeRows, parent, buildRow)
 end
 
 local function releaseAll()

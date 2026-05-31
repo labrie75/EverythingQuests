@@ -153,12 +153,7 @@ local function buildCriteriaRow(parent)
 end
 
 local function acquireCriteria(parent)
-    local row = tremove(S.criteriaPool)
-    if not row then row = buildCriteriaRow(parent) end
-    row:SetParent(parent)
-    row:Show()
-    S.activeCriteria[#S.activeCriteria + 1] = row
-    return row
+    return ns.Util.AcquirePooled(S.criteriaPool, S.activeCriteria, parent, buildCriteriaRow)
 end
 
 local function releaseAllCriteria()

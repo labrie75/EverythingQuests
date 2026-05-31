@@ -37,21 +37,11 @@ local function buildLine(parent)
 end
 
 local function acquireHeader(parent)
-    local r = tremove(E.headerPool)
-    if not r then r = buildHeader(parent) end
-    r:SetParent(parent)
-    r:Show()
-    E.activeHeaders[#E.activeHeaders + 1] = r
-    return r
+    return ns.Util.AcquirePooled(E.headerPool, E.activeHeaders, parent, buildHeader)
 end
 
 local function acquireLine(parent)
-    local r = tremove(E.linePool)
-    if not r then r = buildLine(parent) end
-    r:SetParent(parent)
-    r:Show()
-    E.activeLines[#E.activeLines + 1] = r
-    return r
+    return ns.Util.AcquirePooled(E.linePool, E.activeLines, parent, buildLine)
 end
 
 local function releaseAll()

@@ -77,21 +77,11 @@ local function buildReagent(parent)
 end
 
 local function acquireHeader(parent)
-    local r = tremove(P.headerPool)
-    if not r then r = buildHeader(parent) end
-    r:SetParent(parent)
-    r:Show()
-    P.activeHeaders[#P.activeHeaders + 1] = r
-    return r
+    return ns.Util.AcquirePooled(P.headerPool, P.activeHeaders, parent, buildHeader)
 end
 
 local function acquireReagent(parent)
-    local r = tremove(P.reagentPool)
-    if not r then r = buildReagent(parent) end
-    r:SetParent(parent)
-    r:Show()
-    P.activeReagents[#P.activeReagents + 1] = r
-    return r
+    return ns.Util.AcquirePooled(P.reagentPool, P.activeReagents, parent, buildReagent)
 end
 
 local function releaseAll()

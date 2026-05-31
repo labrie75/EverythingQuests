@@ -62,12 +62,7 @@ local function buildListRow(parent)
 end
 
 local function acquireRow(pool, active, parent)
-    local r = tremove(pool)
-    if not r then r = buildListRow(parent) end
-    r:SetParent(parent)
-    r:Show()
-    active[#active + 1] = r
-    return r
+    return ns.Util.AcquirePooled(pool, active, parent, buildListRow)
 end
 
 local function releaseAllRows(pool, active)

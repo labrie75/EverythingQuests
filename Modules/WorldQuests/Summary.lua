@@ -71,12 +71,7 @@ local function buildRow(parent)
 end
 
 local function acquireRow(parent)
-    local r = tremove(S.rowPool)
-    if not r then r = buildRow(parent) end
-    r:SetParent(parent)
-    r:Show()
-    S.activeRows[#S.activeRows + 1] = r
-    return r
+    return ns.Util.AcquirePooled(S.rowPool, S.activeRows, parent, buildRow)
 end
 
 local function releaseAllRows()

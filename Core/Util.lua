@@ -39,6 +39,17 @@ function Util.FmtTimeShort(secs)
     return ("%dd"):format(secs / 86400)
 end
 
+-- Format an elapsed duration as "1h 47m" / "47m" / "30s" (e.g. play-session
+-- length). Unlike FmtTimeShort this keeps the minutes alongside the hours.
+function Util.FmtDuration(secs)
+    secs = math.max(0, math.floor(secs or 0))
+    local h = math.floor(secs / 3600)
+    local m = math.floor((secs % 3600) / 60)
+    if h > 0 then return ("%dh %dm"):format(h, m) end
+    if m > 0 then return ("%dm"):format(m) end
+    return ("%ds"):format(secs)
+end
+
 -- ── World-quest time-left (single source of truth) ───────────────────
 -- All WQ surfaces (map pin, zone list, tooltip) take minutes from
 -- C_TaskQuest.GetQuestTimeLeftMinutes and MUST agree on urgency color and
@@ -161,6 +172,24 @@ function Util.QuestTitle(questID, withNumberFallback)
     end
     if withNumberFallback then return "Quest #" .. tostring(questID) end
     return nil
+end
+
+-- ── Frame-pool acquire (single source of truth) ──────────────────────
+-- A dozen surfaces (Chain Guide, History, World Quests, and the tracker's
+-- scenario / profession / event / endeavor sections, auto-complete and
+-- auto-quest popups) keep a free-list `pool` of reusable frames plus an
+-- `active` list of the ones currently shown, and re-acquire them every
+-- render. The acquire half was copy-pasted identically: pop from the pool,
+-- build a fresh one via factory(parent) on a miss, reparent, show, and
+-- record it in `active`. This is that half, lifted to one place. The release
+-- half stays per-module (each surface resets different fields on its rows).
+function Util.AcquirePooled(pool, active, parent, factory)
+    local f = tremove(pool)
+    if not f then f = factory(parent) end
+    f:SetParent(parent)
+    f:Show()
+    active[#active + 1] = f
+    return f
 end
 
 ns.Util = Util

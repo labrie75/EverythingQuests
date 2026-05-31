@@ -69,7 +69,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.8.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.9.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
@@ -701,6 +701,10 @@ local function eqSlashHandler(msg)
     elseif msg == "history" then
         local HF = ns:GetSubsystem("HistoryFrame")
         if HF and HF.Toggle then HF:Toggle() end
+        return
+    elseif msg == "session" then
+        local Sess = ns:GetSubsystem("Session")
+        if Sess and Sess.Print then Sess:Print() end
         return
     elseif msg == "whatsnew" or msg == "changes" then
         -- Re-open the "What's New" popup on demand (it otherwise auto-shows

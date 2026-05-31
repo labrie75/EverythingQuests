@@ -121,11 +121,7 @@ local function buildBox()
 end
 
 local function acquire(parent)
-    local box = tremove(S.pool) or buildBox()
-    box:SetParent(parent)
-    box:Show()
-    S.active[#S.active + 1] = box
-    return box
+    return ns.Util.AcquirePooled(S.pool, S.active, parent, buildBox)
 end
 
 function S:ReleaseAll()

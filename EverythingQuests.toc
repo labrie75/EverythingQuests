@@ -2,7 +2,7 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.8.1
+## Version: 1.9.0
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache, EverythingQuestsHistory, EverythingQuestsHistoryBackups
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
@@ -20,19 +20,6 @@ Libs\LibSharedMedia-3.0\lib.xml
 Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Libs\LibMapPinHandler\LibMapPinHandler.lua
-
-# ─── Locales ───────────────────────────────────────────────────────────
-Locales\enUS.lua
-Locales\deDE.lua
-Locales\esES.lua
-Locales\esMX.lua
-Locales\frFR.lua
-Locales\itIT.lua
-Locales\koKR.lua
-Locales\ptBR.lua
-Locales\ruRU.lua
-Locales\zhCN.lua
-Locales\zhTW.lua
 
 # ─── Core (defines RegisterSubsystem; must load before any module) ─────
 Core\Init.lua
@@ -96,6 +83,7 @@ Modules\Nameplates\QuestIcons.lua
 
 Modules\History\Recorder.lua
 Modules\History\Frame.lua
+Modules\History\Session.lua
 
 # ─── Data (registers chain definitions into ChainGuideDatabase) ────────
 Data\RewardIcons.lua

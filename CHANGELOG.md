@@ -5,6 +5,17 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-05-31
+
+### New Features
+
+- **Session summary** — A new "This Session" view recaps your current play session: quests completed, quest XP and gold earned, time played, quests per hour, and level-ups. Type `/eqs session` for a quick chat recap, or open the new "This Session" tab in the Quest History window (`/eqs history`). A session starts when you log in and continues across `/reload`; it resets the next time you log in fresh.
+
+### Maintenance
+
+- Consolidated the frame-pool "acquire" pattern that around ten UI surfaces each hand-rolled into a single shared helper — no behavior change, just less duplicated code.
+- Removed an unused, never-displayed localization scaffold (Everything Quests is English-only, so it did nothing).
+
 ## [1.8.1] - 2026-05-31
 
 ### Bug Fixes

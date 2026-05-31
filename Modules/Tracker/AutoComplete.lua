@@ -90,12 +90,7 @@ local function buildPopup()
 end
 
 function AC:Acquire(parent)
-    local p = tremove(self.pool)
-    if not p then p = buildPopup() end
-    p:SetParent(parent)
-    p:Show()
-    self.active[#self.active + 1] = p
-    return p
+    return ns.Util.AcquirePooled(self.pool, self.active, parent, buildPopup)
 end
 
 function AC:ReleaseAll()

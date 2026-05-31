@@ -140,21 +140,11 @@ local function buildLine(parent)
 end
 
 local function acquireHeader(parent)
-    local r = tremove(V.headerPool)
-    if not r then r = buildHeader(parent) end
-    r:SetParent(parent)
-    r:Show()
-    V.activeHeaders[#V.activeHeaders + 1] = r
-    return r
+    return ns.Util.AcquirePooled(V.headerPool, V.activeHeaders, parent, buildHeader)
 end
 
 local function acquireLine(parent)
-    local r = tremove(V.linePool)
-    if not r then r = buildLine(parent) end
-    r:SetParent(parent)
-    r:Show()
-    V.activeLines[#V.activeLines + 1] = r
-    return r
+    return ns.Util.AcquirePooled(V.linePool, V.activeLines, parent, buildLine)
 end
 
 local function releaseAll()
