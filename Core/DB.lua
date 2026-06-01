@@ -22,11 +22,6 @@ DB.defaults = {
             -- player is opinionated, so it's strictly opt-in.
             autoAcceptQuests = false,
             autoTurnInQuests = false,
-            -- Map auto-zoom (Modules/Tracker/MapAutoSwitch.lua). When ON,
-            -- opening the world map switches to the super-tracked quest's
-            -- zone. OFF by default — overriding the player's map view is
-            -- only desirable if they ask for it.
-            autoZoomToTrackedQuest = false,
             -- Super-track persistence (Modules/Tracker/SuperTrackPersist).
             -- Blizzard restores the previously super-tracked quest on
             -- login, which also revives the in-game waypoint arrow (and

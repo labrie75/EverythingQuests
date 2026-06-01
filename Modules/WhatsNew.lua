@@ -11,15 +11,23 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
+-- FEATURE_POPUP_VERSION is deliberately held at 1.9.0 for the 1.10.0 release:
+-- this is a fix-focused update and we don't want to auto-popup existing
+-- players (per user). Anyone who saw the 1.9.0 popup stays silent; a FRESH
+-- install (whatsNewSeen = "") still gets one popup, now showing the current
+-- 1.10.0 highlights below. Everyone can reopen it anytime with /eqs whatsnew.
 local FEATURE_POPUP_VERSION = "1.9.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.9.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.10.0"
 
 local POPUP_BODY = [[
-|cffEBB706See how your session is going|r |cffaaaaaa(new)|r
-A new "This Session" view recaps your current play session: quests completed, quest XP and gold earned, time played, quests per hour, and any level-ups. Type |cffffffff/eqs session|r for a quick chat recap, or open the new "This Session" tab in the Quest History window (|cffffffff/eqs history|r).
+|cffEBB706World map errors fixed|r
+With the map open, hovering a point of interest or having the map switch to a tracked quest's zone could throw a "secret value" Lua error or a "blocked action" message under Midnight's new UI-protection rules. Everything Quests no longer refreshes the game's own map markers from an unsafe context, so the map is clean again.
 
-|cffEBB706It picks up where you left off|r
-Your session keeps counting across a |cffffffff/reload|r and only resets the next time you log in fresh, so a quick reload won't lose your tally.
+|cffEBB706Chain Guide directions point to your next step|r
+Clicking a quest you haven't reached yet in a chain used to drop a waypoint where you were standing, with nothing to pick up. It now sends you to the earliest step in that chain you can actually act on, and tells you which one.
+
+|cffEBB706Removed: auto-zoom map to focused quest|r
+That option caused the map errors above and can't work safely under Midnight, so it's gone. Use the world map or |cffffffff"Get Directions"|r to jump to a quest's zone.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

@@ -110,17 +110,11 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         autoTIGet, autoTISet)
     autoTI:SetPoint("TOPLEFT", autoAcc, "BOTTOMLEFT", 0, -2)
 
-    local zoomGet, zoomSet = generalSetting("autoZoomToTrackedQuest")
-    local zoom = Options:CreateCheckbox(content,
-        "Zoom world map to focused quest's zone  |cffaaaaaa(when you open the map)|r",
-        zoomGet, zoomSet)
-    zoom:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
-
     local restoreGet, restoreSet = generalSetting("restoreSuperTrackOnLogin")
     local restore = Options:CreateCheckbox(content,
         "Keep focused quest after relog  |cffaaaaaa(restores the waypoint arrow)|r",
         restoreGet, restoreSet)
-    restore:SetPoint("TOPLEFT", zoom, "BOTTOMLEFT", 0, -2)
+    restore:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
     -- Nameplate quest icons. Custom get/set: the stored value is nil until the
     -- user touches it, which resolves to ON unless ElvUI is loaded (ElvUI shows

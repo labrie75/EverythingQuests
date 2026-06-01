@@ -226,7 +226,7 @@ EverythingQuests/
 │   │                                 #   AutoQuestPopup, QuestSound,
 │   │                                 #   DragDrop, Events, Profession,
 │   │                                 #   Endeavors, TaxiHighlight,
-│   │                                 #   MapAutoSwitch, SuperTrackPersist)
+│   │                                 #   SuperTrackPersist)
 │   ├── Nameplates/                   # Nameplate quest icons (QuestIcons.lua)
 │   ├── WorldQuests/                  # World/zone map pins
 │   ├── ChainGuide/                   # Chain browser window + campaign source

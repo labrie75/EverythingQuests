@@ -5,6 +5,17 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-05-31
+
+### Bug Fixes
+
+- **No more Lua errors or "blocked action" messages from the world map** — With the map open, switching it to a tracked quest's zone or hovering a point of interest could throw a "secret value" Lua error (in the map's tooltip) or an `ADDON_ACTION_BLOCKED` message. Under Midnight's new UI-protection rules, Everything Quests was refreshing the map's own quest and point-of-interest markers from an unsafe context. Those refreshes have been removed or made safe, so the map is clean again.
+- **Chain Guide "Get Directions" points to your next step** — Clicking a quest you haven't reached yet in a chain used to drop a waypoint where you were standing, with nothing to pick up there. It now sends you to the earliest quest in that chain you can actually act on, and tells you which step that is.
+
+### Removed
+
+- **"Zoom world map to focused quest's zone" option** — This was the main cause of the map errors above, and there is no way to keep it working safely under Midnight's map-protection rules. The world map no longer re-centers itself when you open it; use the map's own navigation or "Get Directions" to jump to a quest's zone.
+
 ## [1.9.0] - 2026-05-31
 
 ### New Features
