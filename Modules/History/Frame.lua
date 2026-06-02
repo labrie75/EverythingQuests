@@ -218,7 +218,10 @@ function HF:Build()
     self._tabs.streak   = makeTab("streak",   "Streak")
     self._tabs.timeline = makeTab("timeline", "Chain Timeline")
     self._tabs.activity = makeTab("activity", "Activity")
-    self._tabs.totals   = makeTab("totals",   "Totals")
+    -- Tab id stays "totals" (used throughout); the user-facing label is
+    -- "Stats" because this tab now holds both the lifetime Totals view and
+    -- the XP/gold/quests Trends view (toggled inside the pane).
+    self._tabs.totals   = makeTab("totals",   "Stats")
     self._tabs.session  = makeTab("session",  "This Session")
     self._tabs.quests:SetPoint("LEFT", tabRow, "LEFT", 0, 0)
     self._tabs.streak:SetPoint("LEFT", self._tabs.quests, "RIGHT", 4, 0)
@@ -913,14 +916,114 @@ local function fmtBigNumber(n)
     return tostring(n)
 end
 
+-- ─── Stats: shared helpers for the Trends view + sub-view toggle ────────
+local STATS_MAX_BARS = 30                       -- daily view shows 30; weekly 12
+local CARD_W, CARD_H, CARD_GAP = 210, 70, 12
+local BAR_GAP = 3
+
+-- Format one metric value for cards / tooltips.
+local function formatMetric(key, v)
+    v = v or 0
+    if key == "gold" then return fmtMoney(v) end
+    if key == "xp"   then return fmtBigNumber(v) .. " XP" end
+    return fmtBigNumber(v) .. (v == 1 and " quest" or " quests")
+end
+
+-- Signed, colored period-over-period delta (green up / red down / grey flat).
+local function fmtDelta(key, d)
+    if d == 0 then return "|cff888888no change|r" end
+    local mag = (key == "gold") and fmtMoney(math.abs(d)) or fmtBigNumber(math.abs(d))
+    if key == "xp" then mag = mag .. " XP" end
+    if d > 0 then return "|cff55dd55+" .. mag .. "|r" end
+    return "|cffdd5555-" .. mag .. "|r"
+end
+
+-- A small two-state toggle button reused for the Totals/Trends sub-view
+-- switch, the Daily/Weekly granularity switch, and the metric switch. The
+-- active visual mirrors the top-level tab styling (red fill, yellow text).
+local function makeToggleButton(parent, label, w)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(w, 22)
+    b.bg = b:CreateTexture(nil, "BACKGROUND")
+    b.bg:SetAllPoints()
+    b.hl = b:CreateTexture(nil, "HIGHLIGHT")
+    b.hl:SetAllPoints()
+    b.hl:SetColorTexture(1, 1, 1, 0.08)
+    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    b.text:SetPoint("CENTER")
+    b.text:SetText(label)
+    thin(b.text)
+    function b:SetActive(on)
+        if on then
+            self.bg:SetColorTexture(HEADER_RED[1], HEADER_RED[2], HEADER_RED[3], 0.85)
+            self.text:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
+        else
+            self.bg:SetColorTexture(0, 0, 0, 0.5)
+            self.text:SetTextColor(0.85, 0.85, 0.85)
+        end
+    end
+    b:SetActive(false)
+    return b
+end
+
+-- A comparison "card": metric label + big current value + colored delta line.
+local function makeCard(parent)
+    local c = CreateFrame("Frame", nil, parent)
+    c:SetSize(CARD_W, CARD_H)
+    local bg = c:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.4)
+    c.label = c:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    c.label:SetPoint("TOPLEFT", 8, -6)
+    thin(c.label)
+    c.value = c:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    c.value:SetPoint("TOPLEFT", 8, -22)
+    c.value:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
+    thin(c.value)
+    c.delta = c:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    c.delta:SetPoint("BOTTOMLEFT", 8, 6)
+    thin(c.delta)
+    return c
+end
+
+-- Bar hover: period range + exact value for the selected metric.
+local function barOnEnter(self)
+    if not self._rangeText then return end
+    GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
+    GameTooltip:SetText(self._rangeText, 1, 1, 1)
+    GameTooltip:AddLine(self._valueText or "", YELLOW[1], YELLOW[2], YELLOW[3])
+    GameTooltip:Show()
+end
+
 function HF:_buildTotalsPane(parent)
     local pane = CreateFrame("Frame", nil, parent)
     pane:SetAllPoints()
     pane:Hide()
 
-    pane._intro = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    pane._intro:SetPoint("TOPLEFT",  30, -12)
-    pane._intro:SetPoint("TOPRIGHT", -30, -12)
+    -- Sub-view segmented control. This "Stats" tab holds two views: the
+    -- lifetime Totals (default) and the XP/gold/quests Trends view. A two-
+    -- button toggle keeps both under one top-level tab (the tab bar is full).
+    pane._segTotals = makeToggleButton(pane, "Totals", 80)
+    pane._segTotals:SetPoint("TOPLEFT", 12, -8)
+    pane._segTrends = makeToggleButton(pane, "Trends", 80)
+    pane._segTrends:SetPoint("LEFT", pane._segTotals, "RIGHT", 4, 0)
+    pane._segTotals:SetScript("OnClick", function() HF:_switchStatsView("totals") end)
+    pane._segTrends:SetScript("OnClick", function() HF:_switchStatsView("trends") end)
+
+    -- ── Totals view: lifetime aggregates ──────────────────────────────
+    -- Wrapped in its own frame (anchored below the toggle) so the whole view
+    -- shows/hides as a unit. Field handles still live on `pane` so the
+    -- existing _renderTotals keeps working unchanged; only the widget PARENT
+    -- moved to this container. Offsets are tightened versus the old full-pane
+    -- layout to reclaim the ~34px the toggle row consumes.
+    local tvw = CreateFrame("Frame", nil, pane)
+    tvw:SetPoint("TOPLEFT",     0, -34)
+    tvw:SetPoint("BOTTOMRIGHT", 0, 0)
+    pane._totalsView = tvw
+
+    pane._intro = tvw:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    pane._intro:SetPoint("TOPLEFT",  30, -4)
+    pane._intro:SetPoint("TOPRIGHT", -30, -4)
     pane._intro:SetJustifyH("LEFT")
     pane._intro:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
     pane._intro:SetText("Account-wide quest rewards. Totals count only quests turned in while reward tracking was on; older entries didn't capture XP or gold.")
@@ -928,13 +1031,13 @@ function HF:_buildTotalsPane(parent)
 
     -- Helper to make a "Label \n Value" pair stacked vertically.
     local function pairBlock(yOffset, labelText, big)
-        local label = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local label = tvw:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         label:SetPoint("TOPLEFT", 30, yOffset)
         label:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
         label:SetText(labelText)
         thin(label)
 
-        local value = pane:CreateFontString(nil, "OVERLAY",
+        local value = tvw:CreateFontString(nil, "OVERLAY",
             big and "GameFontNormalLarge" or "GameFontHighlight")
         value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
         value:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
@@ -942,13 +1045,13 @@ function HF:_buildTotalsPane(parent)
         return value
     end
 
-    pane._totalQuests = pairBlock(-44,  "Total quests with reward data", true)
-    pane._totalGold   = pairBlock(-94,  "Total gold earned",             true)
-    pane._totalXP     = pairBlock(-144, "Total XP earned",               true)
+    pane._totalQuests = pairBlock(-30,  "Total quests with reward data", true)
+    pane._totalGold   = pairBlock(-78,  "Total gold earned",             true)
+    pane._totalXP     = pairBlock(-126, "Total XP earned",               true)
 
     -- Per-character section header.
-    local h2 = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    h2:SetPoint("TOPLEFT", 30, -200)
+    local h2 = tvw:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    h2:SetPoint("TOPLEFT", 30, -180)
     h2:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     h2:SetText("By character")
     thin(h2)
@@ -956,33 +1059,44 @@ function HF:_buildTotalsPane(parent)
 
     -- Per-character rows — created on demand and reused across renders.
     -- Cap at 8 visible rows so the Top-rewards section pinned to the bottom
-    -- of the pane never collides with the char list above it.
+    -- of the view never collides with the char list above it.
     pane._charRows = {}
 
-    -- Top rewards section pinned to the BOTTOM of the pane. Anchoring from
+    -- Top rewards section pinned to the BOTTOM of the view. Anchoring from
     -- BOTTOMLEFT (rather than absolute TOPLEFT offsets) keeps the section
-    -- visible regardless of pane height, so a smaller window or future
+    -- visible regardless of view height, so a smaller window or future
     -- layout tweak doesn't push it off the bottom edge again.
-    pane._topXP = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    pane._topXP = tvw:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     pane._topXP:SetPoint("BOTTOMLEFT",  30,   8)
     pane._topXP:SetPoint("BOTTOMRIGHT", -30,  8)
     pane._topXP:SetJustifyH("LEFT")
     pane._topXP:SetTextColor(1, 1, 1)
     thin(pane._topXP)
 
-    pane._topGold = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    pane._topGold = tvw:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     pane._topGold:SetPoint("BOTTOMLEFT",  pane._topXP, "TOPLEFT",  0, 4)
     pane._topGold:SetPoint("BOTTOMRIGHT", pane._topXP, "TOPRIGHT", 0, 4)
     pane._topGold:SetJustifyH("LEFT")
     pane._topGold:SetTextColor(1, 1, 1)
     thin(pane._topGold)
 
-    local h3 = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local h3 = tvw:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     h3:SetPoint("BOTTOMLEFT", pane._topGold, "TOPLEFT", 0, 6)
     h3:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     h3:SetText("Top single-quest rewards")
     thin(h3)
     pane._topHeader = h3
+
+    -- ── Trends view: XP/gold/quests over time (built lazily-ish here) ──
+    pane._trendsView = self:_buildTrendsView(pane)
+
+    -- Default to the Totals view; Trends shows on demand.
+    self._statsView      = "totals"
+    self._trendGran      = "daily"
+    self._trendMetric    = "gold"
+    self._trendCharFilter = "all"          -- account-wide by default
+    pane._segTotals:SetActive(true)
+    pane._trendsView:Hide()
 
     return pane
 end
@@ -990,11 +1104,12 @@ end
 local function ensureCharRow(pane, idx)
     local r = pane._charRows[idx]
     if r then return r end
-    r = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local host = pane._totalsView or pane
+    r = host:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     r:SetTextColor(0.92, 0.92, 0.92)
     r:SetJustifyH("LEFT")
-    r:SetPoint("TOPLEFT",  40, -222 - (idx - 1) * 14)
-    r:SetPoint("TOPRIGHT", -30, -222 - (idx - 1) * 14)
+    r:SetPoint("TOPLEFT",  host, "TOPLEFT",  40, -200 - (idx - 1) * 14)
+    r:SetPoint("TOPRIGHT", host, "TOPRIGHT", -30, -200 - (idx - 1) * 14)
     thin(r)
     pane._charRows[idx] = r
     return r
@@ -1048,6 +1163,226 @@ function HF:_renderTotals()
     else
         pane._topXP:SetText("Biggest XP:    (none yet)")
     end
+end
+
+-- ─── Stats → Trends sub-view ──────────────────────────────────────────
+-- XP / gold / quest-count over time, sourced from History:Trends(). Layout:
+-- a Daily/Weekly granularity toggle + a metric toggle on top, three
+-- comparison cards (current period vs previous), and a bar chart of the
+-- selected metric across periods. Data depth for XP/gold is bounded by when
+-- reward tracking began — surfaced in the caveat line at the bottom.
+function HF:_buildTrendsView(pane)
+    local Options = ns:GetSubsystem("Options")
+    local tv = CreateFrame("Frame", nil, pane)
+    tv:SetPoint("TOPLEFT",     0, -34)
+    tv:SetPoint("BOTTOMRIGHT", 0, 0)
+    tv:Hide()
+
+    -- Top row: granularity (left), character scope (middle), metric (right).
+    tv._granDaily  = makeToggleButton(tv, "Daily", 60)
+    tv._granDaily:SetPoint("TOPLEFT", 12, -4)
+    tv._granWeekly = makeToggleButton(tv, "Weekly", 60)
+    tv._granWeekly:SetPoint("LEFT", tv._granDaily, "RIGHT", 4, 0)
+    tv._granDaily:SetScript("OnClick",  function() HF:_switchTrendGran("daily")  end)
+    tv._granWeekly:SetScript("OnClick", function() HF:_switchTrendGran("weekly") end)
+
+    -- Character scope: account-wide (all characters) or one character. Mirrors
+    -- the Quests tab's character dropdown; kept on its own filter so toggling
+    -- scope here doesn't disturb the Quests list (and vice-versa).
+    local charLabel = tv:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    charLabel:SetPoint("LEFT", tv._granWeekly, "RIGHT", 16, 0)
+    charLabel:SetText("Show:")
+    thin(charLabel)
+    if Options and Options.CreateDropdown then
+        local function listFn()
+            local R = ns:GetSubsystem("History")
+            local out = { { value = "all", label = "All characters" } }
+            if R then
+                local chars = R:GetCharacters()
+                for i = 1, #chars do
+                    out[#out + 1] = { value = chars[i], label = chars[i] }
+                end
+            end
+            return out
+        end
+        local function curFn() return HF._trendCharFilter or "all" end
+        local function setFn(v) HF._trendCharFilter = v; HF:_renderTrends() end
+        tv._charDD = Options:CreateDropdown(tv, nil, listFn, curFn, setFn)
+        tv._charDD:SetPoint("LEFT", charLabel, "RIGHT", 4, 0)
+        tv._charDD:SetWidth(170)
+    end
+
+    tv._mGold  = makeToggleButton(tv, "Gold", 64)
+    tv._mGold:SetPoint("TOPRIGHT", -12, -4)
+    tv._mXP    = makeToggleButton(tv, "XP", 64)
+    tv._mXP:SetPoint("RIGHT", tv._mGold, "LEFT", -4, 0)
+    tv._mCount = makeToggleButton(tv, "Quests", 64)
+    tv._mCount:SetPoint("RIGHT", tv._mXP, "LEFT", -4, 0)
+    tv._mGold:SetScript("OnClick",  function() HF:_switchTrendMetric("gold")  end)
+    tv._mXP:SetScript("OnClick",    function() HF:_switchTrendMetric("xp")    end)
+    tv._mCount:SetScript("OnClick", function() HF:_switchTrendMetric("count") end)
+
+    -- Comparison cards (current period vs previous): Quests / XP / Gold.
+    tv._cards = {}
+    for i = 1, 3 do
+        local card = makeCard(tv)
+        if i == 1 then
+            card:SetPoint("TOPLEFT", 12, -34)
+        else
+            card:SetPoint("LEFT", tv._cards[i - 1], "RIGHT", CARD_GAP, 0)
+        end
+        tv._cards[i] = card
+    end
+
+    -- Bar chart of the selected metric. Bottom inset leaves room for the
+    -- axis labels (just under the chart) and the two-line caveat.
+    local chart = CreateFrame("Frame", nil, tv)
+    chart:SetPoint("TOPLEFT",     12, -(34 + CARD_H + 14))
+    chart:SetPoint("BOTTOMRIGHT", -12, 46)
+    local cbg = chart:CreateTexture(nil, "BACKGROUND")
+    cbg:SetAllPoints()
+    cbg:SetColorTexture(1, 1, 1, 0.03)
+    tv._chart = chart
+
+    tv._bars = {}
+    for i = 1, STATS_MAX_BARS do
+        local bar = CreateFrame("Frame", nil, chart)
+        bar:EnableMouse(true)
+        bar.fill = bar:CreateTexture(nil, "ARTWORK")
+        bar.fill:SetAllPoints()
+        bar:SetScript("OnEnter", barOnEnter)
+        bar:SetScript("OnLeave", GameTooltip_Hide)
+        bar:Hide()
+        tv._bars[i] = bar
+    end
+
+    tv._axisL = tv:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    tv._axisL:SetPoint("TOPLEFT", chart, "BOTTOMLEFT", 0, -2)
+    thin(tv._axisL)
+    tv._axisR = tv:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    tv._axisR:SetPoint("TOPRIGHT", chart, "BOTTOMRIGHT", 0, -2)
+    tv._axisR:SetJustifyH("RIGHT")
+    thin(tv._axisR)
+
+    tv._caveat = tv:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    tv._caveat:SetPoint("BOTTOMLEFT",  12, 8)
+    tv._caveat:SetPoint("BOTTOMRIGHT", -12, 8)
+    tv._caveat:SetJustifyH("LEFT")
+    tv._caveat:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    tv._caveat:SetText("Gold is all income (loot, vendor, rewards) tracked forward from when this version was installed \226\128\148 past periods may read 0. XP and quest counts come from quest turn-ins.")
+    thin(tv._caveat)
+
+    return tv
+end
+
+-- Switch between the Totals and Trends sub-views of the Stats tab.
+function HF:_switchStatsView(view)
+    local pane = self._panes and self._panes.totals
+    if not pane then return end
+    self._statsView = view
+    if view == "trends" then
+        pane._totalsView:Hide()
+        pane._trendsView:Show()
+    else
+        pane._trendsView:Hide()
+        pane._totalsView:Show()
+    end
+    pane._segTotals:SetActive(view == "totals")
+    pane._segTrends:SetActive(view == "trends")
+    self:_renderStats()
+end
+
+function HF:_switchTrendGran(gran)
+    self._trendGran = gran
+    self:_renderTrends()
+end
+
+function HF:_switchTrendMetric(metric)
+    self._trendMetric = metric
+    self:_renderTrends()
+end
+
+-- Dispatch the active Stats sub-view (called from Render / SwitchTab).
+function HF:_renderStats()
+    if self._statsView == "trends" then
+        self:_renderTrends()
+    else
+        self:_renderTotals()
+    end
+end
+
+function HF:_renderTrends()
+    local pane = self._panes and self._panes.totals
+    local tv   = pane and pane._trendsView
+    local R    = ns:GetSubsystem("History")
+    if not (tv and R and R.Trends) then return end
+
+    local gran   = self._trendGran   or "daily"
+    local metric = self._trendMetric or "gold"
+    local data   = R:Trends(gran, self._trendCharFilter)
+    local periods = data.periods
+    local n = #periods
+    if n == 0 then return end
+
+    -- Comparison cards: current (last) period vs the previous one.
+    local cur  = periods[n]
+    local prev = periods[n - 1] or { xp = 0, gold = 0, count = 0 }
+    local curLabel  = (gran == "weekly") and "This week" or "Today"
+    local prevLabel = (gran == "weekly") and "last week" or "yesterday"
+    local CARD_DEFS = {
+        { key = "count", name = "Quests" },
+        { key = "xp",    name = "XP" },
+        { key = "gold",  name = "Gold" },
+    }
+    for i = 1, 3 do
+        local d    = CARD_DEFS[i]
+        local card = tv._cards[i]
+        card.label:SetText(("%s \226\128\148 %s"):format(d.name, curLabel))
+        card.value:SetText(formatMetric(d.key, cur[d.key] or 0))
+        local delta = (cur[d.key] or 0) - (prev[d.key] or 0)
+        card.delta:SetText(fmtDelta(d.key, delta) .. " vs " .. prevLabel)
+    end
+
+    -- Bar chart of the selected metric.
+    local maxV = (metric == "xp" and data.maxXP)
+              or (metric == "gold" and data.maxGold)
+              or data.maxCount
+    local chart = tv._chart
+    local cw = chart:GetWidth()
+    local ch = chart:GetHeight()
+    if not cw or cw <= 1 then cw = (tv:GetWidth() or 660) - 24 end
+    if not ch or ch <= 1 then ch = 180 end
+    local barW = (cw - (n - 1) * BAR_GAP) / n
+
+    for i = 1, STATS_MAX_BARS do
+        local bar = tv._bars[i]
+        if i <= n then
+            local p = periods[i]
+            local v = (metric == "xp" and p.xp) or (metric == "gold" and p.gold) or p.count
+            local h = 0
+            if maxV > 0 and v > 0 then h = math.max(2, (v / maxV) * (ch - 4)) end
+            bar:ClearAllPoints()
+            bar:SetPoint("BOTTOMLEFT", chart, "BOTTOMLEFT", (i - 1) * (barW + BAR_GAP), 0)
+            bar:SetSize(math.max(barW, 1), math.max(h, 1))
+            bar.fill:SetColorTexture(YELLOW[1], YELLOW[2], YELLOW[3], v > 0 and 0.9 or 0.12)
+            local rng = p.label
+            if gran == "weekly" then rng = rng .. " \226\128\147 " .. date("%b %d", p.day1 * 86400) end
+            bar._rangeText = rng
+            bar._valueText = formatMetric(metric, v)
+            bar:Show()
+        else
+            bar:Hide()
+        end
+    end
+
+    tv._axisL:SetText(periods[1].label)
+    tv._axisR:SetText(periods[n].label)
+
+    tv._granDaily:SetActive(gran == "daily")
+    tv._granWeekly:SetActive(gran == "weekly")
+    tv._mCount:SetActive(metric == "count")
+    tv._mXP:SetActive(metric == "xp")
+    tv._mGold:SetActive(metric == "gold")
 end
 
 -- ─── Pane: This Session ────────────────────────────────────────────────
@@ -1118,7 +1453,7 @@ function HF:Render()
     if t == "streak"   then self:_renderStreak() end
     if t == "timeline" then self:_renderTimeline() end
     if t == "activity" then self:_renderHeatmap() end
-    if t == "totals"   then self:_renderTotals() end
+    if t == "totals"   then self:_renderStats()  end
     if t == "session"  then self:_renderSession() end
 end
 
@@ -1269,6 +1604,31 @@ function HF:_exportTotals()
     return table.concat(lines, "\n")
 end
 
+-- Trends export: a plain-text table of the current granularity's periods
+-- with quests / XP / gold per period.
+function HF:_exportTrends()
+    local R = ns:GetSubsystem("History")
+    if not (R and R.Trends) then return "(history unavailable)" end
+    local gran  = self._trendGran or "daily"
+    local scope = self._trendCharFilter
+    local data  = R:Trends(gran, scope)
+    local scopeLabel = (not scope or scope == "all" or scope == "") and "all characters" or scope
+    local lines = {
+        ("Quest History — Trends (%s, %s)"):format(gran == "weekly" and "weekly" or "daily", scopeLabel),
+        "",
+        "# period | quests | xp | gold",
+    }
+    for i = 1, #data.periods do
+        local p = data.periods[i]
+        local period = (gran == "weekly")
+            and (date("%Y-%m-%d", p.day0 * 86400) .. " – " .. date("%Y-%m-%d", p.day1 * 86400))
+            or  date("%Y-%m-%d", p.day0 * 86400)
+        lines[#lines + 1] = ("%s | %d | %d | %s"):format(
+            period, p.count, p.xp, fmtMoneyText(p.gold))
+    end
+    return table.concat(lines, "\n")
+end
+
 function HF:_exportSession()
     local Sess = ns:GetSubsystem("Session")
     if not (Sess and Sess.Summary) then return "(session unavailable)" end
@@ -1294,7 +1654,11 @@ function HF:_exportForTab(tabId)
     if tabId == "streak"   then return self:_exportStreak()   end
     if tabId == "timeline" then return self:_exportTimeline() end
     if tabId == "activity" then return self:_exportActivity() end
-    if tabId == "totals"   then return self:_exportTotals()   end
+    if tabId == "totals"   then
+        -- The "Stats" tab exports whichever sub-view is active.
+        if self._statsView == "trends" then return self:_exportTrends() end
+        return self:_exportTotals()
+    end
     if tabId == "session"  then return self:_exportSession()  end
     return "(nothing to export)"
 end

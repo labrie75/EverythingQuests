@@ -398,6 +398,14 @@ function V:Render(content, contentWidth, yStart, collapsed)
             row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
         end
         row.title:SetText(questTitle(qid))
+        -- Honor the user's chosen title color so World Quests follow the same
+        -- color scheme as the main Quests section (Blocks.lua title logic).
+        -- Pooled rows always reset the color, so set both branches explicitly.
+        if ov and ov.r then
+            row.title:SetTextColor(ov.r, ov.g, ov.b)
+        else
+            row.title:SetTextColor(1.0, 0.82, 0.0)
+        end
         if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(row.title, 0) end
         y = y + HEADER_H + ROW_GAP
 

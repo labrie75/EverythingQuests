@@ -39,6 +39,12 @@ local function ensureSV()
     local sv = _G.EverythingQuestsHistory
     sv.entries        = sv.entries        or {}
     sv.charBackfilled = sv.charBackfilled or {}
+    -- All-source gold ledger: goldDaily[charKey][dayNumber] = copper EARNED
+    -- that day (positive PLAYER_MONEY deltas only). Separate from the quest
+    -- entries because it isn't tied to a quest; used by the Stats → Trends
+    -- "Gold" metric. Not snapshotted into the history backups (it's
+    -- regenerated forward from live play, never restored).
+    sv.goldDaily      = sv.goldDaily      or {}
     return sv
 end
 
@@ -159,6 +165,17 @@ function R:OnEnable()
     Events:On("QUEST_TURNED_IN", function(_, questID, xpReward, moneyReward)
         if not enabled() then return end
         self:Record(questID, xpReward, moneyReward)
+    end)
+
+    -- All-source gold tracking. PLAYER_MONEY fires on any balance change; we
+    -- diff GetMoney() against a runtime baseline and bank positive deltas
+    -- (loot, vendor, quest rewards — everything) into the per-day ledger.
+    -- The baseline is seeded from the CURRENT balance each session, so a
+    -- /reload records nothing spurious and offline mail/AH changes are never
+    -- attributed to a day we can't actually know.
+    self._moneyBaseline = (GetMoney and GetMoney()) or 0
+    Events:On("PLAYER_MONEY", function()
+        self:RecordMoney()
     end)
     -- Async title-fill: whenever Blizzard returns data for a quest we
     -- asked about, look for any history entry missing its title and fill
@@ -447,6 +464,44 @@ function R:Record(questID, xpReward, moneyReward)
     entries[#entries + 1] = entry
     self:_updateCompletion(entry.q, entry.t)
     self:_enforceRetention()
+end
+
+-- All-source gold ledger. Banks positive PLAYER_MONEY deltas into
+-- goldDaily[charKey][today]. Spending (negative delta) only re-baselines.
+-- Days beyond the retention window are pruned once per new day so the table
+-- stays bounded (a few hundred small ints per character at most).
+local GOLD_RETENTION_DAYS = 400
+
+function R:RecordMoney()
+    if not GetMoney then return end
+    local cur   = GetMoney()
+    local delta = cur - (self._moneyBaseline or cur)
+    self._moneyBaseline = cur
+    if not enabled() then return end                  -- history off → don't bank
+    if delta <= 0 then return end                     -- income only, not spending
+
+    local key   = charKey()
+    local today = math.floor(((GetServerTime and GetServerTime()) or time()) / 86400)
+    local ledger = self.sv.goldDaily
+    local days = ledger[key]
+    if not days then days = {}; ledger[key] = days end
+
+    local isNewDay = days[today] == nil
+    days[today] = (days[today] or 0) + delta
+
+    if isNewDay then
+        local cutoff = today - GOLD_RETENTION_DAYS
+        for d in pairs(days) do
+            if d < cutoff then days[d] = nil end
+        end
+    end
+
+    -- Live-refresh only while the user is actually watching the Trends view.
+    local HF = ns:GetSubsystem("HistoryFrame")
+    if HF and HF.frame and HF.frame:IsShown()
+       and HF._activeTab == "totals" and HF._statsView == "trends" then
+        HF:Render()
+    end
 end
 
 -- Drop oldest entries when over the cap. Append-only writes keep oldest
@@ -752,4 +807,90 @@ function R:DayCounts(daysBack)
         end
     end
     return counts, today, minDay
+end
+
+-- Period-bucketed XP / gold / quest-count for the Stats → Trends view.
+-- granularity: "weekly" → twelve rolling 7-day windows; anything else → the
+-- last 30 days, one bucket per day. Buckets are returned OLDEST→NEWEST so a
+-- chart draws left (old) → right (new), and the last bucket is the current
+-- day/week. Only entries with a real timestamp (t>0) contribute. xp/gold come
+-- from the optional reward fields (xp / m), which only exist on turn-ins
+-- recorded after reward tracking shipped — so a period can show quests with
+-- little or no xp/gold. Returns:
+--   periods     — array of { label, day0, day1, xp, gold, count } oldest→newest
+--   maxXP/maxGold/maxCount — peak across periods (bar scaling; 0-safe)
+--   granularity — "daily" | "weekly" (echoed back)
+-- charFilter: a "Name-Realm" key restricts to that character; nil / "all" /
+-- "" means account-wide (every character that pivots through e.c).
+function R:Trends(granularity, charFilter)
+    local weekly   = (granularity == "weekly")
+    local wantChar = charFilter
+    if wantChar == "all" or wantChar == "" then wantChar = nil end
+    local now      = (GetServerTime and GetServerTime()) or time()
+    local today    = math.floor(now / 86400)
+    local nBuckets = weekly and 12 or 30
+    local span     = weekly and 7 or 1
+
+    -- Pre-create buckets oldest→newest. Bucket i covers the inclusive day
+    -- range [hiDay - span + 1, hiDay], where hiDay walks forward to today.
+    local periods = {}
+    for i = 1, nBuckets do
+        local hiDay = today - span * (nBuckets - i)
+        periods[i] = { day0 = hiDay - span + 1, day1 = hiDay, xp = 0, gold = 0, count = 0 }
+    end
+    local oldestDay = periods[1].day0
+
+    local function bucketIndex(day)
+        if day < oldestDay or day > today then return nil end
+        if weekly then return nBuckets - math.floor((today - day) / 7) end
+        return nBuckets - (today - day)
+    end
+
+    -- Quests + quest XP come from recorded turn-ins.
+    local entries = self.sv.entries
+    for k = 1, #entries do
+        local e = entries[k]
+        local t = e.t
+        if t and t > 0 and (not wantChar or e.c == wantChar) then
+            local idx = bucketIndex(math.floor(t / 86400))
+            if idx then
+                local p = periods[idx]
+                p.count = p.count + 1
+                if e.xp and e.xp > 0 then p.xp = p.xp + e.xp end
+            end
+        end
+    end
+
+    -- Gold is ALL-source income from the per-day money ledger (loot, vendor,
+    -- quest rewards — everything), not just quest-reward coin.
+    local ledger = self.sv.goldDaily
+    if ledger then
+        for ckey, days in pairs(ledger) do
+            if not wantChar or ckey == wantChar then
+                for day, copper in pairs(days) do
+                    if copper and copper > 0 then
+                        local idx = bucketIndex(day)
+                        if idx then periods[idx].gold = periods[idx].gold + copper end
+                    end
+                end
+            end
+        end
+    end
+
+    local maxXP, maxGold, maxCount = 0, 0, 0
+    for i = 1, nBuckets do
+        local p = periods[i]
+        if p.xp    > maxXP    then maxXP    = p.xp    end
+        if p.gold  > maxGold  then maxGold  = p.gold  end
+        if p.count > maxCount then maxCount = p.count end
+        p.label = date("%b %d", p.day0 * 86400)        -- bucket start; weekly = window start
+    end
+
+    return {
+        periods     = periods,
+        maxXP       = maxXP,
+        maxGold     = maxGold,
+        maxCount    = maxCount,
+        granularity = weekly and "weekly" or "daily",
+    }
 end

@@ -69,8 +69,39 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.10.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.11.0"))
     f.version:SetTextColor(unpack(YELLOW))
+
+    -- Discord link, top-left — mirrors the version label on the right and
+    -- flanks the centered title so it reads as a deliberate call-out. A small
+    -- Discord-blurple chip (#5865F2) sits before the text as a brand accent.
+    -- Click pops a copyable invite (ns:ShowDiscord) — WoW can't open a browser.
+    f.discord = CreateFrame("Button", nil, f)
+    f.discord.icon = f.discord:CreateTexture(nil, "OVERLAY")
+    f.discord.icon:SetSize(16, 16)
+    f.discord.icon:SetPoint("LEFT", 0, 0)
+    -- Official Discord symbol (white, 64x64 TGA with alpha) at
+    -- Media\Textures\discord.tga. If the file is ever missing, WoW draws a
+    -- placeholder square — replace the asset, don't recolor the logo.
+    f.discord.icon:SetTexture("Interface\\AddOns\\EverythingQuests\\Media\\Textures\\discord.tga")
+    f.discord.text = f.discord:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.discord.text:SetPoint("LEFT", f.discord.icon, "RIGHT", 5, 0)
+    f.discord.text:SetText("Join our Discord!")
+    f.discord.text:SetTextColor(unpack(YELLOW))
+    f.discord:SetSize(16 + 5 + f.discord.text:GetStringWidth() + 4, 18)
+    f.discord:SetPoint("TOPLEFT", 14, -15)
+    f.discord:SetScript("OnClick", function() ns:ShowDiscord() end)
+    f.discord:SetScript("OnEnter", function(s)
+        s.text:SetTextColor(1, 1, 1)
+        GameTooltip:SetOwner(s, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Join our Discord", YELLOW[1], YELLOW[2], YELLOW[3])
+        GameTooltip:AddLine("Click to copy the invite link.", 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+    end)
+    f.discord:SetScript("OnLeave", function(s)
+        s.text:SetTextColor(unpack(YELLOW))
+        GameTooltip:Hide()
+    end)
 
     -- Close button (X) — yellow text in a small dark square (matches screenshot)
     local close = CreateFrame("Button", nil, f)

@@ -11,23 +11,25 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- FEATURE_POPUP_VERSION is deliberately held at 1.9.0 for the 1.10.0 release:
--- this is a fix-focused update and we don't want to auto-popup existing
--- players (per user). Anyone who saw the 1.9.0 popup stays silent; a FRESH
--- install (whatsNewSeen = "") still gets one popup, now showing the current
--- 1.10.0 highlights below. Everyone can reopen it anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.9.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.10.0"
+-- 1.11.0 is a feature release, so FEATURE_POPUP_VERSION is bumped to it:
+-- everyone who hasn't already seen the 1.11.0 popup gets one on next login.
+-- Bump this constant + rewrite POPUP_BODY for the next big release and a
+-- fresh popup shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.11.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.11.0"
 
 local POPUP_BODY = [[
-|cffEBB706World map errors fixed|r
-With the map open, hovering a point of interest or having the map switch to a tracked quest's zone could throw a "secret value" Lua error or a "blocked action" message under Midnight's new UI-protection rules. Everything Quests no longer refreshes the game's own map markers from an unsafe context, so the map is clean again.
+|cffEBB706New: Stats tab with Trends|r
+The History window's "Totals" tab is now |cffffffffStats|r, with a new |cffffffffTrends|r view that charts your quests, XP, and gold over time. Toggle between daily and weekly, compare the current period to the one before it, and view it account-wide or for a single character.
 
-|cffEBB706Chain Guide directions point to your next step|r
-Clicking a quest you haven't reached yet in a chain used to drop a waypoint where you were standing, with nothing to pick up. It now sends you to the earliest step in that chain you can actually act on, and tells you which one.
+|cffEBB706New: real gold tracking|r
+The Trends "Gold" line now counts |cffffffffall|r the gold you earn — loot, vendor sales, quest rewards, everything — bucketed per day. It begins counting from this update forward (gold earned before now can't be recovered).
 
-|cffEBB706Removed: auto-zoom map to focused quest|r
-That option caused the map errors above and can't work safely under Midnight, so it's gone. Use the world map or |cffffffff"Get Directions"|r to jump to a quest's zone.
+|cffEBB706World Quests follow your colors|r
+World Quest titles in the tracker now use the title color you picked in Appearance instead of always showing yellow, so every section matches your color scheme.
+
+|cffEBB706We have a Discord!|r
+Join the community for help, feedback, and updates — use the button below, or the link at the top of the Options window.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]
@@ -131,6 +133,27 @@ function WN:Build()
     f.gotBtn.text:SetText("Got it")
     f.gotBtn.text:SetTextColor(1, 1, 1)
     f.gotBtn:SetScript("OnClick", dismiss)
+
+    -- "Join our Discord!" between the two buttons — same look as the Options
+    -- title-bar link (logo chip + yellow text). Does NOT dismiss/mark-seen,
+    -- so the user can copy the invite and keep reading. Opens the same
+    -- copyable invite popup (ns:ShowDiscord).
+    f.discordBtn = CreateFrame("Button", nil, f, "BackdropTemplate")
+    f.discordBtn:SetHeight(28)
+    f.discordBtn:SetPoint("BOTTOM", 0, 12)
+    local dBg = f.discordBtn:CreateTexture(nil, "BACKGROUND")
+    dBg:SetAllPoints()
+    dBg:SetColorTexture(0.10, 0.10, 0.10, 0.95)
+    f.discordBtn.icon = f.discordBtn:CreateTexture(nil, "OVERLAY")
+    f.discordBtn.icon:SetSize(16, 16)
+    f.discordBtn.icon:SetPoint("LEFT", 10, 0)
+    f.discordBtn.icon:SetTexture("Interface\\AddOns\\EverythingQuests\\Media\\Textures\\discord.tga")
+    f.discordBtn.text = f.discordBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.discordBtn.text:SetPoint("LEFT", f.discordBtn.icon, "RIGHT", 6, 0)
+    f.discordBtn.text:SetText("Join our Discord!")
+    f.discordBtn.text:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
+    f.discordBtn:SetWidth(10 + 16 + 6 + f.discordBtn.text:GetStringWidth() + 12)
+    f.discordBtn:SetScript("OnClick", function() ns:ShowDiscord() end)
 
     -- Standard X close in the corner. Same dismiss path (marks seen too)
     -- so the user can't bypass the one-shot flag by clicking the X.

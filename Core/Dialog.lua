@@ -157,6 +157,9 @@ function Dialog:Show(opts)
         f.editBox:SetText(opts.editBoxText or "")
         f.editBox:SetCursorPosition(0)
         f.editBox:SetFocus()
+        -- Pre-select the text so a read-only value (e.g. a URL to copy) is
+        -- ready for a single Ctrl+C.
+        if opts.highlightEditBox then f.editBox:HighlightText() end
     else
         f.editBox:Hide()
         f.editBox:ClearFocus()

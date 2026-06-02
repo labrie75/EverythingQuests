@@ -5,6 +5,18 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-06-01
+
+### New Features
+
+- **Stats tab with Trends** — The Quest History window's "Totals" tab is now "Stats" and adds a new **Trends** view that charts your quests, XP, and gold over time. Switch between daily (last 30 days) and weekly (last 12 weeks), compare the current period to the one before it with at-a-glance cards, and view it account-wide or for a single character. The original lifetime totals are still there under the same tab.
+- **Real gold tracking** — The Trends "Gold" figure now counts *all* the gold you earn — loot, vendor sales, quest rewards, everything — bucketed per day, not just quest-reward coin. It starts counting from this update forward (gold earned before now can't be reconstructed) and re-baselines at each login so offline mail and auction-house changes aren't miscounted.
+- **Community Discord** — There's now a "Join our Discord!" link at the top of the Options window and in the What's New popup. Since the game can't open a browser, clicking it shows the invite link pre-selected so you can copy it with one Ctrl+C.
+
+### Improvements
+
+- **World Quest titles follow your color scheme** — World Quest titles in the tracker now use the title color you chose in Appearance instead of always rendering yellow, so every section matches the rest of your colors.
+
 ## [1.10.0] - 2026-05-31
 
 ### Bug Fixes
