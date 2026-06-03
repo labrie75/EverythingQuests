@@ -491,15 +491,19 @@ function Tracker:ToggleSectionCollapsed(id)
     self:Render()
 end
 
--- Coalesce QUEST_LOG_UPDATE / ZONE_CHANGED bursts into a single redraw.
+-- Coalesce QUEST_LOG_UPDATE / ZONE_CHANGED bursts into a single redraw via the
+-- shared trailing-debounce primitive (Core/Events.lua). The render thunk is
+-- hoisted once so a burst of Refresh() calls allocates nothing.
 function Tracker:Refresh()
     if not self.frame then return end
-    if self._refreshPending then return end
-    self._refreshPending = true
-    C_Timer.After(REFRESH_THROTTLE, function()
-        self._refreshPending = false
-        self:Render()
-    end)
+    local Events = ns:GetSubsystem("Events")
+    if not (Events and Events.Debounce) then return end
+    local thunk = self._refreshThunk
+    if not thunk then
+        thunk = function() self:Render() end
+        self._refreshThunk = thunk
+    end
+    Events:Debounce("eq.tracker.refresh", REFRESH_THROTTLE, thunk)
 end
 
 -- Toggle the section's collapsed state. Persisted per-character so the user

@@ -155,4 +155,60 @@ function Events:Throttle(key, delay, fn)
     return true
 end
 
+-- ── Trailing-edge debounce (coalesce a burst into ONE delayed call) ────
+-- Events:Debounce(key, delay, fn) — schedules fn() to run `delay` seconds
+-- after the FIRST call that opened the window. Further Debounce(key, ...)
+-- calls while the window is open are coalesced: they do NOT reschedule (so
+-- the call fires at a bounded latency, not "delay after the LAST call"), but
+-- the latest fn wins for the trailing fire. This is the "one timer, drop the
+-- reschedules, run once at the end" idiom the modules previously hand-rolled
+-- with a `pending` boolean + an inline C_Timer.After closure.
+--
+-- Contrast Events:Throttle (leading-edge + trailing coalesce): Debounce never
+-- fires on the leading edge — reach for it when the leading call would be
+-- wasted work (a render that depends on state still being mutated by the rest
+-- of the burst). The trailing fn is pcall-guarded so a throw surfaces via the
+-- error handler instead of eating later flushes.
+--
+-- Allocation: the per-key tick closure is memoized once and reused, so a
+-- steady-state burst that passes a HOISTED fn allocates nothing.
+local _debounce   = {}               -- [key] = { armed, fn }
+local _debTickFns = {}               -- [key] = memoized C_Timer.After closure
+
+local function debounceTick(key)
+    local d = _debounce[key]
+    if not d then return end
+    local fn = d.fn
+    d.armed = false
+    d.fn    = nil
+    if fn then
+        local ok, err = pcall(fn)
+        if not ok then geterrorhandler()(err) end
+    end
+end
+
+local function getDebTickFn(key)
+    local fn = _debTickFns[key]
+    if not fn then
+        fn = function() debounceTick(key) end
+        _debTickFns[key] = fn
+    end
+    return fn
+end
+
+-- Returns true if this call opened a new window (scheduled the timer), false
+-- if it coalesced into an already-open one.
+function Events:Debounce(key, delay, fn)
+    local d = _debounce[key]
+    if d and d.armed then
+        d.fn = fn                    -- coalesce: latest fn wins, no reschedule
+        return false
+    end
+    if not d then d = {}; _debounce[key] = d end
+    d.armed = true
+    d.fn    = fn
+    C_Timer.After(delay, getDebTickFn(key))
+    return true
+end
+
 ns.Events = Events

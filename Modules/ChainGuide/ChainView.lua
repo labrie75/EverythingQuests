@@ -58,17 +58,17 @@ CV.linePool, CV.activeLines = {}, {}
 function CV:OnEnable()
     local Events = ns:GetSubsystem("Events")
     if not Events then return end
-    local pending
+    -- Coalesce the burst of QUEST_DATA_LOAD_RESULT events a fresh chain view
+    -- generates (one per uncached quest) into a single re-render via the
+    -- shared trailing-debounce primitive (Core/Events.lua).
+    local function rerender()
+        local CG = ns:GetSubsystem("ChainGuide")
+        if CG and CG.frame and CG.frame:IsShown() and CG.RenderCurrent then
+            CG:RenderCurrent()
+        end
+    end
     Events:On("QUEST_DATA_LOAD_RESULT", function()
-        if pending then return end
-        pending = true
-        C_Timer.After(0.15, function()
-            pending = false
-            local CG = ns:GetSubsystem("ChainGuide")
-            if CG and CG.frame and CG.frame:IsShown() and CG.RenderCurrent then
-                CG:RenderCurrent()
-            end
-        end)
+        Events:Debounce("eq.chainview.dataload", 0.15, rerender)
     end)
 end
 

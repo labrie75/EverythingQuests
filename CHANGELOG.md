@@ -5,6 +5,26 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-06-03
+
+### New Features
+
+- **Sort your Quest History** — The Quests tab now has a **Sort** control (next to the Type filter) with a clickable direction arrow. Sort by **Date**, **Name** (A–Z), or **Type**, and click the arrow to flip between ascending and descending. Undated "before tracking" entries always group at the bottom of a date sort, and the Export and result count follow whatever sort you've chosen. The "Hide undated" checkbox moved to the far right of the toolbar.
+
+### Bug Fixes
+
+- **Manual tracker order no longer loses hidden quests** — When you drag-reorder the tracker in Manual sort mode, quests that were filtered off-screen at the time (unwatched, wrong zone, or a collapsed section) used to lose their place and drop to the bottom when they reappeared. Their position is now preserved.
+- **Color picker keeps transparency on Cancel** — Cancelling out of a color picker (background, border, title color, etc.) could snap the color back to fully opaque, losing your transparency setting. Cancel now restores the exact color you started with.
+- **Quest History list quirks** — Fixed a case where an expanded quest row in the Chain Timeline could show a stale tooltip or click action carried over from another row.
+
+### Improvements
+
+- **Stable sort order** — Quests with the same sort key (same zone, level, or type) no longer shuffle position between refreshes; they now hold a consistent, predictable order.
+
+### Maintenance
+
+- Consolidated several hand-rolled "wait then refresh once" timers across the tracker, Chain Guide, and History windows into a single shared helper, and removed per-frame work that re-created click handlers on every redraw — less wasted memory, no behavior change.
+
 ## [1.11.0] - 2026-06-01
 
 ### New Features

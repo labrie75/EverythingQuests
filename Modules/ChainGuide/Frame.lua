@@ -26,6 +26,31 @@ local ROW_H           = 22
 CG.catRowPool   = {}; CG.catRowsActive   = {}
 CG.chainRowPool = {}; CG.chainRowsActive = {}
 
+-- Static row scripts. Wired ONCE per pooled row in buildListRow and reused
+-- across every render — the per-row click/tooltip data rides on frame fields
+-- (row.navKind / row.navID / row._ttTitle / row._ttSub) that each render
+-- overwrites, instead of allocating a fresh capturing closure per row per
+-- render. (These renders are on-demand, not per-frame, so this is hygiene
+-- rather than a hot-path win — but it keeps the pattern consistent with the
+-- tracker's build-time wiring.)
+local function onRowClick(self)
+    if self.navKind == "cat" then
+        CG:NavigateCategory(self.navID)
+    elseif self.navKind == "chain" then
+        CG:NavigateChain(self.navID)
+    end
+end
+local function onRowEnter(self)
+    if not self._ttTitle then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(self._ttTitle, 1, 0.82, 0, 1, true)
+    if self._ttSub and self._ttSub ~= "" then
+        GameTooltip:AddLine(self._ttSub, 0.7, 0.7, 0.7)
+    end
+    GameTooltip:Show()
+end
+local function onRowLeave() GameTooltip:Hide() end
+
 -- ─── Row factories ────────────────────────────────────────────────────
 -- Categories and chain-list rows share the same look — small clickable
 -- buttons with a hover highlight and a yellow-tinted active state.
@@ -58,6 +83,11 @@ local function buildListRow(parent)
     r.completeIcon:SetSize(12, 12)
     r.completeIcon:SetPoint("RIGHT", r.suffix, "LEFT", -4, 0)
     r.completeIcon:Hide()
+
+    -- Static scripts wired once; per-row data set at render time.
+    r:SetScript("OnClick", onRowClick)
+    r:SetScript("OnEnter", onRowEnter)
+    r:SetScript("OnLeave", onRowLeave)
     return r
 end
 
@@ -70,9 +100,10 @@ local function releaseAllRows(pool, active)
         local r = active[i]
         r:Hide()
         r:ClearAllPoints()
-        r:SetScript("OnClick", nil)
-        r:SetScript("OnEnter", nil)
-        r:SetScript("OnLeave", nil)
+        -- Scripts stay attached (static, set in buildListRow). Clear only the
+        -- per-row data so a pooled row can't carry stale click/tooltip state.
+        r.navKind, r.navID = nil, nil
+        r._ttTitle, r._ttSub = nil, nil
         r.selectedTex:Hide()
         r.suffix:SetText("")
         r.suffix:SetTextColor(0.92, 0.72, 0.02)
@@ -98,13 +129,8 @@ end
 -- Shadow", long questline titles); the row text is clipped with no wrap,
 -- so hovering is the clean, zero-layout-risk way to read the whole thing.
 local function setRowTooltip(row, title, sub)
-    row:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(title, 1, 0.82, 0, 1, true)
-        if sub and sub ~= "" then GameTooltip:AddLine(sub, 0.7, 0.7, 0.7) end
-        GameTooltip:Show()
-    end)
-    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    row._ttTitle = title
+    row._ttSub   = sub
 end
 
 -- ─── Build window ──────────────────────────────────────────────────────
@@ -353,8 +379,7 @@ function CG:RenderCategories(activeCatID)
             row.title:SetText(catName)
             row.title:SetTextColor(1, 1, 1)
             if entry.id == activeCatID then row.selectedTex:Show() end
-            local catID = entry.id
-            row:SetScript("OnClick", function() CG:NavigateCategory(catID) end)
+            row.navKind, row.navID = "cat", entry.id
             setRowTooltip(row, catName)
             prev = row
         end
@@ -431,8 +456,7 @@ function CG:RenderChains(activeCatID, activeChainID)
             end
         end
         if entry.id == activeChainID then row.selectedTex:Show() end
-        local chainID = entry.id
-        row:SetScript("OnClick", function() CG:NavigateChain(chainID) end)
+        row.navKind, row.navID = "chain", entry.id
         setRowTooltip(row, chainName,
             total > 0 and ("%d / %d quests done"):format(complete, total) or nil)
         prev = row

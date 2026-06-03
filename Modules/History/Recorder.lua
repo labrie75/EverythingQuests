@@ -350,13 +350,21 @@ function R:_fillTitle(questID)
             touched = true
         end
     end
-    if touched and not self._rerenderPending then
-        self._rerenderPending = true
-        C_Timer.After(0.5, function()
-            self._rerenderPending = false
-            local HF = ns:GetSubsystem("HistoryFrame")
-            if HF and HF.Render then HF:Render() end
-        end)
+    if touched then
+        -- Coalesce a flood of QUEST_DATA_LOAD_RESULT fills into one History
+        -- re-render via the shared trailing-debounce primitive (Core/Events.lua).
+        local Events = ns:GetSubsystem("Events")
+        if Events and Events.Debounce then
+            local thunk = self._rerenderThunk
+            if not thunk then
+                thunk = function()
+                    local HF = ns:GetSubsystem("HistoryFrame")
+                    if HF and HF.Render then HF:Render() end
+                end
+                self._rerenderThunk = thunk
+            end
+            Events:Debounce("eq.history.fillrender", 0.5, thunk)
+        end
     end
 end
 
@@ -617,8 +625,20 @@ end
 --   classification  : "all" | "campaign" | "questline" | "calling"
 --                       | "recurring" | "worldquest" | "other"
 --   hideBackfilled  : true to exclude entries with t == 0
--- Returns array of entries matching filter, NEWEST FIRST. Allocates one
--- fresh result table per call (click-driven; not a hot path).
+--   sortBy          : "date" (default) | "name" | "type"
+--   sortDir         : "desc" (default) | "asc"
+-- Returns array of entries matching filter, sorted per sortBy/sortDir.
+-- Default (date / desc) is newest-first. Undated (t == 0, backfilled) entries
+-- have no real date, so they ALWAYS sink to the bottom regardless of
+-- direction. Allocates one fresh result table per call (click-driven; not a
+-- hot path).
+--
+-- Bucket display order for the "type" sort — mirrors the Type filter
+-- dropdown in Modules/History/Frame.lua so the grouping reads the same.
+local SORT_BUCKET_ORDER = {
+    campaign = 1, questline = 2, calling = 3,
+    recurring = 4, worldquest = 5, other = 6,
+}
 function R:Query(filter)
     local entries = self.sv.entries
     local out = {}
@@ -661,6 +681,45 @@ function R:Query(filter)
             if bucketOf(e.k) ~= wantClass then ok = false end
         end
         if ok then out[#out + 1] = e end
+    end
+
+    -- Sort the result. `out` was collected newest-first (reverse insertion),
+    -- but we now order it explicitly so the toolbar's Sort dropdown + caret
+    -- control it. Undated entries (t == 0) always go last.
+    local asc    = filter and filter.sortDir == "asc"
+    local sortBy = filter and filter.sortBy or "date"
+    if sortBy == "name" then
+        table.sort(out, function(a, b)
+            local na, nb = (a.n or ""):lower(), (b.n or ""):lower()
+            if na ~= nb then
+                if asc then return na < nb else return na > nb end
+            end
+            return (a.q or 0) < (b.q or 0)
+        end)
+    elseif sortBy == "type" then
+        table.sort(out, function(a, b)
+            local ba = SORT_BUCKET_ORDER[bucketOf(a.k)] or 99
+            local bb = SORT_BUCKET_ORDER[bucketOf(b.k)] or 99
+            if ba ~= bb then
+                if asc then return ba < bb else return ba > bb end
+            end
+            -- Within a type: newest first, undated last, then questID for a
+            -- stable total order.
+            local ta, tb = a.t or 0, b.t or 0
+            if (ta == 0) ~= (tb == 0) then return tb == 0 end
+            if ta ~= tb then return ta > tb end
+            return (a.q or 0) < (b.q or 0)
+        end)
+    else -- "date"
+        table.sort(out, function(a, b)
+            local ta, tb = a.t or 0, b.t or 0
+            -- Dated entries always precede undated, both directions.
+            if (ta == 0) ~= (tb == 0) then return tb == 0 end
+            if ta ~= tb then
+                if asc then return ta < tb else return ta > tb end
+            end
+            return (a.q or 0) < (b.q or 0)
+        end)
     end
     return out
 end

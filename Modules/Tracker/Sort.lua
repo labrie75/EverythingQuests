@@ -6,21 +6,39 @@ local _, ns = ...
 
 local Sort = ns:RegisterSubsystem("TrackerSort", {})
 
+-- Final tiebreak shared by every comparator. Without a unique backstop, two
+-- quests with an equal primary key (same zone / frequency / level / distance)
+-- leave table.sort free to order them arbitrarily, so they visibly shuffle
+-- between refreshes. Title gives a friendly alphabetical secondary order;
+-- questID is the unique backstop that guarantees a TOTAL, stable ordering.
+-- Static + allocation-free so it stays safe to call inside table.sort.
+local function byTitleThenID(a, b)
+    local ta, tb = a.title or "", b.title or ""
+    if ta ~= tb then return ta < tb end
+    return (a.questID or 0) < (b.questID or 0)
+end
+
 local function cmpZone(a, b)
-    return (a.zone or "~") < (b.zone or "~")
+    local za, zb = a.zone or "~", b.zone or "~"
+    if za ~= zb then return za < zb end
+    return byTitleThenID(a, b)
 end
 
 local function cmpStatus(a, b)
     if a.isComplete ~= b.isComplete then return a.isComplete end
-    return (a.title or "") < (b.title or "")
+    return byTitleThenID(a, b)
 end
 
 local function cmpType(a, b)
-    return (a.frequency or 0) > (b.frequency or 0)
+    local fa, fb = a.frequency or 0, b.frequency or 0
+    if fa ~= fb then return fa > fb end
+    return byTitleThenID(a, b)
 end
 
 local function cmpLevel(a, b)
-    return (a.level or 0) < (b.level or 0)
+    local la, lb = a.level or 0, b.level or 0
+    if la ~= lb then return la < lb end
+    return byTitleThenID(a, b)
 end
 
 -- Recently-added mode: newest firstSeen first, then title. q.firstSeen rides on
@@ -30,7 +48,7 @@ end
 local function cmpRecent(a, b)
     local fa, fb = a.firstSeen or 0, b.firstSeen or 0
     if fa ~= fb then return fa > fb end
-    return (a.title or "") < (b.title or "")
+    return byTitleThenID(a, b)
 end
 
 -- Manual mode reads its order from this module-scope ref so the comparator
@@ -66,7 +84,9 @@ local function cmpDistance(a, b)
     local da = distKey[a.questID] or INF
     local db = distKey[b.questID] or INF
     if da ~= db then return da < db end
-    return (a.zone or "~") < (b.zone or "~")
+    local za, zb = a.zone or "~", b.zone or "~"
+    if za ~= zb then return za < zb end
+    return byTitleThenID(a, b)
 end
 
 -- Swap in the per-render distance map (or clear to EMPTY). Called from

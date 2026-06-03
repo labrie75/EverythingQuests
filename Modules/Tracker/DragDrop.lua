@@ -191,10 +191,22 @@ end
 -- their CURRENT visible order, removing the dragged quest, then splicing it
 -- back in at dropIndex. Sequential ordinals (1..N) — gaps would let other
 -- entries (filtered-out quests) collide ambiguously.
+--
+-- Quests that are filtered out of the tracker right now (unwatched, wrong
+-- zone, type-filtered, collapsed section) aren't in Blocks.active, so a naive
+-- rebuild-from-visible would erase their saved ordinal and sink them to the
+-- bottom (99999) when they reappear. To preserve them, we MERGE the new
+-- visible order back into the previously-saved order: each saved slot that
+-- held a visible quest is refilled from the new on-screen order, while a
+-- filtered-out quest keeps its exact slot. Stale entries for quests no longer
+-- in the log are pruned (via the Cache) so manualOrder can't grow unbounded.
 function DD:Commit(draggedQuestID, dropIndex)
     local DB = ns:GetSubsystem("DB")
     local Blocks = ns:GetSubsystem("TrackerBlocks")
     if not (DB and Blocks and Blocks.active) then return end
+
+    local profile  = DB.db.profile.tracker
+    local oldOrder = profile.manualOrder
 
     -- Collect visible questIDs in current order, excluding the dragged one.
     local seq = {}
@@ -209,13 +221,43 @@ function DD:Commit(draggedQuestID, dropIndex)
     local insertAt = math.min(math.max(dropIndex, 1), #seq + 1)
     table.insert(seq, insertAt, draggedQuestID)
 
-    -- Replace manualOrder. Filtered-out quests lose their ordinal and will
-    -- sort to the bottom (default 99999) when they re-appear; re-drag once
-    -- to position them. Acceptable v1 trade-off — full preservation across
-    -- filter changes is a polish item.
+    -- Set of quests visible this pass (so we know which saved slots to refill).
+    local visible = {}
+    for i = 1, #seq do visible[seq[i]] = true end
+
+    -- Walk the previously-saved order in ascending ordinal. Every slot that
+    -- held a visible quest is refilled from `seq` (consumed in the new
+    -- on-screen order); every filtered-out quest still in the log keeps its
+    -- slot in place. Quests gone from the log are dropped here.
+    local Cache  = ns:GetSubsystem("Cache")
+    local merged, si = {}, 1
+    if oldOrder then
+        local masterOld = {}
+        for qid in pairs(oldOrder) do masterOld[#masterOld + 1] = qid end
+        table.sort(masterOld, function(a, b) return oldOrder[a] < oldOrder[b] end)
+        for i = 1, #masterOld do
+            local qid = masterOld[i]
+            if visible[qid] then
+                if si <= #seq then
+                    merged[#merged + 1] = seq[si]
+                    si = si + 1
+                end
+            elseif not Cache or (Cache.Get and Cache:Get(qid) ~= nil) then
+                merged[#merged + 1] = qid
+            end
+        end
+    end
+    -- Visible quests beyond the saved visible-slot count (newly appeared, or
+    -- no saved order yet) append in their on-screen order.
+    while si <= #seq do
+        merged[#merged + 1] = seq[si]
+        si = si + 1
+    end
+
+    -- Sequential ordinals (1..N) — gaps would let entries collide ambiguously.
     local order = {}
-    for i = 1, #seq do order[seq[i]] = i end
-    DB.db.profile.tracker.manualOrder = order
+    for i = 1, #merged do order[merged[i]] = i end
+    profile.manualOrder = order
 
     local Tracker = ns:GetSubsystem("Tracker")
     if Tracker then Tracker:Refresh() end

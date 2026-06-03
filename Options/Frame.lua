@@ -69,7 +69,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.11.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.12.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -681,6 +681,14 @@ function Options:CreateColorPicker(parent, label, getter, setter)
 
     btn:SetScript("OnClick", function()
         local c = getter and getter() or { r = 1, g = 1, b = 1, a = 1 }
+        -- Immutable snapshot of the color as it was when the picker opened.
+        -- Cancel restores from THIS, not from the `prev` arg Blizzard hands
+        -- cancelFunc: the 10.2.5 ColorPickerFrame overhaul changed the shape
+        -- of that argument (and whether it even carries alpha), so reading
+        -- prev.a was unreliable and Cancel dropped the alpha back to opaque.
+        -- A self-captured snapshot is version-proof and always has all four
+        -- channels.
+        local orig = { r = c.r or 0, g = c.g or 0, b = c.b or 0, a = c.a or 1 }
         local function applyColor(restore)
             local r, g, b, a
             if restore then
@@ -710,7 +718,7 @@ function Options:CreateColorPicker(parent, label, getter, setter)
                 opacity = c.a or 1, hasOpacity = true,
                 swatchFunc = function() applyColor() end,
                 opacityFunc = function() applyColor() end,
-                cancelFunc  = function(prev) applyColor(prev) end,
+                cancelFunc  = function() applyColor(orig) end,
             })
         end
     end)

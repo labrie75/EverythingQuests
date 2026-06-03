@@ -500,18 +500,15 @@ function V:OnEnable()
     -- Task quest data (objectives included) loads asynchronously after the
     -- first RequestLoadQuestByID. QUEST_LOG_UPDATE doesn't always fire for
     -- those loads — QUEST_DATA_LOAD_RESULT is the dedicated signal.
-    -- Debounce so a chain of loads in quick succession only triggers one
-    -- redraw instead of one per quest.
-    local pending
+    -- Debounce (shared primitive, Core/Events.lua) so a chain of loads in
+    -- quick succession only triggers one redraw instead of one per quest.
+    local function dataLoadFlush()
+        -- A data load can also produce a new task entry (the underlying
+        -- quest becoming visible), so mark the active list dirty too.
+        _activeDirty = true
+        refresh()
+    end
     Events:On("QUEST_DATA_LOAD_RESULT", function()
-        if pending then return end
-        pending = true
-        C_Timer.After(0.15, function()
-            pending = false
-            -- A data load can also produce a new task entry (the underlying
-            -- quest becoming visible), so mark the active list dirty too.
-            _activeDirty = true
-            refresh()
-        end)
+        Events:Debounce("eq.wqtracker.dataload", 0.15, dataLoadFlush)
     end)
 end

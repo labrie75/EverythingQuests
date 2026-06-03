@@ -54,6 +54,70 @@ end
 HF._rowPool   = {}
 HF._rowActive = {}
 
+-- Forward declaration: the static row handlers below reference this, but its
+-- real definition (which needs helpers declared later in the file) lives
+-- further down. Declaring the local up here lets the handlers capture it as an
+-- upvalue that's filled in before any handler can fire.
+local findChainForQuest
+
+-- Static row scripts. The History list and Chain Timeline panes share ONE row
+-- pool (HF._rowPool). Setting fresh capturing closures per row per render
+-- allocated garbage and — because releaseAllRows didn't clear scripts — let a
+-- pooled row carry a previous pane's handler (e.g. a quest sub-row, which sets
+-- no script of its own, inheriting a stale click/hover from whatever row it
+-- was last used as). Both problems vanish with data-driven static handlers:
+-- behavior keys off frame fields set at render time —
+--   row._kind     = "history" | "timeline" | "sub"
+--   history  rows: row._questID, row._fullName
+--   timeline rows: row._chainID, row._chainName
+-- Wired ONCE in buildRow; dispatch on _kind here.
+local function rowOnMouseUp(self, button)
+    local kind = self._kind
+    if kind == "history" then
+        if button ~= "RightButton" then return end
+        local chainID = findChainForQuest(self._questID)
+        if chainID then
+            local CG = ns:GetSubsystem("ChainGuide")
+            if CG then
+                if CG.Open          then CG:Open()                end
+                if CG.NavigateChain then CG:NavigateChain(chainID) end
+            end
+        else
+            print(("|cffEBB706EQ History|r: |cffffffff%s|r isn't part of any chain in the Chain Guide."):format(
+                self._fullName or ("Quest #" .. tostring(self._questID))))
+        end
+    elseif kind == "timeline" then
+        if button == "RightButton" then
+            local CG = ns:GetSubsystem("ChainGuide")
+            if CG then
+                if CG.Open          then CG:Open()              end
+                if CG.NavigateChain then CG:NavigateChain(self._chainID) end
+            end
+            return
+        end
+        HF._timelineOpen[self._chainID] = not HF._timelineOpen[self._chainID]
+        HF:_renderTimeline()
+    end
+end
+
+local function rowOnEnter(self)
+    local kind = self._kind
+    if kind == "history" then
+        GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
+        GameTooltip:SetText(self._fullName or ("Quest #" .. tostring(self._questID)), 1, 1, 1, 1, true)
+        GameTooltip:AddLine("Right-click to open in the Chain Guide", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    elseif kind == "timeline" then
+        GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
+        GameTooltip:SetText(self._chainName or "Chain", 1, 0.82, 0)
+        GameTooltip:AddLine("Click to expand", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Right-click to open in the Chain Guide", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end
+end
+
+local function rowOnLeave() GameTooltip:Hide() end
+
 local function buildRow(parent)
     local r = CreateFrame("Frame", nil, parent)
     r:SetHeight(ROW_H)
@@ -85,6 +149,11 @@ local function buildRow(parent)
     r.right:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
 
     thin(r.title); thin(r.meta); thin(r.right)
+
+    -- Static scripts wired once; per-row behavior keys off _kind + data fields.
+    r:SetScript("OnMouseUp", rowOnMouseUp)
+    r:SetScript("OnEnter",   rowOnEnter)
+    r:SetScript("OnLeave",   rowOnLeave)
     return r
 end
 
@@ -100,6 +169,13 @@ local function releaseAllRows()
         r.title:SetText("")
         r.meta:SetText("")
         r.right:SetText("")
+        -- Scripts stay attached (static, set in buildRow). Disable mouse and
+        -- clear the per-row data so a pooled row can't fire a stale handler or
+        -- carry another pane's click/tooltip state.
+        r:EnableMouse(false)
+        r._kind = nil
+        r._questID, r._fullName = nil, nil
+        r._chainID, r._chainName = nil, nil
         HF._rowPool[#HF._rowPool + 1] = r
         HF._rowActive[i] = nil
     end
@@ -380,13 +456,75 @@ function HF:_buildQuestsPane(parent)
     end
     pane._classDD = classDD
 
+    -- Sort: field dropdown (Date / Type) + a direction caret to its right that
+    -- flips ascending/descending for the chosen field.
+    local sortLabel = row2:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    sortLabel:SetPoint("LEFT", classDD or typeLabel, "RIGHT", 14, 0)
+    sortLabel:SetText("Sort:")
+    thin(sortLabel)
+
+    local SORT_OPTIONS = {
+        { value = "date", label = "Date" },
+        { value = "name", label = "Name" },
+        { value = "type", label = "Type" },
+    }
+    local sortDD
+    if Options and Options.CreateDropdown then
+        local function listFn() return SORT_OPTIONS end
+        local function curFn()  return HF._sortBy or "date" end
+        local function setFn(v) HF._sortBy = v; HF:Render() end
+        sortDD = Options:CreateDropdown(row2, nil, listFn, curFn, setFn)
+        sortDD:SetPoint("LEFT", sortLabel, "RIGHT", 4, 0)
+        sortDD:SetWidth(90)
+    end
+    pane._sortDD = sortDD
+
+    -- Direction caret. UI-SortArrow points up natively; flip it vertically to
+    -- point down for descending (the default: newest first / largest first).
+    local dirBtn = CreateFrame("Button", nil, row2)
+    dirBtn:SetSize(22, 20)
+    dirBtn:SetPoint("LEFT", sortDD or sortLabel, "RIGHT", 2, 0)
+    local dirHL = dirBtn:CreateTexture(nil, "HIGHLIGHT")
+    dirHL:SetAllPoints()
+    dirHL:SetColorTexture(1, 1, 1, 0.10)
+    local arrow = dirBtn:CreateTexture(nil, "ARTWORK")
+    arrow:SetSize(16, 16)
+    arrow:SetPoint("CENTER")
+    arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
+    local function syncArrow()
+        if (HF._sortDir or "desc") == "asc" then
+            arrow:SetTexCoord(0, 1, 0, 1)      -- point up = ascending
+        else
+            arrow:SetTexCoord(0, 1, 1, 0)      -- point down = descending
+        end
+    end
+    syncArrow()
+    dirBtn:SetScript("OnClick", function()
+        HF._sortDir = ((HF._sortDir or "desc") == "desc") and "asc" or "desc"
+        syncArrow()
+        HF:Render()
+    end)
+    dirBtn:SetScript("OnEnter", function(btn)
+        GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Sort direction", 1, 1, 1)
+        GameTooltip:AddLine("Click to flip ascending / descending.", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    dirBtn:SetScript("OnLeave", GameTooltip_Hide)
+    pane._dirBtn = dirBtn
+
     if Options and Options.CreateCheckbox then
         local function get() return HF._hideBackfilled and true or false end
         local function set(v) HF._hideBackfilled = v and true or false; HF:Render() end
         local hideCB = Options:CreateCheckbox(row2,
             "Hide undated  |cffaaaaaa(backfilled)|r",
             get, set)
-        hideCB:SetPoint("LEFT", classDD or typeLabel, "RIGHT", 14, 0)
+        -- Far-right of the row: anchor the label's right edge to row2 and tuck
+        -- the checkbox just left of the label (its text extends leftward).
+        hideCB:ClearAllPoints()
+        hideCB.label:ClearAllPoints()
+        hideCB.label:SetPoint("RIGHT", row2, "RIGHT", -6, 1)
+        hideCB:SetPoint("RIGHT", hideCB.label, "LEFT", -4, -1)
         pane._hideCB = hideCB
     end
 
@@ -416,7 +554,9 @@ end
 -- database after warming it up so questline + campaign chains are present
 -- (mirrors the warmup the Chain Timeline tab and the "Find in Chain Guide"
 -- button on the tracker already do). Returns chainID or nil.
-local function findChainForQuest(questID)
+-- (Assigns the forward-declared upvalue near the row pool so the static row
+-- handlers can call it; do NOT re-`local` it here.)
+function findChainForQuest(questID)
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     local QLS      = ns:GetSubsystem("ChainGuideQuestLineSource")
     local CS       = ns:GetSubsystem("ChainGuideCampaignSource")
@@ -463,6 +603,8 @@ function HF:_renderQuests()
         dateRange      = HF._dateFilter,
         classification = HF._classFilter,
         hideBackfilled = HF._hideBackfilled,
+        sortBy         = HF._sortBy or "date",
+        sortDir        = HF._sortDir or "desc",
     })
 
     local n = #entries
@@ -503,35 +645,22 @@ function HF:_renderQuests()
         -- Right-click → open this quest's chain in the Chain Guide. Mirrors
         -- the Chain Timeline tab's affordance so users can jump in either
         -- direction. Tooltip surfaces the affordance + the quest's full
-        -- name (which is otherwise truncated for wide-name rows).
+        -- name (which is otherwise truncated for wide-name rows). Behavior is
+        -- handled by the static rowOnMouseUp/rowOnEnter (dispatch on _kind).
         row:EnableMouse(true)
-        row._questID = e.q
+        row._kind     = "history"
+        row._questID  = e.q
         row._fullName = e.n
-        row:SetScript("OnMouseUp", function(rowFrame, button)
-            if button ~= "RightButton" then return end
-            local chainID = findChainForQuest(rowFrame._questID)
-            if chainID then
-                local CG = ns:GetSubsystem("ChainGuide")
-                if CG then
-                    if CG.Open          then CG:Open()                end
-                    if CG.NavigateChain then CG:NavigateChain(chainID) end
-                end
-            else
-                print(("|cffEBB706EQ History|r: |cffffffff%s|r isn't part of any chain in the Chain Guide."):format(
-                    rowFrame._fullName or ("Quest #" .. tostring(rowFrame._questID))))
-            end
-        end)
-        row:SetScript("OnEnter", function(rowFrame)
-            GameTooltip:SetOwner(rowFrame, "ANCHOR_CURSOR_RIGHT")
-            GameTooltip:SetText(rowFrame._fullName or ("Quest #" .. tostring(rowFrame._questID)), 1, 1, 1, 1, true)
-            GameTooltip:AddLine("Right-click to open in the Chain Guide", 0.7, 0.7, 0.7)
-            GameTooltip:Show()
-        end)
-        row:SetScript("OnLeave", GameTooltip_Hide)
     end
 
     if n > MAX then
-        pane._count:SetText(("%d entries (showing newest %d)"):format(n, MAX))
+        -- Which MAX are visible depends on the active sort: newest/oldest for a
+        -- date sort, just "first" for a type sort (newest/oldest isn't the key).
+        local which = "first"
+        if (HF._sortBy or "date") == "date" then
+            which = (HF._sortDir == "asc") and "oldest" or "newest"
+        end
+        pane._count:SetText(("%d entries (showing %s %d)"):format(n, which, MAX))
     end
 end
 
@@ -706,28 +835,13 @@ function HF:_renderTimeline()
         row.title:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
         row.meta:SetText(("%d of %d quests recorded"):format(rec.doneN, rec.total))
         row.right:SetText(fmtTime(rec.latest))
+        -- Left-click expands; right-click opens the chain. Hover hint makes the
+        -- affordance discoverable. Handled by the static rowOnMouseUp/rowOnEnter
+        -- (dispatch on _kind).
         row:EnableMouse(true)
-        row:SetScript("OnMouseUp", function(_, button)
-            if button == "RightButton" then
-                local CG = ns:GetSubsystem("ChainGuide")
-                if CG then
-                    if CG.Open          then CG:Open()              end
-                    if CG.NavigateChain then CG:NavigateChain(rec.id) end
-                end
-                return
-            end
-            HF._timelineOpen[rec.id] = not HF._timelineOpen[rec.id]
-            HF:_renderTimeline()
-        end)
-        -- Hover hint so the right-click affordance is discoverable.
-        row:SetScript("OnEnter", function(rowFrame)
-            GameTooltip:SetOwner(rowFrame, "ANCHOR_CURSOR_RIGHT")
-            GameTooltip:SetText(chain.name or "Chain", 1, 0.82, 0)
-            GameTooltip:AddLine("Click to expand", 0.7, 0.7, 0.7)
-            GameTooltip:AddLine("Right-click to open in the Chain Guide", 0.7, 0.7, 0.7)
-            GameTooltip:Show()
-        end)
-        row:SetScript("OnLeave", GameTooltip_Hide)
+        row._kind      = "timeline"
+        row._chainID   = rec.id
+        row._chainName = chain.name
         y = y + ROW_H + 2
 
         if HF._timelineOpen[rec.id] then
@@ -735,6 +849,10 @@ function HF:_renderTimeline()
                 local it = chain.items[j]
                 if it and it.type == "quest" then
                     local sub = acquireRow(pane._canvas)
+                    -- Inert quest sub-row: no click/hover. _kind="sub" makes the
+                    -- shared static handlers no-op; mouse off so no highlight.
+                    sub._kind = "sub"
+                    sub:EnableMouse(false)
                     sub:SetPoint("TOPLEFT",  pane._canvas, "TOPLEFT",  24, -y)
                     sub:SetPoint("TOPRIGHT", pane._canvas, "TOPRIGHT", 0, -y)
                     local t = completion[it.id]
@@ -1500,6 +1618,8 @@ function HF:_exportQuests()
         dateRange      = HF._dateFilter,
         classification = HF._classFilter,
         hideBackfilled = HF._hideBackfilled,
+        sortBy         = HF._sortBy or "date",
+        sortDir        = HF._sortDir or "desc",
     })
     local lines = { ("# Quest History — %d entries"):format(#entries) }
     lines[#lines + 1] = "# date | character | quest | type | zone"
