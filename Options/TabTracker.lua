@@ -221,13 +221,19 @@ Options:AddTab("tracker", "Tracker", function(content)
         newTagGet, newTagSet)
     newTagCheck:SetPoint("TOPLEFT", popupCheck, "BOTTOMLEFT", 0, -2)
 
+    local splitGet, splitSet = trackerSetting("splitQuestClick")
+    local splitCheck = Options:CreateCheckbox(content,
+        "Split quest click  |cffaaaaaa(click the icon to focus, click the title to open the quest log)|r",
+        splitGet, splitSet)
+    splitCheck:SetPoint("TOPLEFT", newTagCheck, "BOTTOMLEFT", 0, -2)
+
     local Media = ns:GetSubsystem("Media")
     local soundGet, soundSet = trackerSetting("questSoundEnabled")
     local soundCheck = Options:CreateCheckbox(
         content,
         "Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r",
         soundGet, soundSet)
-    soundCheck:SetPoint("TOPLEFT", newTagCheck, "BOTTOMLEFT", 0, -8)
+    soundCheck:SetPoint("TOPLEFT", splitCheck, "BOTTOMLEFT", 0, -8)
 
     local soundList = (Media and Media.GetSoundList and Media:GetSoundList()) or {}
     local sndChoiceGet, sndChoiceSet = trackerSetting("questCompleteSound")
@@ -255,9 +261,34 @@ Options:AddTab("tracker", "Tracker", function(content)
     local profCheck = Options:CreateCheckbox(content, "Profession section", profGet, profSet)
     profCheck:SetPoint("TOPLEFT", visHeader, "BOTTOMLEFT", 0, -8)
 
+    local achGet, achSet = trackerSetting("showAchievementsSection")
+    local achCheck = Options:CreateCheckbox(content, "Achievements section  |cffaaaaaa(achievements you're tracking)|r", achGet, achSet)
+    achCheck:SetPoint("TOPLEFT", profCheck, "BOTTOMLEFT", 0, -2)
+
     local wqGet, wqSet = trackerSetting("showWorldQuestsSection")
     local wqCheck = Options:CreateCheckbox(content, "World Quests section", wqGet, wqSet)
-    wqCheck:SetPoint("TOPLEFT", profCheck, "BOTTOMLEFT", 0, -2)
+    wqCheck:SetPoint("TOPLEFT", achCheck, "BOTTOMLEFT", 0, -2)
+
+    -- Auto-list current-zone WQs. Custom setter: besides the usual save +
+    -- Tracker:Refresh, it marks the World Quests section's active list dirty
+    -- so toggling it repopulates immediately instead of waiting for a zone
+    -- change (the active list is cached and only rebuilds on dirty).
+    local autoWQGet = function()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.autoListZoneWorldQuests
+    end
+    local autoWQSet = function(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.autoListZoneWorldQuests = value end
+        local Events = ns:GetSubsystem("TrackerEvents")
+        if Events and Events.MarkActiveDirty then Events:MarkActiveDirty() end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    local autoWQCheck = Options:CreateCheckbox(content,
+        "Auto-list current-zone world quests  |cffaaaaaa(lists every WQ in your zone without tracking each)|r",
+        autoWQGet, autoWQSet)
+    autoWQCheck:SetPoint("TOPLEFT", wqCheck, "BOTTOMLEFT", 0, -2)
 
     -- Helper hint at the bottom — no Apply button by design, so call out
     -- the live-update behavior so the user knows changes are taking effect.

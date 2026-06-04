@@ -441,6 +441,10 @@ function Tracker:BuildSectionHeaders(content)
         { id = "quests",     title = "Quests" },
         { id = "profession", title = "Profession" },
         { id = "endeavors",  title = "Endeavors" },
+        -- Achievements the player is tracking (via the Achievement UI),
+        -- populated by TrackerAchievements. Hidden automatically when nothing
+        -- is tracked, like the other optional sections.
+        { id = "achievements", title = "Achievements" },
         -- The "events" section is wholly populated by TrackerEvents which
         -- pulls watched world quests via C_TaskQuest. Display label reflects
         -- what's actually shown so it lines up with Blizzard's own naming.
@@ -645,12 +649,19 @@ function Tracker:_RenderEventsSection(content, contentWidth, yStart, collapsed)
     return Events:Render(content, contentWidth, yStart, collapsed)
 end
 
+function Tracker:_RenderAchievementsSection(content, contentWidth, yStart, collapsed)
+    local Achievements = ns:GetSubsystem("TrackerAchievements")
+    if not Achievements or not Achievements.Render then return 0, 0 end
+    return Achievements:Render(content, contentWidth, yStart, collapsed)
+end
+
 local SECTION_RENDERERS = {
-    campaign   = "_RenderCampaignSection",
-    quests     = "_RenderQuestsSection",
-    profession = "_RenderProfessionSection",
-    endeavors  = "_RenderEndeavorsSection",
-    events     = "_RenderEventsSection",
+    campaign     = "_RenderCampaignSection",
+    quests       = "_RenderQuestsSection",
+    profession   = "_RenderProfessionSection",
+    endeavors    = "_RenderEndeavorsSection",
+    achievements = "_RenderAchievementsSection",
+    events       = "_RenderEventsSection",
 }
 
 -- Stable, allocation-free closure for the combat-deferred tracker rescale
@@ -893,11 +904,12 @@ function Tracker:Render()
     local DB = ns:GetSubsystem("DB")
     local cfg = DB and DB.db.profile.tracker
     local sectionVisible = {
-        campaign   = true,
-        quests     = true,
-        endeavors  = true,
-        profession = not cfg or cfg.showProfessionSection  ~= false,
-        events     = not cfg or cfg.showWorldQuestsSection ~= false,
+        campaign     = true,
+        quests       = true,
+        endeavors    = true,
+        profession   = not cfg or cfg.showProfessionSection   ~= false,
+        achievements = not cfg or cfg.showAchievementsSection ~= false,
+        events       = not cfg or cfg.showWorldQuestsSection  ~= false,
     }
 
     -- Max on-screen height for the pinned World Quests region. Available

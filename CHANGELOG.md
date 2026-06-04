@@ -5,6 +5,20 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-06-03
+
+### New Features
+
+- **Tracked achievements in the tracker** — Achievements you're tracking from the Achievement UI now appear in their own **Achievements** section of the on-screen tracker, with each achievement's criteria listed beneath it: a checkmark for finished criteria and a colorized "X/Y" for measured progress. The section hides itself when you're not tracking anything, and can be turned off under Tracker → Tracker Visibility. *(Suggested by LightsBeacon on Discord.)*
+- **WoW's default fonts** — The Appearance font dropdown now includes WoW's own built-in fonts — **WoW Default (Friz Quadrata)**, **WoW Arial Narrow**, and **WoW Morpheus** — alongside the bundled selection, for anyone who prefers the stock look. *(Suggested by Zox on Discord.)*
+- **Auto-list current-zone world quests** — A new Tracker option lists every world quest in your current zone in the tracker's World Quests section without having to track each one individually. It's off by default (in WQ-dense zones the list can get long), and these auto-listed quests drop off when you leave the zone. *(Suggested by Zox on Discord.)*
+- **Click a world quest on the map to track it** — Left-clicking a world quest pin on the world map, or a row in the zone world-quest list, now both follows it (waypoint arrow) and lists it in the tracker — no more right-click → Track step just to make a selected world quest show up. *(Suggested by Zox on Discord.)*
+
+### Improvements
+
+- **World Quest icons in the tracker** — Rows in the tracker's World Quests section now show Blizzard's stock world-quest icon — the brown ring with the gold star (plus the PvP / dungeon / profession / boss / etc. variants where they apply) — and the ring turns gold when that World Quest is focused (super-tracked).
+- **Optional Blizzard-style quest clicks** — A new "Split quest click" option (Tracker tab, off by default) changes left-click behavior to match Blizzard's tracker: click the quest's icon/circle to focus it, and click the title to open it in the quest log. With the option on, World Quest rows in the tracker behave the same way — click the icon to focus, click the title to open the quest's map details. With the option off, EQ keeps its existing behavior where a left-click anywhere on the row focuses the quest. *(Suggested by Zox on Discord.)*
+
 ## [1.12.0] - 2026-06-03
 
 ### New Features

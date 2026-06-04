@@ -10,6 +10,11 @@ local ICON_PAD     = 4
 local LABEL_PAD    = 6
 local LINE_INDENT  = ICON_PAD + ICON_SIZE + LABEL_PAD
 local TICKER_INTERVAL = 30
+-- Stock WQ marker sizes. The brown ring is the background; the gold star (or
+-- type icon) sits centered on it. Ratio mirrors Blizzard's atlases (ring 44 /
+-- icon 32 ≈ 0.73). The ring swaps to its gold "selected" variant when focused.
+local WQ_RING_SIZE = 26
+local WQ_STAR_SIZE = 19
 
 
 V.headerPool   = {}
@@ -32,22 +37,21 @@ local function buildHeader(parent)
     hl:SetAllPoints()
     hl:SetColorTexture(1, 1, 1, 0.06)
 
-    -- Icon stack mirrors the pattern from Modules/Tracker/Blocks.lua:
-    -- a holder Frame contains a BACKGROUND glow texture (oversized + ADD
-    -- blend so it haloes around the icon) plus an ARTWORK center icon.
-    -- The glow gets tinted by reward category so each WQ visually keys to
-    -- its reward type, matching the on-map pin in Modules/WorldQuests/Pin.lua.
+    -- Stock Blizzard WQ tracker visuals: the brown ring background
+    -- ("worldquest-tracker-ring") with the gold star / type icon centered on
+    -- it ("Worldquest-icon" and friends). The ring swaps to its gold
+    -- "selected" variant when the quest is super-tracked (focused) — the same
+    -- atlases Blizzard's own objective tracker uses.
     r.iconHolder = CreateFrame("Frame", nil, r)
     r.iconHolder:SetSize(ICON_SIZE, ICON_SIZE)
     r.iconHolder:SetPoint("LEFT", ICON_PAD, 0)
 
-    r.iconGlow = r.iconHolder:CreateTexture(nil, "BACKGROUND")
-    r.iconGlow:SetSize(50, 50)
-    r.iconGlow:SetPoint("CENTER")
-    r.iconGlow:SetBlendMode("ADD")
+    r.ring = r.iconHolder:CreateTexture(nil, "ARTWORK", nil, 0)
+    r.ring:SetSize(WQ_RING_SIZE, WQ_RING_SIZE)
+    r.ring:SetPoint("CENTER")
 
-    r.icon = r.iconHolder:CreateTexture(nil, "ARTWORK")
-    r.icon:SetSize(20, 20)   -- fits inside the compact HEADER_H row
+    r.icon = r.iconHolder:CreateTexture(nil, "ARTWORK", nil, 1)
+    r.icon:SetSize(WQ_STAR_SIZE, WQ_STAR_SIZE)
     r.icon:SetPoint("CENTER")
 
     r.title = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -116,7 +120,37 @@ local function buildHeader(parent)
                 end)
             end)
         else
-            if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+            -- Split-click parity with the Quests section. With "Split quest
+            -- click" on: clicking the icon focuses (super-tracks), clicking the
+            -- title opens the quest's details. We hit-test cursor X against the
+            -- icon's right edge (divided by effective scale, same approach as
+            -- Blocks.lua) instead of giving the icon its own handler. With the
+            -- option off, a left-click anywhere super-tracks as before. World
+            -- quests have no floating QuestLogPopupDetailFrame (that's a
+            -- normal-quest-only frame), so "details" opens the world map
+            -- focused on the quest.
+            local DB  = ns:GetSubsystem("DB")
+            local cfg = DB and DB.db.profile.tracker
+            local overIcon = false
+            if cfg and cfg.splitQuestClick then
+                local ih = self.iconHolder
+                if ih then
+                    local mx = GetCursorPosition()
+                    mx = mx / (self:GetEffectiveScale() or 1)
+                    local iconRight = ih:GetRight()
+                    if iconRight and mx <= iconRight then overIcon = true end
+                end
+            end
+            if cfg and cfg.splitQuestClick and not overIcon then
+                if C_AddOns and C_AddOns.LoadAddOn then
+                    C_AddOns.LoadAddOn("Blizzard_QuestLog")
+                end
+                if QuestMapFrame_OpenToQuestDetails then
+                    QuestMapFrame_OpenToQuestDetails(self.questID)
+                elseif OpenWorldMap and C_TaskQuest and C_TaskQuest.GetQuestZoneID then
+                    OpenWorldMap(C_TaskQuest.GetQuestZoneID(self.questID))
+                end
+            elseif C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                 C_SuperTrack.SetSuperTrackedQuestID(self.questID)
             end
         end
@@ -153,10 +187,6 @@ local function releaseAll()
         r:Hide()
         r:ClearAllPoints()
         r.icon:SetTexture(nil)
-        if r.iconGlow then
-            r.iconGlow:SetTexture(nil)
-            r.iconGlow:SetVertexColor(1, 1, 1)
-        end
         V.headerPool[#V.headerPool + 1] = r
         V.activeHeaders[i] = nil
     end
@@ -254,6 +284,43 @@ local function getInZoneActiveTaskQuests()
     return out
 end
 
+-- When the user enables "auto-list current-zone world quests"
+-- (tracker.autoListZoneWorldQuests), surface EVERY world quest available on
+-- the player's CURRENT zone map — not just the ones they've started or
+-- watched. Unlike getInZoneActiveTaskQuests this does not require inProgress,
+-- and it filters to genuine world quests (skipping plain bonus objectives).
+-- Display-only: nothing here is added to the persistent watch list, so the
+-- rows drop off on the next ZONE_CHANGED_NEW_AREA rebuild after leaving.
+local function isWorldQuest(qid)
+    if not qid then return false end
+    if C_QuestLog and C_QuestLog.IsWorldQuest and C_QuestLog.IsWorldQuest(qid) then
+        return true
+    end
+    if QuestUtils_IsQuestWorldQuest and QuestUtils_IsQuestWorldQuest(qid) then
+        return true
+    end
+    return false
+end
+
+local function getZoneWorldQuests()
+    local DB = ns:GetSubsystem("DB")
+    local t  = DB and DB.db and DB.db.profile and DB.db.profile.tracker
+    if not (t and t.autoListZoneWorldQuests) then return {} end
+    if not (C_Map and C_Map.GetBestMapForUnit) then return {} end
+    local mapID = C_Map.GetBestMapForUnit("player")
+    if not mapID or mapID <= 0 then return {} end
+    local out = {}
+    local list = fetchTaskQuestsForMap(mapID)
+    for i = 1, #list do
+        local q = list[i]
+        local qid = q and (q.questId or q.questID)
+        if isWorldQuest(qid) then
+            out[#out + 1] = qid
+        end
+    end
+    return out
+end
+
 -- Pulls task / world-quest / bounty entries straight from the player's
 -- quest log. Some bonus objectives end up here without ever appearing in
 -- the world-quest watch list or a current-map task query, so this is the
@@ -310,11 +377,18 @@ local function rebuildActiveWorldQuests()
     for _, qid in ipairs(getWatchedWorldQuests())     do push(qid) end
     for _, qid in ipairs(getInZoneActiveTaskQuests()) do push(qid) end
     for _, qid in ipairs(getQuestLogTaskQuests())     do push(qid) end
+    for _, qid in ipairs(getZoneWorldQuests())        do push(qid) end
     _activeDirty = false
 end
 local function getActiveWorldQuests()
     if _activeDirty then rebuildActiveWorldQuests() end
     return _activeCache
+end
+
+-- Public hook so options (e.g. the auto-list toggle) can force the active WQ
+-- list to rebuild on the next render instead of waiting for a zone change.
+function V:MarkActiveDirty()
+    _activeDirty = true
 end
 
 -- "X/Y" prefix turns red while at zero, amber while in progress, green when
@@ -353,6 +427,10 @@ function V:Render(content, contentWidth, yStart, collapsed)
             math.floor(ov.b * 255 + 0.5))
     end
 
+    -- Drives the "grow when focused" state for the stock WQ marker.
+    local superID = (C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
+                     and C_SuperTrack.GetSuperTrackedQuestID()) or 0
+
     local y = yStart
     for i = 1, count do
         local qid = quests[i]
@@ -362,39 +440,37 @@ function V:Render(content, contentWidth, yStart, collapsed)
         row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
         row.questID = qid
 
-        -- Always render iconless: clean Blizzard-style row that's just
-        -- title + objectives. Reset the icon stack so a pooled row that
-        -- previously held a glow doesn't leak its texture state.
-        row.iconGlow:SetTexture(nil)
-        row.iconGlow:SetVertexColor(1, 1, 1)
-        row.title:ClearAllPoints()
-        -- Elite world quests only (Rare Elite / World Boss style — the
-        -- gold-rosette ones). isElite is Blizzard's own flag for these;
-        -- C_LFGList returns an activity for many *ordinary* WQs too, so
-        -- gating on it alone put the eye + elite icon on non-group quests.
+        -- Center star / type icon, resolved by Blizzard's own helper so every
+        -- type/quality matches the map exactly: normal WQs get the gold
+        -- "Worldquest-icon" star, while PvP / dungeon / raid / profession /
+        -- boss / etc. each get their own icon. Falls back to the gold star if
+        -- the helper or tag info isn't available.
         local tagInfo = C_QuestLog and C_QuestLog.GetQuestTagInfo
                         and C_QuestLog.GetQuestTagInfo(qid)
+        local atlas = "Worldquest-icon"
+        if QuestUtil and QuestUtil.GetWorldQuestAtlasInfo and tagInfo then
+            atlas = QuestUtil.GetWorldQuestAtlasInfo(qid, tagInfo, false) or atlas
+        end
+        row.icon:SetAtlas(atlas)
+        -- Brown ring normally; gold "selected" ring when super-tracked, so the
+        -- whole marker turns gold to show focus (like the quest icons light up).
+        row.ring:SetAtlas((qid == superID)
+            and "worldquest-tracker-ring-selected" or "worldquest-tracker-ring")
+        row.iconHolder:Show()
+        row.title:ClearAllPoints()
+        row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)
+
+        -- Elite world quests that are group-listable keep the group-finder eye
+        -- on the right. An LFG activity alone isn't enough since many ordinary
+        -- WQs expose one too.
         local isElite = (tagInfo and tagInfo.isElite) and true or false
         local hasLFG  = C_LFGList and C_LFGList.GetActivityIDForQuestID
                         and C_LFGList.GetActivityIDForQuestID(qid) and true or false
-        if isElite then
-            row.icon:SetAtlas("worldquest-icon-elite")
-            row.iconHolder:Show()
-            row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)
-            -- Eye only when the elite WQ is actually group-listable, so a
-            -- click does something.
-            if hasLFG then
-                row.groupFinder:Show()
-                row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
-            else
-                row.groupFinder:Hide()
-                row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-            end
+        if isElite and hasLFG then
+            row.groupFinder:Show()
+            row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
         else
-            row.icon:SetTexture(nil)
-            row.iconHolder:Hide()
             row.groupFinder:Hide()
-            row.title:SetPoint("LEFT",  row, "LEFT",  ICON_PAD, 0)
             row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
         end
         row.title:SetText(questTitle(qid))

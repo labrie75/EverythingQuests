@@ -96,9 +96,14 @@ local function buildRow(parent)
                 end)
             end
         else
+            -- Left-click follows the WQ (super-track / arrow) AND lists it in
+            -- the tracker, so selecting a WQ from the zone list tracks it with
+            -- no extra right-click → Track step. Untrack stays on the menu.
             if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                 C_SuperTrack.SetSuperTrackedQuestID(self.questID)
             end
+            local Watch = ns:GetSubsystem("WQWatchPersist")
+            if Watch and Watch.Track then Watch:Track(self.questID) end
         end
     end)
 

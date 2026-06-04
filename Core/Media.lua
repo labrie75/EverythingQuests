@@ -87,6 +87,17 @@ local FONTS = {
     { name = "Ubuntu Bold",              file = FONT_PATH .. "Ubuntu-Bold.ttf" },
 }
 
+-- WoW's own built-in fonts, for users who want the stock look. "WoW Default"
+-- points at STANDARD_TEXT_FONT so it stays locale-correct (the client swaps in
+-- the right Friz Quadrata glyphs for Cyrillic/Korean/etc.). LSM already ships
+-- locale-aware registrations for some of these names; LSM:Register is a no-op
+-- when a name already exists, so listing them here is harmless either way.
+local WOW_FONTS = {
+    { name = "WoW Default (Friz Quadrata)", file = STANDARD_TEXT_FONT or [[Fonts\FRIZQT__.TTF]] },
+    { name = "WoW Arial Narrow",            file = [[Fonts\ARIALN.TTF]] },
+    { name = "WoW Morpheus",                file = [[Fonts\MORPHEUS.TTF]] },
+}
+
 function Media:OnInitialize()
     local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
     if not LSM then return end
@@ -94,6 +105,9 @@ function Media:OnInitialize()
         LSM:Register("sound", s.name, s.file)
     end
     for _, f in ipairs(FONTS) do
+        LSM:Register("font", f.name, f.file)
+    end
+    for _, f in ipairs(WOW_FONTS) do
         LSM:Register("font", f.name, f.file)
     end
     self.LSM = LSM
@@ -122,6 +136,9 @@ end
 
 function Media:GetFontList()
     local out = {}
+    for _, f in ipairs(WOW_FONTS) do
+        out[#out + 1] = { value = f.name, label = f.name }
+    end
     for _, f in ipairs(FONTS) do
         out[#out + 1] = { value = f.name, label = f.name }
     end
@@ -133,6 +150,10 @@ function Media:GetFontFile(name)
     if LSM then
         local f = LSM:Fetch("font", name or "Friz Quadrata TT")
         if f then return f end
+    end
+    -- LSM missing: resolve our own WoW-font names before the generic fallback.
+    for _, f in ipairs(WOW_FONTS) do
+        if f.name == name then return f.file end
     end
     return STANDARD_TEXT_FONT
 end

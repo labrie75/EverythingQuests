@@ -163,8 +163,14 @@ function Pin:OnClick(button)
     if button == "RightButton" then
         pinContextMenu(self)
     else
+        -- Left-click on a WQ pin both follows it (super-track / arrow) AND
+        -- adds it to the tracker, so "select a world quest on the map" lists
+        -- it without a separate right-click → Track step. Untrack still
+        -- lives on the right-click menu.
         if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
             C_SuperTrack.SetSuperTrackedQuestID(self.questID)
         end
+        local Watch = _ns:GetSubsystem("WQWatchPersist")
+        if Watch and Watch.Track then Watch:Track(self.questID) end
     end
 end

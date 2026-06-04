@@ -373,11 +373,49 @@ local function buildBlock()
                 return
             end
 
-            -- Plain left-click "focuses" the quest: super-track it so it
-            -- gets the on-screen waypoint/arrow and the SuperTracked icon.
-            -- Opening the quest log / details now lives on the right-click
-            -- context menu (handled above); shift-left-click still toggles
-            -- watch (Blizzard's QUESTWATCHTOGGLE, handled above).
+            -- Optional Blizzard-style split (tracker.splitQuestClick): the
+            -- left-side POI icon/circle focuses, the title opens the quest
+            -- log. We hit-test by cursor X against the icon's right edge
+            -- rather than giving the icon its own mouse handler, because the
+            -- whole block is the drag-reorder target — a mouse-enabled child
+            -- would swallow drags that start on the icon. GetCursorPosition
+            -- is in raw pixels, so divide by the block's effective scale to
+            -- compare against GetRight() (which is already in scaled coords).
+            local DB  = ns:GetSubsystem("DB")
+            local cfg = DB and DB.db.profile.tracker
+            if cfg and cfg.splitQuestClick then
+                local overIcon = false
+                local ih = self.iconHolder
+                if ih then
+                    local mx = GetCursorPosition()
+                    mx = mx / (self:GetEffectiveScale() or 1)
+                    local iconRight = ih:GetRight()
+                    if iconRight and mx <= iconRight then overIcon = true end
+                end
+                if overIcon then
+                    if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+                        C_SuperTrack.SetSuperTrackedQuestID(self.questID)
+                        local Tracker = ns:GetSubsystem("Tracker")
+                        if Tracker and Tracker.Refresh then Tracker:Refresh() end
+                    end
+                else
+                    if C_AddOns and C_AddOns.LoadAddOn then
+                        C_AddOns.LoadAddOn("Blizzard_QuestLog")
+                    end
+                    if QuestMapFrame_OpenToQuestDetails then
+                        QuestMapFrame_OpenToQuestDetails(self.questID)
+                    elseif ToggleQuestLog then
+                        ToggleQuestLog()
+                    end
+                end
+                return
+            end
+
+            -- Default (split off): a plain left-click anywhere on the row
+            -- "focuses" the quest: super-track it so it gets the on-screen
+            -- waypoint/arrow and the SuperTracked icon. Opening the quest log
+            -- / details lives on the right-click context menu (handled
+            -- above); shift-left-click toggles watch (handled above).
             if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                 C_SuperTrack.SetSuperTrackedQuestID(self.questID)
                 local Tracker = ns:GetSubsystem("Tracker")

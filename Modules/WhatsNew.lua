@@ -11,25 +11,30 @@ local _, ns = ...
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.11.0 is a feature release, so FEATURE_POPUP_VERSION is bumped to it:
--- everyone who hasn't already seen the 1.11.0 popup gets one on next login.
+-- 1.13.0 is a feature release, so FEATURE_POPUP_VERSION is bumped to it:
+-- everyone who hasn't already seen the 1.13.0 popup gets one on next login.
 -- Bump this constant + rewrite POPUP_BODY for the next big release and a
 -- fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.11.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.11.0"
+local FEATURE_POPUP_VERSION = "1.13.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.13.0"
 
+-- This release is built entirely from community suggestions in our Discord —
+-- the credits below are deliberate, not filler.
 local POPUP_BODY = [[
-|cffEBB706New: Stats tab with Trends|r
-The History window's "Totals" tab is now |cffffffffStats|r, with a new |cffffffffTrends|r view that charts your quests, XP, and gold over time. Toggle between daily and weekly, compare the current period to the one before it, and view it account-wide or for a single character.
+|cffEBB706New: tracked achievements in the tracker|r
+Achievements you're tracking now show up in their own |cffffffffAchievements|r section of the tracker, with each criterion listed beneath — a checkmark when it's done, a colored X/Y while it's in progress. Turn it off under Tracker, Tracker Visibility. |cff999999(Suggested by LightsBeacon.)|r
 
-|cffEBB706New: real gold tracking|r
-The Trends "Gold" line now counts |cffffffffall|r the gold you earn — loot, vendor sales, quest rewards, everything — bucketed per day. It begins counting from this update forward (gold earned before now can't be recovered).
+|cffEBB706New: WoW's default fonts|r
+The Appearance font dropdown now includes WoW's own built-in fonts — |cffffffffWoW Default (Friz Quadrata)|r, |cffffffffWoW Arial Narrow|r, and |cffffffffWoW Morpheus|r — alongside the bundled selection. |cff999999(Suggested by Zox.)|r
 
-|cffEBB706World Quests follow your colors|r
-World Quest titles in the tracker now use the title color you picked in Appearance instead of always showing yellow, so every section matches your color scheme.
+|cffEBB706New: world quests in the tracker|r
+Left-click a world quest on the map (or in the zone list) and it now follows |cffffffffand|r lists in the tracker. Tracked world quests now show Blizzard's stock world-quest icon (brown ring + gold star) that turns gold when focused, and there's a new Tracker option to auto-list every world quest in your current zone (off by default). |cff999999(Suggested by Zox.)|r
 
-|cffEBB706We have a Discord!|r
-Join the community for help, feedback, and updates — use the button below, or the link at the top of the Options window.
+|cffEBB706New: optional Blizzard-style quest clicks|r
+Turn on |cffffffffSplit quest click|r (Tracker tab) to click a quest's icon to focus it and its title to open the quest log — on World Quest rows the icon focuses and the title opens the map. It's |cffffffffoff by default|r — leave it off and a left-click anywhere on the row keeps focusing the quest like before. |cff999999(Suggested by Zox.)|r
+
+|cffEBB706Thanks for the ideas|r
+Every feature above came from our Discord. Join with the button below to suggest your own.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

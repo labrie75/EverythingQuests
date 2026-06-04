@@ -92,6 +92,14 @@ DB.defaults = {
             hideScrollBar        = false,                                        -- hide the scroll bar entirely; mouse wheel still scrolls
             showQuestPopups      = true,                                         -- "Quest Discovered!"/"Quest Complete!" auto-quest popup boxes
             showRecentlyAddedTag = true,                                         -- "NEW" tag on quests accepted within the last hour
+            -- Blizzard-style split click on tracker quest rows. OFF by
+            -- default to preserve EQ's long-standing behavior (a left-click
+            -- anywhere on the row focuses/super-tracks). When ON: clicking
+            -- the left-side POI icon/circle focuses the quest, while clicking
+            -- the title (or anywhere else on the row) opens it in the quest
+            -- log. Shift-left-click still toggles watch; right-click still
+            -- opens the context menu in both modes.
+            splitQuestClick      = false,
             -- Type-by-type visibility filters. All on by default — the user
             -- opts INTO hiding categories rather than opting in to seeing them.
             filters = {
@@ -108,7 +116,15 @@ DB.defaults = {
             -- no obvious off-switch); Profession and World Quests can be
             -- toggled because some players never use them.
             showProfessionSection = true,
+            showAchievementsSection = true,
             showWorldQuestsSection = true,
+            -- Auto-list every world quest available in the player's CURRENT
+            -- zone in the tracker's World Quests section, without having to
+            -- track each one. OFF by default — in WQ-dense zones this can be
+            -- a long list. Purely a display source: these rows are NOT added
+            -- to the persistent watch list, so they vanish when you leave the
+            -- zone. Manually-tracked WQs still show regardless of this.
+            autoListZoneWorldQuests = false,
             -- World Quests are pinned to the bottom of the tracker and
             -- always visible; this caps that region at a fraction of the
             -- tracker's inner height so a big WQ load can't swallow the
