@@ -318,16 +318,15 @@ function M:OnEnable()
         if WorldMapFrame and WorldMapFrame:IsShown() then self:UpdateSelections() end
     end)
 
-    -- Safety net: piggy-back on Blizzard's own WQ provider refresh so that
-    -- any internal event path we don't listen to directly still ends up
-    -- repainting our pins. Our Refresh has its own throttle, so multiple
-    -- triggers in one frame collapse cleanly. Defensive — no known event we
-    -- currently miss; this is here so a future Blizzard API churn doesn't
-    -- silently leave EQ's WQ layer one event behind.
-    if hooksecurefunc and WorldMap_WorldQuestDataProviderMixin
-       and WorldMap_WorldQuestDataProviderMixin.RefreshAllData then
-        hooksecurefunc(WorldMap_WorldQuestDataProviderMixin, "RefreshAllData", function()
-            if WorldMapFrame and WorldMapFrame:IsShown() then self:Refresh() end
-        end)
-    end
+    -- (Removed) We used to hooksecurefunc(WorldMap_WorldQuestDataProviderMixin,
+    -- "RefreshAllData") as a defensive net to repaint our pins whenever
+    -- Blizzard refreshed its own WQ provider. It was redundant — the explicit
+    -- events above plus the map-open hook and 60s ticker already cover every WQ
+    -- state change we care about — and under Midnight it tied EQ's (insecure)
+    -- refresh closure to Blizzard's WQ-provider cadence on the shared map
+    -- canvas, putting EQ taint on the map's execution every refresh. That makes
+    -- EQ more likely to be the addon blamed when a later AreaPOI tooltip trips
+    -- Blizzard's systemic "secret value" widget-layout bug. Dropping it removes
+    -- the needless taint with no functional loss (worst case a WQ pin is briefly
+    -- stale until the next QUEST_LOG_UPDATE, which fires constantly).
 end

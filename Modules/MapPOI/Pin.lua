@@ -65,28 +65,32 @@ function Pin:OnMouseEnter()
     local q = Cache:Get(self.questID)
     if not q then return end
 
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(q.title or ("Quest #" .. tostring(self.questID)),
+    -- EQ's private tooltip, not the shared GameTooltip: drawing a map-pin hover
+    -- on the shared tooltip seeds our taint onto it, which the next AreaPOI
+    -- tooltip inherits and crashes on under Midnight's secret-value rules.
+    local tip = ns.Util.PinTooltip()
+    tip:SetOwner(self, "ANCHOR_RIGHT")
+    tip:SetText(q.title or ("Quest #" .. tostring(self.questID)),
                         1.0, 0.82, 0.0, 1, true)
-    if q.zone   then GameTooltip:AddLine(q.zone, 0.7, 0.7, 0.7) end
+    if q.zone   then tip:AddLine(q.zone, 0.7, 0.7, 0.7) end
     if q.isComplete then
-        GameTooltip:AddLine("Ready to turn in", 0.4, 0.85, 0.4)
+        tip:AddLine("Ready to turn in", 0.4, 0.85, 0.4)
     else
         local objs = q.objectives
         if objs then
             for i = 1, #objs do
                 local o = objs[i]
                 if not o.finished then
-                    GameTooltip:AddLine("- " .. (o.text or ""), 0.95, 0.95, 0.95, true)
+                    tip:AddLine("- " .. (o.text or ""), 0.95, 0.95, 0.95, true)
                 end
             end
         end
     end
-    GameTooltip:Show()
+    tip:Show()
 end
 
 function Pin:OnMouseLeave()
-    GameTooltip:Hide()
+    ns.Util.PinTooltip():Hide()
 end
 
 -- Required empty stub. Newer MapCanvas calls this on every pin during

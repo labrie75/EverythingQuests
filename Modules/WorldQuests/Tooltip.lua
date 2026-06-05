@@ -104,37 +104,42 @@ end
 -- via GameTooltip:Hide() in OnLeave.
 function T:Show(owner, questID)
     if not (owner and questID) then return end
-    if not GameTooltip then return end
+    -- Use EQ's private tooltip, not the shared GameTooltip: a pin hover drawn
+    -- on the shared tooltip leaves our taint on it, which the next AreaPOI
+    -- tooltip inherits and crashes on (Midnight secret values). See Util.PinTooltip.
+    local tip = Util.PinTooltip()
+    if not tip then return end
 
     if C_TaskQuest and C_TaskQuest.RequestPreloadRewardData then
         C_TaskQuest.RequestPreloadRewardData(questID)
     end
 
-    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    tip:SetOwner(owner, "ANCHOR_RIGHT")
 
-    GameTooltip:SetText(questTitle(questID), 1.0, 0.82, 0.0, 1, true)
+    tip:SetText(questTitle(questID), 1.0, 0.82, 0.0, 1, true)
 
     local fname = factionName(questID)
     if fname then
-        GameTooltip:AddLine(fname, 0.7, 0.7, 0.7)
+        tip:AddLine(fname, 0.7, 0.7, 0.7)
     end
 
-    addObjectives(GameTooltip, questID)
+    addObjectives(tip, questID)
 
-    if addRewards(GameTooltip, questID) then
-        GameTooltip:AddLine(" ")
+    if addRewards(tip, questID) then
+        tip:AddLine(" ")
     end
 
     local mins = C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes
                  and C_TaskQuest.GetQuestTimeLeftMinutes(questID)
     if mins and mins > 0 then
         local r, g, b = Util.WQTimeColor(mins)
-        GameTooltip:AddLine("Time Left: " .. Util.WQTimeLong(mins), r, g, b)
+        tip:AddLine("Time Left: " .. Util.WQTimeLong(mins), r, g, b)
     end
 
-    GameTooltip:Show()
+    tip:Show()
 end
 
 function T:Hide()
-    if GameTooltip then GameTooltip:Hide() end
+    local tip = Util.PinTooltip()
+    if tip then tip:Hide() end
 end

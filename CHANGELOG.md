@@ -5,6 +5,12 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-06-05
+
+### Bug Fixes
+
+- **Fewer "secret value" Lua errors from the world map** — Under Midnight's new UI-protection rules, hovering a point of interest on the world map can throw a "secret value" Lua error from Blizzard's own tooltip code, which names whichever add-on was last active on the shared tooltip. Everything Quests now draws its world-map pin tooltips (world quests, quest pins, and the Chain Guide map button) on its own private tooltip instead of the shared one, and no longer piggy-backs on Blizzard's world-quest refresh — so EQ stays off that shared path and is far less likely to be the add-on blamed. This is a Blizzard-side issue that affects many add-ons; these changes reduce EQ's involvement but can't make the error disappear entirely.
+
 ## [1.13.0] - 2026-06-03
 
 ### New Features

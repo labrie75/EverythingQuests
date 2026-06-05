@@ -192,4 +192,25 @@ function Util.AcquirePooled(pool, active, parent, factory)
     return f
 end
 
+-- Private tooltip for EQ's world-map pins (and the pin-like rows that share
+-- the WQ tooltip). Drawing a pin hover on the SHARED GameTooltip leaves EQ's
+-- insecure execution taint on that singleton; under Midnight's "secret value"
+-- system the NEXT tooltip shown on it — e.g. Blizzard's AreaPOI POI tooltip —
+-- can then throw "secret value (execution tainted by 'EverythingQuests')"
+-- during its widget layout. A dedicated frame keeps EQ off the shared tooltip
+-- entirely, so an AreaPOI hover never inherits our taint. Lazily created so we
+-- only pay for it once a map pin is actually hovered.
+--
+-- Trade-off: this tooltip is NOT restyled by tooltip-skinning addons (ElvUI,
+-- TipTac, …) and won't carry third-party "extra line" injections — EQ draws
+-- all of its own content (title/objectives/rewards/time), so nothing is lost
+-- functionally, only the borrowed skin.
+local _pinTooltip
+function Util.PinTooltip()
+    if not _pinTooltip then
+        _pinTooltip = CreateFrame("GameTooltip", "EQPinTooltip", UIParent, "GameTooltipTemplate")
+    end
+    return _pinTooltip
+end
+
 ns.Util = Util
