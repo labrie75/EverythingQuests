@@ -57,8 +57,11 @@ ns.CAT = {
 -- which reads more naturally than an alphabetical jumble.
 DBmod:RegisterCategory(ns.CAT.CAMPAIGN,         { expansion = ns.EXP_MIDNIGHT, name = "Midnight Campaign", mapIDs = {}, campaignID = 270, order = 10 })
 DBmod:RegisterCategory(ns.CAT.WAR_LIGHT_SHADOW, { expansion = ns.EXP_MIDNIGHT, name = "The War of Light and Shadow", mapIDs = {}, campaignID = 284, order = 20 })
-DBmod:RegisterCategory(ns.CAT.EVERSONG_WOODS,   { expansion = ns.EXP_MIDNIGHT, name = "Eversong Woods", mapIDs = {}, order = 30 })
-DBmod:RegisterCategory(ns.CAT.ZULAMAN,          { expansion = ns.EXP_MIDNIGHT, name = "Zul'Aman",       mapIDs = {}, order = 40 })
-DBmod:RegisterCategory(ns.CAT.HARANDAR,         { expansion = ns.EXP_MIDNIGHT, name = "Harandar",       mapIDs = {}, order = 50 })
+DBmod:RegisterCategory(ns.CAT.EVERSONG_WOODS,   { expansion = ns.EXP_MIDNIGHT, name = "Eversong Woods", mapIDs = { 2393 }, order = 30 })
+DBmod:RegisterCategory(ns.CAT.ZULAMAN,          { expansion = ns.EXP_MIDNIGHT, name = "Zul'Aman",       mapIDs = { 2437 }, order = 40 })
+DBmod:RegisterCategory(ns.CAT.HARANDAR,         { expansion = ns.EXP_MIDNIGHT, name = "Harandar",       mapIDs = { 2413 }, order = 50 })
+-- "Arator's Journey" is a continent-spanning campaign (Light's Hope, Scarlet
+-- Monastery, Hammerfall, Blackrock), NOT a zone — so it has no uiMapID to seed
+-- and never surfaces a zone-progress bar. Kept as a ChainGuide category only.
 DBmod:RegisterCategory(ns.CAT.ARATOR,           { expansion = ns.EXP_MIDNIGHT, name = "Arator",         mapIDs = {}, order = 60 })
-DBmod:RegisterCategory(ns.CAT.VOIDSTORM,        { expansion = ns.EXP_MIDNIGHT, name = "Voidstorm",      mapIDs = {}, order = 70 })
+DBmod:RegisterCategory(ns.CAT.VOIDSTORM,        { expansion = ns.EXP_MIDNIGHT, name = "Voidstorm",      mapIDs = { 2405 }, order = 70 })

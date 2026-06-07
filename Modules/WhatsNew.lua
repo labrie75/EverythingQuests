@@ -12,22 +12,23 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.14 adds French/localization + the Zone Progress Bar, so the popup is
--- bumped: everyone who hasn't already seen the 1.14 popup gets one on next
--- login. Bump this constant + rewrite POPUP_BODY for the next big release and
--- a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.14.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.14"
+-- 1.14.1 makes the Zone Progress Bar reliable for everyone and completes the
+-- French translation. Bumping the version re-shows the popup once to everyone:
+-- players who skipped 1.14.0 get caught up, and players already on 1.14.0 hear
+-- about the fix. Bump this constant + rewrite POPUP_BODY for the next release
+-- and a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.14.1"
+local POPUP_TITLE           = "What's New in Everything Quests v1.14.1"
 
 local POPUP_BODY = [[
-|cffEBB706New: French translation (and localization support)|r
-Everything Quests now speaks French. On a French game client the options window appears in French, with more of the interface following in future updates; every other language keeps displaying in English. Huge thanks to |cffffffffZox|r for the translation — and if you'd like to help translate EQ into your language, come say hi on our Discord. |cff999999(French translation by Zox.)|r
+|cffEBB706Zone progress bar — now more reliable|r
+The optional zone progress bar shows how far through your current zone's questlines you are, tracked per character. A few players found it didn't show up for them — that's now sorted, and it appears reliably across all four Midnight zones. New to it? It's |cffffffffoff by default|r — turn it on under Tracker, Zone Progress Bar. It can float as its own movable bar (drag to move; right-click to lock or reset) or sit as a section on the tracker.
 
-|cffEBB706New: Zone progress bar|r
-An optional bar that shows your approximate questline progress through the current zone. It can float as its own movable bar (drag to move; right-click to lock or reset) or sit as a section on the tracker. It's |cffffffffoff by default|r — turn it on under Tracker, Zone Progress Bar (and size it under Appearance).
+|cffEBB706French translation complete|r
+Thanks to |cffffffffZox|r, EQ's French translation is now fully complete — the whole interface displays in French on a French game client. Every other language keeps displaying in English. Want to help bring EQ to your language? Come say hi on our Discord.
 
 |cffEBB706Thanks for being here|r
-EQ keeps growing thanks to our Discord community. Join with the button below to suggest features or lend a hand with translations.
+EQ keeps growing thanks to our Discord community. Join with the button below to suggest a feature or lend a hand.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

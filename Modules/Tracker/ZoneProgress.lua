@@ -5,29 +5,42 @@
 --   [#########----------------------]
 --
 -- WHY THIS IS BUILT THE WAY IT IS:
--- WoW has no API for "all quests in a zone". The only source is
--- C_QuestLine.GetAvailableQuestLines(uiMapID), which DROPS completed
--- questlines (so a naive live count has a shrinking denominator as you finish
--- content) and repeats each questline once per entry-point quest. We therefore
--- PERSIST discovery so the total stays stable:
---   * ns.db.global.zoneProgress.qlQuests[questLineID] = { questID, ... }
---       a questline's quest list. Static game data, identical for every
---       character, so it is cached ACCOUNT-WIDE. Stored MONOTONICALLY (never
---       replaced by a shorter async re-fetch) so the denominator never wobbles.
---   * DB.char.zoneProgress.questlines[zoneRootID] = { [questLineID] = true }
---       the discovered SET that drives the denominator. PER-CHARACTER: a
---       faction/class/race-locked questline discovered on one alt must not
---       inflate another alt's total forever.
--- Completion is per-character and computed LIVE (IsQuestFlaggedCompleted),
--- never persisted.
+-- WoW has no API for "all quests in a zone", and C_QuestLine.GetAvailableQuestLines
+-- DROPS completed questlines — so a live scan gives an empty bar on a character
+-- who has finished the zone (i.e. most players' main). v1.14.0 tried to persist
+-- a discovered set to work around that; it failed exactly there, because a
+-- completed main never discovers anything to persist.
+--
+-- The denominator therefore comes from ChainGuide's AUTHORED routing table
+-- (ns.QUESTLINE_ROUTING), which lists every questline in a zone regardless of
+-- completion — that table exists for precisely this reason (see
+-- Data/QuestChains/_QuestLineRouting.lua). Flow:
+--   1. zoneRoot() → the player's current Zone-type uiMapID.
+--   2. _ResolveCategory() maps that uiMapID to a ChainGuide category. Resolution
+--      is locale-safe: a learned account-wide uiMapID→catID cache first, then an
+--      English name match, then a majority vote of any live-available questlines
+--      against the routing table (which also seeds the cache for other locales /
+--      future completed visits).
+--   3. The category's routed questlines ARE the denominator. Each questline's
+--      quest list comes from C_QuestLine.GetQuestLineQuests (static game data,
+--      NOT completion-filtered), cached account-wide in qlQuests with an async
+--      retry for lists Blizzard hasn't loaded yet.
+--   4. Completion is PER-CHARACTER, computed LIVE (IsQuestFlaggedCompleted),
+--      never persisted. So every toon sees its own count against the same
+--      complete, stable denominator — instantly, no discovery, no cross-char
+--      dependency, no hoops.
+--
+-- Account-wide caches in ns.db.global.zoneProgress:
+--   * qlQuests[questLineID] = { questID, ... }   -- static quest lists, monotonic
+--   * zoneCat[uiMapID]      = catID              -- learned zone→category map
 --
 -- The whole subsystem is gated behind db.profile.tracker.showZoneProgressBar
 -- (OFF by default). Every event handler and Render early-returns when the flag
 -- is off, so there is zero ongoing cost for users who don't opt in.
 --
--- Coverage is APPROXIMATE: it only knows questlines this character has seen
--- available in the zone (and only questline quests). Best in current-content
--- zones the player actually quests through; documented in the option tooltip.
+-- Coverage = zones present in the routing data (current-content Midnight zones).
+-- An unresolved zone hides the bar; "/eqs zonebar debug" prints the unresolved
+-- uiMapID so a new zone can be added to routing.
 
 local _, ns = ...
 
@@ -48,6 +61,7 @@ ZP._countCache     = {}   -- [zoneRootID] = { completed=, total=, name= }
 ZP._retryScheduled = {}   -- [questLineID] = true (one in-flight retry per line)
 ZP._seen           = {}   -- reused scratch for union dedupe (wipe()'d each Recompute)
 ZP._scratchMaps    = {}   -- reused scratch for the map + children list
+ZP._voteTally      = {}   -- reused scratch for category majority vote
 
 -- ── small accessors ──────────────────────────────────────────────────────
 
@@ -86,13 +100,67 @@ local function qlQuestStore()
     return zp.qlQuests
 end
 
--- Per-character discovered-questline set, keyed by zone-root mapID.
-local function discoveredStore()
+-- Account-wide learned uiMapID -> ChainGuide catID map. Locale-independent
+-- (keyed by mapID, valued by our own category constant), so a localized client
+-- that once saw available questlines in a zone keeps resolving it after the
+-- character completes the zone — and every other character reuses it.
+local function zoneCatStore()
     local db = DBsub()
-    if not (db and db.char) then return nil end
-    db.char.zoneProgress = db.char.zoneProgress or {}
-    db.char.zoneProgress.questlines = db.char.zoneProgress.questlines or {}
-    return db.char.zoneProgress.questlines
+    if not (db and db.db and db.db.global) then return nil end
+    local zp = db.db.global.zoneProgress
+    if not zp then zp = {}; db.db.global.zoneProgress = zp end
+    zp.zoneCat = zp.zoneCat or {}
+    return zp.zoneCat
+end
+
+-- Case-insensitive zone-name -> ChainGuide catID. Works out of the box on an
+-- English client (category names are authored in English); other locales fall
+-- back to the live majority vote in _VoteCategory. Mirrors ChainGuide's own
+-- matchCategoryByName: exact match wins, else substring either direction.
+local function categoryByName(name)
+    if not name or name == "" then return nil end
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    if not (Database and Database.categories) then return nil end
+    local lower = name:lower()
+    for id, cat in pairs(Database.categories) do
+        if (cat.name or ""):lower() == lower then return id end
+    end
+    for id, cat in pairs(Database.categories) do
+        local cn = (cat.name or ""):lower()
+        if cn ~= "" and (lower:find(cn, 1, true) or cn:find(lower, 1, true)) then
+            return id
+        end
+    end
+    return nil
+end
+
+-- uiMapID -> ChainGuide catID via the category's authored mapIDs (seeded in
+-- Data/QuestChains/_Index.lua) plus any per-character /eqs discover overrides.
+-- Locale-INDEPENDENT and works on a completed main, so this is the strongest
+-- signal — tried before name matching.
+local function categoryByMapID(rootID)
+    if not rootID then return nil end
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    if not (Database and Database.categories) then return nil end
+    -- Per-character override list (cg.zoneMapIDs[catID] = { mapID, ... }), the
+    -- same table /eqs discover appends to for the chain guide.
+    local db = DBsub()
+    local overrides = db and db.db and db.db.profile and db.db.profile.chainGuide
+                      and db.db.profile.chainGuide.zoneMapIDs
+    for id, cat in pairs(Database.categories) do
+        if cat.mapID == rootID then return id end
+        local mids = cat.mapIDs
+        if type(mids) == "table" then
+            for i = 1, #mids do if mids[i] == rootID then return id end end
+        end
+        local ov = overrides and overrides[id]
+        if type(ov) == "table" then
+            for i = 1, #ov do if ov[i] == rootID then return id end end
+        elseif type(ov) == "number" and ov == rootID then
+            return id
+        end
+    end
+    return nil
 end
 
 -- Climb parentMapID until the first Zone-type ancestor, so a player standing
@@ -151,21 +219,43 @@ function ZP:EnsureQuests(qlID)
     end
 end
 
--- Query the API for questlines available on `rootID` (and its descendant
--- sub-maps) and add any new ones to this character's discovered set, caching
--- each questline's quest list. Deduping is implicit: questLineIDs are keys.
-function ZP:Discover(rootID)
-    if not (rootID and C_QuestLine and C_QuestLine.GetAvailableQuestLines) then return end
-    local set = discoveredStore()
-    if not set then return end
-    local zoneSet = set[rootID]
-    if not zoneSet then zoneSet = {}; set[rootID] = zoneSet end
+-- ── zone → category resolution ──────────────────────────────────────────────
 
+-- Lazily-built reverse index of the routing table: catID -> { questLineID, ... }.
+-- Rebuilt only if the routing table identity changes (a data patch), so it costs
+-- one pass per session.
+function ZP:_CategoryQuestLines(catID)
+    local routing = ns.QUESTLINE_ROUTING
+    if not (routing and catID) then return nil end
+    if self._catIndexFor ~= routing then
+        local idx = {}
+        for qlID, entry in pairs(routing) do
+            local c = (type(entry) == "table") and entry.cat or entry
+            if c then
+                local list = idx[c]
+                if not list then list = {}; idx[c] = list end
+                list[#list + 1] = qlID
+            end
+        end
+        self._catIndex    = idx
+        self._catIndexFor = routing
+    end
+    return self._catIndex[catID]
+end
+
+-- Majority vote: scan live-available questlines on this zone (and child maps)
+-- and return the category most of them route to. Locale-independent (uses
+-- questline IDs, not names). A character who has COMPLETED the zone gets nothing
+-- here — which is why _ResolveCategory tries the cache and the name match first.
+function ZP:_VoteCategory(rootID)
+    if not (rootID and C_QuestLine and C_QuestLine.GetAvailableQuestLines and ns.QUESTLINE_ROUTING) then
+        return nil
+    end
     local maps = self._scratchMaps
     wipe(maps)
     maps[1] = rootID
     if C_Map and C_Map.GetMapChildrenInfo then
-        local kids = C_Map.GetMapChildrenInfo(rootID, nil, true)   -- all descendants
+        local kids = C_Map.GetMapChildrenInfo(rootID, nil, true)
         if kids then
             for i = 1, #kids do
                 if kids[i] and kids[i].mapID then maps[#maps + 1] = kids[i].mapID end
@@ -173,41 +263,112 @@ function ZP:Discover(rootID)
         end
     end
 
+    local routing = ns.QUESTLINE_ROUTING
+    local tally = self._voteTally
+    wipe(tally)
+    local bestCat, bestN = nil, 0
     for m = 1, #maps do
         local lines = C_QuestLine.GetAvailableQuestLines(maps[m])
         if lines then
             for i = 1, #lines do
                 local info = lines[i]
                 local qlID = info and info.questLineID
-                if qlID and not info.isHidden then
-                    zoneSet[qlID] = true
-                    self:EnsureQuests(qlID)
+                local entry = qlID and routing[qlID]
+                local c = entry and ((type(entry) == "table") and entry.cat or entry)
+                if c then
+                    local n = (tally[c] or 0) + 1
+                    tally[c] = n
+                    if n > bestN then bestN, bestCat = n, c end
                 end
             end
         end
     end
+    return bestCat
+end
+
+-- Locale-independent fallback: majority-vote a zone's PREVIOUSLY discovered
+-- questlines against the routing table. The discovery may have been captured on
+-- another character (or an earlier build) while the questlines were still
+-- available, so this resolves a completed main with zero live data. Reads the
+-- interim account-wide set (global.zoneProgress.discovered) and the legacy
+-- per-character set (char.zoneProgress.questlines), both written by v1.14.0/the
+-- discovery-based builds.
+function ZP:_CategoryFromHistory(rootID)
+    local routing = ns.QUESTLINE_ROUTING
+    if not (rootID and routing) then return nil end
+    local db = DBsub()
+    if not db then return nil end
+
+    local tally = self._voteTally
+    wipe(tally)
+    local bestCat, bestN = nil, 0
+    local function tallySet(set)
+        if type(set) ~= "table" then return end
+        for qlID in pairs(set) do
+            local entry = routing[qlID]
+            local c = entry and ((type(entry) == "table") and entry.cat or entry)
+            if c then
+                local n = (tally[c] or 0) + 1
+                tally[c] = n
+                if n > bestN then bestN, bestCat = n, c end
+            end
+        end
+    end
+
+    local g = db.db and db.db.global and db.db.global.zoneProgress
+    if g and g.discovered then tallySet(g.discovered[rootID]) end
+    local ch = db.char and db.char.zoneProgress and db.char.zoneProgress.questlines
+    if ch then tallySet(ch[rootID]) end
+    return bestCat
+end
+
+-- Resolve a zone-root uiMapID to a ChainGuide category, caching any hit
+-- account-wide. Priority, strongest signal first:
+--   1. learned cache (account-wide, locale-independent),
+--   2. authored category mapIDs (locale-independent, works on a completed main),
+--   3. English zone-name match,
+--   4. previously-discovered questlines (locale-independent, completed-safe),
+--   5. live majority vote of currently-available questlines.
+function ZP:_ResolveCategory(rootID, name)
+    if not rootID then return nil end
+    local cache = zoneCatStore()
+    if cache and cache[rootID] then return cache[rootID] end
+
+    local catID = categoryByMapID(rootID)
+                  or categoryByName(name)
+                  or self:_CategoryFromHistory(rootID)
+                  or self:_VoteCategory(rootID)
+    if catID and cache then cache[rootID] = catID end
+    return catID
 end
 
 -- ── counting ───────────────────────────────────────────────────────────────
 
--- Count unique quests across this zone's discovered questlines; completed =
--- those flagged complete for THIS character. Allocation-free (reused _seen
--- scratch + integer counters). Result cached per zone root.
-function ZP:Recompute(rootID)
+-- Count unique quests across this zone's AUTHORED questlines (from routing);
+-- completed = those flagged complete for THIS character. Allocation-free
+-- (reused _seen scratch + integer counters). Result cached per zone root; a
+-- nil category (zone not in routing) yields total 0 → the bar hides.
+function ZP:Recompute(rootID, name)
     if not rootID then return end
-    local set   = discoveredStore()
     local store = qlQuestStore()
-    if not (set and store) then return end
+    if not store then return end
+
+    local catID = self:_ResolveCategory(rootID, name)
+    local lines = catID and self:_CategoryQuestLines(catID)
 
     local seen = self._seen
     wipe(seen)
     local total, completed = 0, 0
 
-    local zoneSet = set[rootID]
-    if zoneSet then
+    if lines then
         local flagged = C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
-        for qlID in pairs(zoneSet) do
+        for li = 1, #lines do
+            local qlID  = lines[li]
             local quests = store[qlID]
+            if not quests then
+                self:EnsureQuests(qlID)        -- async load; retry re-recomputes
+                quests = store[qlID]
+            end
             if quests then
                 for i = 1, #quests do
                     local qid = quests[i]
@@ -228,7 +389,41 @@ function ZP:Recompute(rootID)
     cache.total     = total
     cache.completed = completed
     local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(rootID)
-    cache.name = (info and info.name) or cache.name
+    cache.name = (info and info.name) or name or cache.name
+
+    if total == 0 and not catID then self:_DebugUnresolved(rootID, name) end
+end
+
+-- Optional chat hint (off unless "/eqs zonebar debug" set the flag) naming the
+-- uiMapID we couldn't map to routing, so a new zone can be added to the table.
+function ZP:_DebugUnresolved(rootID, name)
+    if not ns.zoneBarDebug then return end
+    if not self._debugSeen then self._debugSeen = {} end
+    if self._debugSeen[rootID] then return end
+    self._debugSeen[rootID] = true
+    print(("|cffEBB706EQ ZoneBar:|r no routing for zone |cffffffff%s|r (uiMapID %d). Add it to _QuestLineRouting.lua.")
+        :format(name or "?", rootID))
+end
+
+-- "/eqs zonebar" report: current zone, the category it resolved to, and the
+-- live count. Forces a fresh Recompute so the numbers are current.
+function ZP:PrintStatus()
+    local rootID, name = zoneRoot()
+    if not rootID then
+        print("|cffEBB706EQ ZoneBar:|r no current zone (instanced / no map).")
+        return
+    end
+    self:Recompute(rootID, name)
+    local catID = self:_ResolveCategory(rootID, name)
+    local cat
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    if catID and Database and Database.categories then cat = Database.categories[catID] end
+    local c = self._countCache[rootID]
+    print(("|cffEBB706EQ ZoneBar:|r zone |cffffffff%s|r (uiMapID %d) → %s, %d/%d complete.")
+        :format(name or "?", rootID,
+                cat and ("category |cffffffff" .. (cat.name or "?") .. "|r")
+                     or "|cffff5555no routing match|r",
+                (c and c.completed) or 0, (c and c.total) or 0))
 end
 
 -- Debounced "recompute current zone + repaint", shared by the quest events and
@@ -240,8 +435,8 @@ function ZP:ScheduleRecompute()
     if not Events then return end
     if not self._recomputeThunk then
         self._recomputeThunk = function()
-            local rootID = zoneRoot()
-            if rootID then ZP:Recompute(rootID) end
+            local rootID, name = zoneRoot()
+            if rootID then ZP:Recompute(rootID, name) end
             ZP:_Repaint()
         end
     end
@@ -264,10 +459,9 @@ function ZP:OnEnable()
 
     self._zoneThunk = function()
         if not enabled() then return end
-        local rootID = zoneRoot()
+        local rootID, name = zoneRoot()
         if not rootID then return end
-        ZP:Discover(rootID)
-        ZP:Recompute(rootID)
+        ZP:Recompute(rootID, name)
         ZP:_Repaint()
     end
 
@@ -284,6 +478,14 @@ function ZP:OnEnable()
     Events:On("PLAYER_ENTERING_WORLD", onZone)
     Events:On("QUEST_TURNED_IN",       onQuest)
     Events:On("QUEST_REMOVED",         onQuest)
+
+    -- The denominator is authored (routing), so a completed main no longer needs
+    -- a live scan. But on a localized client the zone→category resolution may
+    -- still fall back to a majority vote of live-available questlines, and
+    -- GetAvailableQuestLines is ASYNC (empty on the first call, delivered later
+    -- via QUESTLINE_UPDATE). Re-resolve when that data lands so the cache learns
+    -- the mapping. enabled()-gated, so it's free when the feature is off.
+    Events:On("QUESTLINE_UPDATE", onZone)
 end
 
 -- Called by the options checkbox so toggling ON paints the bar immediately
@@ -291,10 +493,9 @@ end
 -- cached counts so no stale bar can linger.
 function ZP:SetEnabled(on)
     if on then
-        local rootID = zoneRoot()
+        local rootID, name = zoneRoot()
         if rootID then
-            self:Discover(rootID)
-            self:Recompute(rootID)
+            self:Recompute(rootID, name)
         end
     else
         wipe(self._countCache)
@@ -429,8 +630,7 @@ function ZP:UpdateFrame()
     end
     local cache = self._countCache[rootID]
     if not cache then
-        self:Discover(rootID)
-        self:Recompute(rootID)
+        self:Recompute(rootID, zname)
         cache = self._countCache[rootID]
     end
     local total = (cache and cache.total) or 0
@@ -531,15 +731,14 @@ function ZP:Render(content, contentWidth, yStart, collapsed)
     -- gates this too, but be defensive).
     if location() ~= "tracker" then return self:_hideBar() end
 
-    local rootID = zoneRoot()
+    local rootID, name = zoneRoot()
     if not rootID then return self:_hideBar() end
 
     local cache = self._countCache[rootID]
     if not cache then
-        -- First paint for this zone with the feature on: discover + count now
+        -- First paint for this zone with the feature on: resolve + count now
         -- so the bar appears on this pass (e.g. right after enabling).
-        self:Discover(rootID)
-        self:Recompute(rootID)
+        self:Recompute(rootID, name)
         cache = self._countCache[rootID]
     end
 

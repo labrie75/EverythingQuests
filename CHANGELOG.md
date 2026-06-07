@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.1] - 2026-06-06
+
+### Bug Fixes
+
+- **Zone progress bar now shows up reliably** — On some characters the zone progress bar could come up empty and show nothing. It was relying on a live questline scan that returns nothing for a zone you've already finished, so a character who had completed a zone's questlines saw a blank bar. The bar now measures against Everything Quests' built-in Midnight questline data instead, so it works the same on every character — fresh alt or fully-completed main — and resolves correctly in every language. Completion is still counted per character.
+
+### Improvements
+
+- **French translation complete** — The French (frFR) translation is now fully complete: the entire Everything Quests interface displays in French on a French game client (every other language continues to display in English). *(French translation contributed by Zox.)*
+
 ## [1.14.0] - 2026-06-06
 
 ### New Features

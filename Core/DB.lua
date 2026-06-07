@@ -209,7 +209,12 @@ DB.defaults = {
         -- list (static game data, identical for every character). Stored
         -- monotonically by ZoneProgress so the denominator never shrinks.
         zoneProgress = {
-            qlQuests = {},            -- [questLineID] = { questID, ... }
+            qlQuests = {},            -- [questLineID] = { questID, ... } static lists
+            -- Learned, locale-independent zone→category map. The denominator
+            -- itself comes from ChainGuide's authored routing table (see
+            -- Modules/Tracker/ZoneProgress.lua); this just caches which category
+            -- each uiMapID resolved to so completed/localized zones still map.
+            zoneCat = {},             -- [uiMapID] = catID
         },
     },
     char = {
@@ -221,9 +226,10 @@ DB.defaults = {
         trackerCollapsed = false,     -- whole on-screen tracker collapsed to just the header
         minimap = { hide = false, minimapPos = 220 },
         lastOptionsTab = "general",
-        -- Per-zone progress bar: this character's discovered questlines per
-        -- zone root. Per-character (not account-wide) so a faction/class-locked
-        -- questline seen on one alt can't inflate another alt's denominator.
+        -- LEGACY (v1.14.0): per-character discovered questlines. No longer read
+        -- — the Zone Progress denominator now comes from ChainGuide's authored
+        -- routing table (see Modules/Tracker/ZoneProgress.lua). Kept so old
+        -- SavedVariables still load cleanly; safe to drop in a future cleanup.
         zoneProgress = {
             questlines = {},          -- [zoneRootID] = { [questLineID] = true }
         },

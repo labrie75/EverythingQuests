@@ -70,7 +70,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.14.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.14.1"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -771,6 +771,17 @@ local function eqSlashHandler(msg)
         return
     elseif msg == "dir" then
         Options:DumpDirections()
+        return
+    elseif msg:match("^zonebar") then
+        -- /eqs zonebar [debug] — report what the Zone Progress bar resolved the
+        -- current zone to; "debug" also toggles a chat hint that names any zone
+        -- with no routing entry (so a new zone can be added to the table).
+        local ZP = ns:GetSubsystem("TrackerZoneProgress")
+        if msg:match("debug") then
+            ns.zoneBarDebug = not ns.zoneBarDebug
+            print("|cffEBB706EQ ZoneBar|r debug " .. (ns.zoneBarDebug and "ON" or "OFF"))
+        end
+        if ZP and ZP.PrintStatus then ZP:PrintStatus() end
         return
     elseif msg:match("^profile") then
         -- /eqs profile [show|reset|mem on|mem off]
