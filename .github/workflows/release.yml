@@ -34,12 +34,17 @@ jobs:
         run: |
           echo "Ref: $GITHUB_REF"
           TAG="${GITHUB_REF#refs/tags/}"
-          echo "Tag: $TAG"
-          TYPE=$(git cat-file -t "$TAG" || echo "unknown")
-          echo "Tag object type: $TYPE  (should be 'tag' for an annotated release)"
+          # actions/checkout peels an annotated tag into a lightweight local ref,
+          # so a naive `git cat-file -t` would report 'commit' and falsely warn
+          # "alpha" on every release. Re-fetch the real tag objects first so the
+          # check is accurate and only fires on a genuinely lightweight tag.
+          git fetch --force --tags origin >/dev/null 2>&1 || true
+          TYPE=$(git cat-file -t "$TAG" 2>/dev/null || echo "unknown")
+          echo "Tag: $TAG  (object type: $TYPE)"
           if [ "$TYPE" != "tag" ]; then
-            echo "::warning::Lightweight tag detected. The packager will treat this as an alpha build."
-            echo "For a stable CurseForge release use: git tag -a $TAG -m \"$TAG\" && git push origin $TAG"
+            echo "::warning::'$TAG' is a lightweight tag — the packager will treat this as an ALPHA build. For a stable CurseForge release use: git tag -a $TAG -m \"$TAG\" && git push origin $TAG"
+          else
+            echo "Annotated tag — packaging as a stable release."
           fi
 
       - name: Package and release
