@@ -10,6 +10,7 @@
 -- state" rendering option.
 
 local _, ns = ...
+local L = ns.L
 
 local S = ns:RegisterSubsystem("WQSummary", {})
 
@@ -117,7 +118,7 @@ function S:Build()
 
     f.header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     f.header:SetPoint("TOP", 0, -PAD)
-    f.header:SetText("World Quests")
+    f.header:SetText(L["World Quests"])
     f.header:SetTextColor(1.0, 0.82, 0.0)
 
     self.frame = f

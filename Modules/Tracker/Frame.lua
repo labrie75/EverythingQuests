@@ -4,6 +4,7 @@
 -- Visual style: native Blizzard (per project_eq_style memory).
 
 local _, ns = ...
+local L = ns.L
 
 local Tracker = ns:RegisterSubsystem("Tracker", {})
 
@@ -206,11 +207,11 @@ function Tracker:BuildFrame()
         GameTooltip:SetOwner(drag, "ANCHOR_BOTTOM")
         GameTooltip:SetText("Everything Quests", 0.92, 0.72, 0.02)
         if locked then
-            GameTooltip:AddLine("Tracker locked", 1, 0.3, 0.3)
-            GameTooltip:AddLine('Move and resize are off. Uncheck "Lock tracker" in /eqs > General.', 0.8, 0.8, 0.8, true)
+            GameTooltip:AddLine(L["Tracker locked"], 1, 0.3, 0.3)
+            GameTooltip:AddLine(L["Move and resize are off. Uncheck \"Lock tracker\" in /eqs > General."], 0.8, 0.8, 0.8, true)
         else
-            GameTooltip:AddLine("Drag to move the tracker", 1, 1, 1)
-            GameTooltip:AddLine("/eqs for options", 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(L["Drag to move the tracker"], 1, 1, 1)
+            GameTooltip:AddLine(L["/eqs for options"], 0.8, 0.8, 0.8)
         end
         GameTooltip:Show()
     end)
@@ -434,21 +435,26 @@ function Tracker:BuildSectionHeaders(content)
     self.sectionFrames = {}
 
     local sections = {
+        -- Optional per-zone quest progress bar, pinned to the very top so it
+        -- reads as "where am I / how far through this zone am I". Off by
+        -- default; its header title is replaced live with the zone name in
+        -- Tracker:Render (see TrackerZoneProgress:HeaderInfo).
+        { id = "zoneprogress", title = L["Zone"] },
         -- Campaign quests are split out of "Quests" into their own section
         -- (Blizzard surfaces the campaign prominently too). Same header
         -- style/code path as every other section — see _RenderQuestGroup.
-        { id = "campaign",   title = "Campaign" },
-        { id = "quests",     title = "Quests" },
-        { id = "profession", title = "Profession" },
-        { id = "endeavors",  title = "Endeavors" },
+        { id = "campaign",   title = L["Campaign"] },
+        { id = "quests",     title = L["Quests"] },
+        { id = "profession", title = L["Profession"] },
+        { id = "endeavors",  title = L["Endeavors"] },
         -- Achievements the player is tracking (via the Achievement UI),
         -- populated by TrackerAchievements. Hidden automatically when nothing
         -- is tracked, like the other optional sections.
-        { id = "achievements", title = "Achievements" },
+        { id = "achievements", title = L["Achievements"] },
         -- The "events" section is wholly populated by TrackerEvents which
         -- pulls watched world quests via C_TaskQuest. Display label reflects
         -- what's actually shown so it lines up with Blizzard's own naming.
-        { id = "events",     title = "World Quests" },
+        { id = "events",     title = L["World Quests"] },
     }
     self.sectionList = sections
 
@@ -649,6 +655,12 @@ function Tracker:_RenderEventsSection(content, contentWidth, yStart, collapsed)
     return Events:Render(content, contentWidth, yStart, collapsed)
 end
 
+function Tracker:_RenderZoneProgressSection(content, contentWidth, yStart, collapsed)
+    local ZP = ns:GetSubsystem("TrackerZoneProgress")
+    if not ZP or not ZP.Render then return 0, 0 end
+    return ZP:Render(content, contentWidth, yStart, collapsed)
+end
+
 function Tracker:_RenderAchievementsSection(content, contentWidth, yStart, collapsed)
     local Achievements = ns:GetSubsystem("TrackerAchievements")
     if not Achievements or not Achievements.Render then return 0, 0 end
@@ -656,6 +668,7 @@ function Tracker:_RenderAchievementsSection(content, contentWidth, yStart, colla
 end
 
 local SECTION_RENDERERS = {
+    zoneprogress = "_RenderZoneProgressSection",
     campaign     = "_RenderCampaignSection",
     quests       = "_RenderQuestsSection",
     profession   = "_RenderProfessionSection",
@@ -910,6 +923,11 @@ function Tracker:Render()
         profession   = not cfg or cfg.showProfessionSection   ~= false,
         achievements = not cfg or cfg.showAchievementsSection ~= false,
         events       = not cfg or cfg.showWorldQuestsSection  ~= false,
+        -- Default-OFF (opt-in), unlike the sections above which default on:
+        -- only as a tracker section when enabled AND the location is "tracker"
+        -- (the "floating" location draws a standalone frame instead).
+        zoneprogress = cfg and cfg.showZoneProgressBar == true
+                       and (cfg.zoneProgressLocation or "floating") == "tracker",
     }
 
     -- Max on-screen height for the pinned World Quests region. Available
@@ -1006,6 +1024,17 @@ function Tracker:Render()
                     headerFrame.text:SetTextColor(hr, hg, hb)
                 end
                 if headerFrame.collapse then headerFrame.collapse:SetTextColor(hr, hg, hb) end
+                -- Zone Progress shows a LIVE header: the current zone's name on
+                -- the left and "<done>/<total>" on the right, instead of the
+                -- static "Zone" title and the plain section count set above.
+                if def.id == "zoneprogress" then
+                    local ZP = ns:GetSubsystem("TrackerZoneProgress")
+                    if ZP and ZP.HeaderInfo then
+                        local zname, zcount = ZP:HeaderInfo()
+                        if headerFrame.text  then headerFrame.text:SetText(zname or "") end
+                        if headerFrame.count then headerFrame.count:SetText(zcount or "") end
+                    end
+                end
                 y = y + SECTION_H + 2 + sectionHeight + gap
             else
                 headerFrame:Hide()
@@ -1449,7 +1478,7 @@ function Tracker:OnEnable()
             if Dialog then
                 Dialog:Show({
                     title = "Everything Quests",
-                    text = "Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options.",
+                    text = L["Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options."],
                     button1 = OKAY,
                 })
             end

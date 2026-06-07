@@ -10,6 +10,7 @@
 -- pattern, same brand-yellow accent).
 
 local _, ns = ...
+local L = ns.L
 
 local HF = ns:RegisterSubsystem("HistoryFrame", {})
 
@@ -83,7 +84,7 @@ local function rowOnMouseUp(self, button)
                 if CG.NavigateChain then CG:NavigateChain(chainID) end
             end
         else
-            print(("|cffEBB706EQ History|r: |cffffffff%s|r isn't part of any chain in the Chain Guide."):format(
+            print((L["|cffEBB706EQ History|r: |cffffffff%s|r isn't part of any chain in the Chain Guide."]):format(
                 self._fullName or ("Quest #" .. tostring(self._questID))))
         end
     elseif kind == "timeline" then
@@ -105,13 +106,13 @@ local function rowOnEnter(self)
     if kind == "history" then
         GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
         GameTooltip:SetText(self._fullName or ("Quest #" .. tostring(self._questID)), 1, 1, 1, 1, true)
-        GameTooltip:AddLine("Right-click to open in the Chain Guide", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(L["Right-click to open in the Chain Guide"], 0.7, 0.7, 0.7)
         GameTooltip:Show()
     elseif kind == "timeline" then
         GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
-        GameTooltip:SetText(self._chainName or "Chain", 1, 0.82, 0)
-        GameTooltip:AddLine("Click to expand", 0.7, 0.7, 0.7)
-        GameTooltip:AddLine("Right-click to open in the Chain Guide", 0.7, 0.7, 0.7)
+        GameTooltip:SetText(self._chainName or L["Chain"], 1, 0.82, 0)
+        GameTooltip:AddLine(L["Click to expand"], 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(L["Right-click to open in the Chain Guide"], 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end
 end
@@ -213,7 +214,7 @@ function HF:Build()
     -- Title bar
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("TOPLEFT", 12, -10)
-    f.title:SetText("Quest History")
+    f.title:SetText(L["Quest History"])
     f.title:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     thin(f.title)
 
@@ -238,29 +239,29 @@ function HF:Build()
         return b
     end
 
-    f.export = makeTitleButton("Export", 70, function() HF:_openExportPopup() end)
+    f.export = makeTitleButton(L["Export"], 70, function() HF:_openExportPopup() end)
     f.export:SetPoint("RIGHT", f.close, "LEFT", -2, 0)
 
     -- "Re-scan names" right next to Export. Same call the Options-tab button
     -- makes — placed here too because the user is most likely to notice
     -- nil-name entries while looking at the History window, not while
     -- digging through Options.
-    f.rescan = makeTitleButton("Re-scan names", 110, function()
+    f.rescan = makeTitleButton(L["Re-scan names"], 110, function()
         local R = ns:GetSubsystem("History")
         if not R then return end
         local queued = R:RequestMissingTitles() or 0
         if queued > 0 then
-            print(("|cffEBB706EQ History:|r requested %d quest name%s from the server. Names will fill in over the next minute or two."):format(
+            print((L["|cffEBB706EQ History:|r requested %d quest name%s from the server. Names will fill in over the next minute or two."]):format(
                 queued, queued == 1 and "" or "s"))
         else
-            print("|cffEBB706EQ History:|r nothing left to look up \226\128\148 every entry that can be resolved already is.")
+            print(L["|cffEBB706EQ History:|r nothing left to look up — every entry that can be resolved already is."])
         end
     end)
     f.rescan:SetPoint("RIGHT", f.export, "LEFT", -4, 0)
     f.rescan:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Re-scan for quest names", 1, 0.82, 0, 1, true)
-        GameTooltip:AddLine("Asks the server for the name of any \"Quest #12345\" entries. They'll fill in over the next minute or two as responses arrive.", 0.7, 0.7, 0.7, true)
+        GameTooltip:SetText(L["Re-scan for quest names"], 1, 0.82, 0, 1, true)
+        GameTooltip:AddLine(L["Asks the server for the name of any \"Quest #12345\" entries. They'll fill in over the next minute or two as responses arrive."], 0.7, 0.7, 0.7, true)
         GameTooltip:Show()
     end)
     f.rescan:SetScript("OnLeave", GameTooltip_Hide)
@@ -374,14 +375,14 @@ function HF:_buildQuestsPane(parent)
 
     local charLabel = row1:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     charLabel:SetPoint("LEFT", search, "RIGHT", 14, 0)
-    charLabel:SetText("Character:")
+    charLabel:SetText(L["Character:"])
     thin(charLabel)
 
     local charDD
     if Options and Options.CreateDropdown then
         local function listFn()
             local R = ns:GetSubsystem("History")
-            local out = { { value = "all", label = "All characters" } }
+            local out = { { value = "all", label = L["All characters"] } }
             if R then
                 local chars = R:GetCharacters()
                 for i = 1, #chars do
@@ -411,14 +412,14 @@ function HF:_buildQuestsPane(parent)
 
     local dateLabel = row2:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     dateLabel:SetPoint("LEFT", row2, "LEFT", 6, 0)
-    dateLabel:SetText("Date:")
+    dateLabel:SetText(L["Date:"])
     thin(dateLabel)
 
     local DATE_OPTIONS = {
-        { value = "all",   label = "All time" },
-        { value = "today", label = "Today" },
-        { value = "7d",    label = "Past 7 days" },
-        { value = "30d",   label = "Past 30 days" },
+        { value = "all",   label = L["All time"] },
+        { value = "today", label = L["Today"] },
+        { value = "7d",    label = L["Past 7 days"] },
+        { value = "30d",   label = L["Past 30 days"] },
     }
     local dateDD
     if Options and Options.CreateDropdown then
@@ -433,17 +434,17 @@ function HF:_buildQuestsPane(parent)
 
     local typeLabel = row2:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     typeLabel:SetPoint("LEFT", dateDD or dateLabel, "RIGHT", 14, 0)
-    typeLabel:SetText("Type:")
+    typeLabel:SetText(L["Type:"])
     thin(typeLabel)
 
     local CLASS_OPTIONS = {
-        { value = "all",        label = "All types"   },
-        { value = "campaign",   label = "Campaign"    },
-        { value = "questline",  label = "Questline"   },
-        { value = "calling",    label = "Calling"     },
-        { value = "recurring",  label = "Recurring"   },
-        { value = "worldquest", label = "World Quest" },
-        { value = "other",      label = "Other"       },
+        { value = "all",        label = L["All types"]   },
+        { value = "campaign",   label = L["Campaign"]    },
+        { value = "questline",  label = L["Questline"]   },
+        { value = "calling",    label = L["Calling"]     },
+        { value = "recurring",  label = L["Recurring"]   },
+        { value = "worldquest", label = L["World Quest"] },
+        { value = "other",      label = L["Other"]       },
     }
     local classDD
     if Options and Options.CreateDropdown then
@@ -460,13 +461,13 @@ function HF:_buildQuestsPane(parent)
     -- flips ascending/descending for the chosen field.
     local sortLabel = row2:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     sortLabel:SetPoint("LEFT", classDD or typeLabel, "RIGHT", 14, 0)
-    sortLabel:SetText("Sort:")
+    sortLabel:SetText(L["Sort:"])
     thin(sortLabel)
 
     local SORT_OPTIONS = {
-        { value = "date", label = "Date" },
-        { value = "name", label = "Name" },
-        { value = "type", label = "Type" },
+        { value = "date", label = L["Date"] },
+        { value = "name", label = L["Name"] },
+        { value = "type", label = L["Type"] },
     }
     local sortDD
     if Options and Options.CreateDropdown then
@@ -506,8 +507,8 @@ function HF:_buildQuestsPane(parent)
     end)
     dirBtn:SetScript("OnEnter", function(btn)
         GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Sort direction", 1, 1, 1)
-        GameTooltip:AddLine("Click to flip ascending / descending.", 0.7, 0.7, 0.7)
+        GameTooltip:SetText(L["Sort direction"], 1, 1, 1)
+        GameTooltip:AddLine(L["Click to flip ascending / descending."], 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     dirBtn:SetScript("OnLeave", GameTooltip_Hide)
@@ -517,7 +518,7 @@ function HF:_buildQuestsPane(parent)
         local function get() return HF._hideBackfilled and true or false end
         local function set(v) HF._hideBackfilled = v and true or false; HF:Render() end
         local hideCB = Options:CreateCheckbox(row2,
-            "Hide undated  |cffaaaaaa(backfilled)|r",
+            L["Hide undated  |cffaaaaaa(backfilled)|r"],
             get, set)
         -- Far-right of the row: anchor the label's right edge to row2 and tuck
         -- the checkbox just left of the label (its text extends leftward).
@@ -543,7 +544,7 @@ function HF:_buildQuestsPane(parent)
     pane._empty = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     pane._empty:SetPoint("CENTER")
     pane._empty:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    pane._empty:SetText("(no matching quests)")
+    pane._empty:SetText(L["(no matching quests)"])
     pane._empty:Hide()
     thin(pane._empty)
 
@@ -608,7 +609,7 @@ function HF:_renderQuests()
     })
 
     local n = #entries
-    if pane._count then pane._count:SetText(("%d entries"):format(n)) end
+    if pane._count then pane._count:SetText((L["%d entries"]):format(n)) end
 
     if n == 0 then
         pane._empty:Show()
@@ -656,11 +657,11 @@ function HF:_renderQuests()
     if n > MAX then
         -- Which MAX are visible depends on the active sort: newest/oldest for a
         -- date sort, just "first" for a type sort (newest/oldest isn't the key).
-        local which = "first"
+        local which = L["first"]
         if (HF._sortBy or "date") == "date" then
-            which = (HF._sortDir == "asc") and "oldest" or "newest"
+            which = (HF._sortDir == "asc") and L["oldest"] or L["newest"]
         end
-        pane._count:SetText(("%d entries (showing %s %d)"):format(n, which, MAX))
+        pane._count:SetText((L["%d entries (showing %s %d)"]):format(n, which, MAX))
     end
 end
 
@@ -684,13 +685,13 @@ function HF:_buildStreakPane(parent)
     end
 
     pane._currentLabel, pane._currentValue = bigStat(-20)
-    pane._currentLabel:SetText("Current daily streak")
+    pane._currentLabel:SetText(L["Current daily streak"])
 
     pane._bestLabel, pane._bestValue = bigStat(-80)
-    pane._bestLabel:SetText("Best daily streak")
+    pane._bestLabel:SetText(L["Best daily streak"])
 
     pane._totalLabel, pane._totalValue = bigStat(-140)
-    pane._totalLabel:SetText("Total quests recorded with a date")
+    pane._totalLabel:SetText(L["Total quests recorded with a date"])
 
     pane._note = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     pane._note:SetPoint("TOPLEFT", 30, -210)
@@ -698,8 +699,7 @@ function HF:_buildStreakPane(parent)
     pane._note:SetJustifyH("LEFT")
     pane._note:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
     pane._note:SetText(
-        "Streak counts consecutive days (server time) with at least one quest turn-in across any character on the account. " ..
-        "Today or yesterday keeps the streak alive — you don't lose it until a whole day passes with no activity.")
+        L["Streak counts consecutive days (server time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive — you don't lose it until a whole day passes with no activity."])
     thin(pane._note)
 
     return pane
@@ -710,8 +710,8 @@ function HF:_renderStreak()
     local R = ns:GetSubsystem("History")
     if not R then return end
     local s = R:Streak()
-    pane._currentValue:SetText(("%d days"):format(s.current))
-    pane._bestValue:SetText(("%d days"):format(s.best))
+    pane._currentValue:SetText((L["%d days"]):format(s.current))
+    pane._bestValue:SetText((L["%d days"]):format(s.best))
     pane._totalValue:SetText(("%d"):format(s.total))
 end
 
@@ -727,7 +727,7 @@ function HF:_buildTimelinePane(parent)
     pane._intro:SetJustifyH("LEFT")
     pane._intro:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
     pane._intro:SetText(
-        "Chains where you have at least one completed quest. Click a chain to expand and see per-quest completion dates.")
+        L["Chains where you have at least one completed quest. Click a chain to expand and see per-quest completion dates."])
     thin(pane._intro)
 
     local scroll = CreateFrame("ScrollFrame", nil, pane, "UIPanelScrollFrameTemplate")
@@ -742,7 +742,7 @@ function HF:_buildTimelinePane(parent)
     pane._empty = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     pane._empty:SetPoint("CENTER")
     pane._empty:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    pane._empty:SetText("(no chain quests recorded yet)")
+    pane._empty:SetText(L["(no chain quests recorded yet)"])
     pane._empty:Hide()
     thin(pane._empty)
 
@@ -833,7 +833,7 @@ function HF:_renderTimeline()
         local check   = (rec.doneN >= rec.total) and MARKER_COMPLETE or ""
         row.title:SetText(marker .. check .. (chain.name or ("Chain #" .. tostring(rec.id))))
         row.title:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
-        row.meta:SetText(("%d of %d quests recorded"):format(rec.doneN, rec.total))
+        row.meta:SetText((L["%d of %d quests recorded"]):format(rec.doneN, rec.total))
         row.right:SetText(fmtTime(rec.latest))
         -- Left-click expands; right-click opens the chain. Hover hint makes the
         -- affordance discoverable. Handled by the static rowOnMouseUp/rowOnEnter
@@ -886,7 +886,7 @@ function HF:_buildHeatmapPane(parent)
     pane._intro:SetPoint("TOPRIGHT", -30, -12)
     pane._intro:SetJustifyH("LEFT")
     pane._intro:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    pane._intro:SetText(("Quest turn-ins per day over the last %d days. Brighter = busier. Hover a cell for the date and count. The bottom-right cell is today."):format(HEATMAP_DAYS - 1))
+    pane._intro:SetText((L["Quest turn-ins per day over the last %d days. Brighter = busier. Hover a cell for the date and count. The bottom-right cell is today."]):format(HEATMAP_DAYS - 1))
     thin(pane._intro)
 
     local gridW = HEATMAP_COLS * (CELL_SIZE + CELL_GAP) - CELL_GAP
@@ -913,7 +913,7 @@ function HF:_buildHeatmapPane(parent)
             GameTooltip:SetOwner(cf, "ANCHOR_CURSOR_RIGHT")
             GameTooltip:SetText(date("%A, %Y-%m-%d", cf._day * 86400), 1, 1, 1)
             local c = cf._count or 0
-            GameTooltip:AddLine(("%d quest%s turned in"):format(c, c == 1 and "" or "s"),
+            GameTooltip:AddLine((L["%d quest%s turned in"]):format(c, c == 1 and "" or "s"),
                 YELLOW[1], YELLOW[2], YELLOW[3])
             GameTooltip:Show()
         end)
@@ -927,7 +927,7 @@ function HF:_buildHeatmapPane(parent)
     legend:SetPoint("TOP", pane._grid, "BOTTOM", 0, -18)
 
     local lessLabel = legend:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    lessLabel:SetText("Less")
+    lessLabel:SetText(L["Less"])
     lessLabel:SetPoint("LEFT")
     thin(lessLabel)
 
@@ -946,7 +946,7 @@ function HF:_buildHeatmapPane(parent)
         swatches[i] = sw
     end
     local moreLabel = legend:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    moreLabel:SetText("More")
+    moreLabel:SetText(L["More"])
     moreLabel:SetPoint("LEFT", swatches[5], "RIGHT", 4, 0)
     thin(moreLabel)
 
@@ -959,7 +959,7 @@ function HF:_buildHeatmapPane(parent)
     pane._totalLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     pane._totalLabel:SetPoint("TOP", pane._totalValue, "BOTTOM", 0, -2)
     pane._totalLabel:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    pane._totalLabel:SetText(("total turn-ins in the last %d days"):format(HEATMAP_DAYS - 1))
+    pane._totalLabel:SetText((L["total turn-ins in the last %d days"]):format(HEATMAP_DAYS - 1))
     thin(pane._totalLabel)
 
     pane._busiestValue = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -1008,7 +1008,7 @@ function HF:_renderHeatmap()
     pane._totalValue:SetText(tostring(total))
     if busiestDay and busiestCount > 0 then
         pane._busiestValue:SetText(
-            ("Busiest day: %s (%d quests)"):format(date("%Y-%m-%d", busiestDay * 86400), busiestCount))
+            (L["Busiest day: %s (%d quests)"]):format(date("%Y-%m-%d", busiestDay * 86400), busiestCount))
     else
         pane._busiestValue:SetText(" ")
     end
@@ -1025,7 +1025,7 @@ local function fmtMoney(copper)
     local g = math.floor(copper / 10000)
     local s = math.floor((copper % 10000) / 100)
     local c = copper % 100
-    return ("%dg %ds %dc"):format(g, s, c)
+    return (L["%dg %ds %dc"]):format(g, s, c)
 end
 
 local function fmtBigNumber(n)
@@ -1121,9 +1121,9 @@ function HF:_buildTotalsPane(parent)
     -- Sub-view segmented control. This "Stats" tab holds two views: the
     -- lifetime Totals (default) and the XP/gold/quests Trends view. A two-
     -- button toggle keeps both under one top-level tab (the tab bar is full).
-    pane._segTotals = makeToggleButton(pane, "Totals", 80)
+    pane._segTotals = makeToggleButton(pane, L["Totals"], 80)
     pane._segTotals:SetPoint("TOPLEFT", 12, -8)
-    pane._segTrends = makeToggleButton(pane, "Trends", 80)
+    pane._segTrends = makeToggleButton(pane, L["Trends"], 80)
     pane._segTrends:SetPoint("LEFT", pane._segTotals, "RIGHT", 4, 0)
     pane._segTotals:SetScript("OnClick", function() HF:_switchStatsView("totals") end)
     pane._segTrends:SetScript("OnClick", function() HF:_switchStatsView("trends") end)
@@ -1144,7 +1144,7 @@ function HF:_buildTotalsPane(parent)
     pane._intro:SetPoint("TOPRIGHT", -30, -4)
     pane._intro:SetJustifyH("LEFT")
     pane._intro:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    pane._intro:SetText("Account-wide quest rewards. Totals count only quests turned in while reward tracking was on; older entries didn't capture XP or gold.")
+    pane._intro:SetText(L["Account-wide quest rewards. Totals count only quests turned in while reward tracking was on; older entries didn't capture XP or gold."])
     thin(pane._intro)
 
     -- Helper to make a "Label \n Value" pair stacked vertically.
@@ -1163,15 +1163,15 @@ function HF:_buildTotalsPane(parent)
         return value
     end
 
-    pane._totalQuests = pairBlock(-30,  "Total quests with reward data", true)
-    pane._totalGold   = pairBlock(-78,  "Total gold earned",             true)
-    pane._totalXP     = pairBlock(-126, "Total XP earned",               true)
+    pane._totalQuests = pairBlock(-30,  L["Total quests with reward data"], true)
+    pane._totalGold   = pairBlock(-78,  L["Total gold earned"],             true)
+    pane._totalXP     = pairBlock(-126, L["Total XP earned"],               true)
 
     -- Per-character section header.
     local h2 = tvw:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     h2:SetPoint("TOPLEFT", 30, -180)
     h2:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
-    h2:SetText("By character")
+    h2:SetText(L["By character"])
     thin(h2)
     pane._charHeader = h2
 
@@ -1201,7 +1201,7 @@ function HF:_buildTotalsPane(parent)
     local h3 = tvw:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     h3:SetPoint("BOTTOMLEFT", pane._topGold, "TOPLEFT", 0, 6)
     h3:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
-    h3:SetText("Top single-quest rewards")
+    h3:SetText(L["Top single-quest rewards"])
     thin(h3)
     pane._topHeader = h3
 
@@ -1255,7 +1255,7 @@ function HF:_renderTotals()
     for i = 1, shown do
         local row = ensureCharRow(pane, i)
         local c = chars[i]
-        row:SetText(("%s  \194\183  %s quests  \194\183  %s  \194\183  %s XP"):format(
+        row:SetText((L["%s  \194\183  %s quests  \194\183  %s  \194\183  %s XP"]):format(
             c.key,
             fmtBigNumber(c.rec.count),
             fmtMoney(c.rec.money),
@@ -1268,18 +1268,18 @@ function HF:_renderTotals()
     end
 
     if t.topGold then
-        pane._topGold:SetText(("Biggest gold:  |cffffffff%s|r  \194\183  %s"):format(
+        pane._topGold:SetText((L["Biggest gold:  |cffffffff%s|r  \194\183  %s"]):format(
             t.topGold.n or ("Quest #" .. tostring(t.topGold.q)),
             fmtMoney(t.topGold.m)))
     else
-        pane._topGold:SetText("Biggest gold:  (none yet)")
+        pane._topGold:SetText(L["Biggest gold:  (none yet)"])
     end
     if t.topXP then
-        pane._topXP:SetText(("Biggest XP:    |cffffffff%s|r  \194\183  %s XP"):format(
+        pane._topXP:SetText((L["Biggest XP:    |cffffffff%s|r  \194\183  %s XP"]):format(
             t.topXP.n or ("Quest #" .. tostring(t.topXP.q)),
             fmtBigNumber(t.topXP.xp)))
     else
-        pane._topXP:SetText("Biggest XP:    (none yet)")
+        pane._topXP:SetText(L["Biggest XP:    (none yet)"])
     end
 end
 
@@ -1297,9 +1297,9 @@ function HF:_buildTrendsView(pane)
     tv:Hide()
 
     -- Top row: granularity (left), character scope (middle), metric (right).
-    tv._granDaily  = makeToggleButton(tv, "Daily", 60)
+    tv._granDaily  = makeToggleButton(tv, L["Daily"], 60)
     tv._granDaily:SetPoint("TOPLEFT", 12, -4)
-    tv._granWeekly = makeToggleButton(tv, "Weekly", 60)
+    tv._granWeekly = makeToggleButton(tv, L["Weekly"], 60)
     tv._granWeekly:SetPoint("LEFT", tv._granDaily, "RIGHT", 4, 0)
     tv._granDaily:SetScript("OnClick",  function() HF:_switchTrendGran("daily")  end)
     tv._granWeekly:SetScript("OnClick", function() HF:_switchTrendGran("weekly") end)
@@ -1309,12 +1309,12 @@ function HF:_buildTrendsView(pane)
     -- scope here doesn't disturb the Quests list (and vice-versa).
     local charLabel = tv:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     charLabel:SetPoint("LEFT", tv._granWeekly, "RIGHT", 16, 0)
-    charLabel:SetText("Show:")
+    charLabel:SetText(L["Show:"])
     thin(charLabel)
     if Options and Options.CreateDropdown then
         local function listFn()
             local R = ns:GetSubsystem("History")
-            local out = { { value = "all", label = "All characters" } }
+            local out = { { value = "all", label = L["All characters"] } }
             if R then
                 local chars = R:GetCharacters()
                 for i = 1, #chars do
@@ -1330,11 +1330,11 @@ function HF:_buildTrendsView(pane)
         tv._charDD:SetWidth(170)
     end
 
-    tv._mGold  = makeToggleButton(tv, "Gold", 64)
+    tv._mGold  = makeToggleButton(tv, L["Gold"], 64)
     tv._mGold:SetPoint("TOPRIGHT", -12, -4)
-    tv._mXP    = makeToggleButton(tv, "XP", 64)
+    tv._mXP    = makeToggleButton(tv, L["XP"], 64)
     tv._mXP:SetPoint("RIGHT", tv._mGold, "LEFT", -4, 0)
-    tv._mCount = makeToggleButton(tv, "Quests", 64)
+    tv._mCount = makeToggleButton(tv, L["Quests"], 64)
     tv._mCount:SetPoint("RIGHT", tv._mXP, "LEFT", -4, 0)
     tv._mGold:SetScript("OnClick",  function() HF:_switchTrendMetric("gold")  end)
     tv._mXP:SetScript("OnClick",    function() HF:_switchTrendMetric("xp")    end)
@@ -1387,7 +1387,7 @@ function HF:_buildTrendsView(pane)
     tv._caveat:SetPoint("BOTTOMRIGHT", -12, 8)
     tv._caveat:SetJustifyH("LEFT")
     tv._caveat:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    tv._caveat:SetText("Gold is all income (loot, vendor, rewards) tracked forward from when this version was installed \226\128\148 past periods may read 0. XP and quest counts come from quest turn-ins.")
+    tv._caveat:SetText(L["Gold is all income (loot, vendor, rewards) tracked forward from when this version was installed \226\128\148 past periods may read 0. XP and quest counts come from quest turn-ins."])
     thin(tv._caveat)
 
     return tv
@@ -1445,20 +1445,20 @@ function HF:_renderTrends()
     -- Comparison cards: current (last) period vs the previous one.
     local cur  = periods[n]
     local prev = periods[n - 1] or { xp = 0, gold = 0, count = 0 }
-    local curLabel  = (gran == "weekly") and "This week" or "Today"
-    local prevLabel = (gran == "weekly") and "last week" or "yesterday"
+    local curLabel  = (gran == "weekly") and L["This week"] or L["Today"]
+    local prevLabel = (gran == "weekly") and L["last week"] or L["yesterday"]
     local CARD_DEFS = {
-        { key = "count", name = "Quests" },
-        { key = "xp",    name = "XP" },
-        { key = "gold",  name = "Gold" },
+        { key = "count", name = L["Quests"] },
+        { key = "xp",    name = L["XP"] },
+        { key = "gold",  name = L["Gold"] },
     }
     for i = 1, 3 do
         local d    = CARD_DEFS[i]
         local card = tv._cards[i]
-        card.label:SetText(("%s \226\128\148 %s"):format(d.name, curLabel))
+        card.label:SetText((L["%s \226\128\148 %s"]):format(d.name, curLabel))
         card.value:SetText(formatMetric(d.key, cur[d.key] or 0))
         local delta = (cur[d.key] or 0) - (prev[d.key] or 0)
-        card.delta:SetText(fmtDelta(d.key, delta) .. " vs " .. prevLabel)
+        card.delta:SetText((L["%s vs %s"]):format(fmtDelta(d.key, delta), prevLabel))
     end
 
     -- Bar chart of the selected metric.
@@ -1516,7 +1516,7 @@ function HF:_buildSessionPane(parent)
     pane._intro:SetPoint("TOPRIGHT", -30, -12)
     pane._intro:SetJustifyH("LEFT")
     pane._intro:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
-    pane._intro:SetText("Your quest activity this play session. A session starts when you log in and continues across /reload; it resets the next time you log in fresh.")
+    pane._intro:SetText(L["Your quest activity this play session. A session starts when you log in and continues across /reload; it resets the next time you log in fresh."])
     thin(pane._intro)
 
     local function pairBlock(yOffset, labelText)
@@ -1532,11 +1532,11 @@ function HF:_buildSessionPane(parent)
         return value
     end
 
-    pane._played = pairBlock(-46,  "Played this session")
-    pane._quests = pairBlock(-100, "Quests completed")
-    pane._xp     = pairBlock(-154, "Quest XP earned")
-    pane._gold   = pairBlock(-208, "Quest gold earned")
-    pane._levels = pairBlock(-262, "Level-ups")
+    pane._played = pairBlock(-46,  L["Played this session"])
+    pane._quests = pairBlock(-100, L["Quests completed"])
+    pane._xp     = pairBlock(-154, L["Quest XP earned"])
+    pane._gold   = pairBlock(-208, L["Quest gold earned"])
+    pane._levels = pairBlock(-262, L["Level-ups"])
 
     return pane
 end
@@ -1549,14 +1549,14 @@ function HF:_renderSession()
 
     pane._played:SetText(ns.Util.FmtDuration(sm.played))
 
-    local rate = sm.perHour and ("   |cffaaaaaa(%.1f / hour)|r"):format(sm.perHour) or ""
+    local rate = sm.perHour and (L["   |cffaaaaaa(%.1f / hour)|r"]):format(sm.perHour) or ""
     pane._quests:SetText(fmtBigNumber(sm.quests) .. rate)
 
     pane._xp:SetText(fmtBigNumber(sm.xp) .. " XP")
     pane._gold:SetText(fmtMoney(sm.gold))
 
     if sm.levelUps > 0 then
-        pane._levels:SetText(("%d   |cffaaaaaa(%d to %d)|r"):format(
+        pane._levels:SetText((L["%d   |cffaaaaaa(%d to %d)|r"]):format(
             sm.levelUps, sm.startLevel, sm.curLevel))
     else
         pane._levels:SetText("0")
@@ -1811,13 +1811,13 @@ function HF:_buildExportPopup()
 
     p.title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     p.title:SetPoint("TOPLEFT", 12, -10)
-    p.title:SetText("Export")
+    p.title:SetText(L["Export"])
     p.title:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     thin(p.title)
 
     p.hint = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     p.hint:SetPoint("TOPLEFT", 12, -32)
-    p.hint:SetText("Press Ctrl+A to select all, then Ctrl+C to copy.")
+    p.hint:SetText(L["Press Ctrl+A to select all, then Ctrl+C to copy."])
     thin(p.hint)
 
     p.close = CreateFrame("Button", nil, p, "UIPanelCloseButton")

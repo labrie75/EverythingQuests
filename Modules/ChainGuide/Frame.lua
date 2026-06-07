@@ -13,6 +13,7 @@
 -- unrelated workflows.
 
 local _, ns = ...
+local L = ns.L
 
 local CG = ns:RegisterSubsystem("ChainGuide", {})
 
@@ -162,7 +163,7 @@ function CG:Build()
     tbg:SetColorTexture(0, 0, 0, 0.85)
     f.title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("LEFT", 12, 0)
-    f.title:SetText("Chain Guide")
+    f.title:SetText(L["Chain Guide"])
     f.title:SetTextColor(1.0, 0.82, 0.0)
     local close = CreateFrame("Button", nil, titleBar, "UIPanelCloseButton")
     close:SetPoint("RIGHT", -2, 0)
@@ -393,7 +394,7 @@ function CG:RenderChains(activeCatID, activeChainID)
     local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
 
     if not activeCatID then
-        self.frame.chainHeader:SetText("Pick a category")
+        self.frame.chainHeader:SetText(L["Pick a category"])
         return
     end
 

@@ -3,8 +3,9 @@
 -- to actually open the chain guide window from inside Options.
 
 local _, ns = ...
+local L = ns.L
 
-ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
+ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(content)
     local Options = ns:GetSubsystem("Options")
 
     local function chainSetting(key)
@@ -22,10 +23,10 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
     end
 
     -- ─── LEFT COLUMN: behavior + window controls ────────────────────────
-    local h = Options:CreateSectionHeader(content, "Chain Guide (Storylines)")
+    local h = Options:CreateSectionHeader(content, L["Chain Guide (Storylines)"])
     h:SetPoint("TOPLEFT", 8, -8)
 
-    local openBtn = Options:CreateYellowButton(content, "Open Chain Guide", function()
+    local openBtn = Options:CreateYellowButton(content, L["Open Chain Guide"], function()
         -- Hide Options first so the chain guide isn't visually buried
         -- behind it. Both windows live at DIALOG strata; getting them out
         -- of each other's way is cleaner than fighting frame-strata
@@ -38,7 +39,7 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
 
     local loginGet, loginSet = chainSetting("showOnLogin")
     local login = Options:CreateCheckbox(content,
-        "Open Chain Guide on login",
+        L["Open Chain Guide on login"],
         loginGet, loginSet)
     login:SetPoint("TOPLEFT", openBtn, "BOTTOMLEFT", 0, -16)
 
@@ -58,18 +59,18 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
         end
     end
     local unrouted = Options:CreateCheckbox(content,
-        "Show unrouted questlines  |cffaaaaaa(API discoveries not in our routing table)|r",
+        L["Show unrouted questlines  |cffaaaaaa(API discoveries not in our routing table)|r"],
         unroutedGet, unroutedSet)
     unrouted:SetPoint("TOPLEFT", login, "BOTTOMLEFT", 0, -2)
 
     local scaleGet, scaleSet = chainSetting("scale")
-    local scale = Options:CreateSlider(content, "Window scale",
+    local scale = Options:CreateSlider(content, L["Window scale"],
         0.6, 1.5, 0.05, scaleGet, scaleSet)
     scale:SetPoint("TOPLEFT", unrouted, "BOTTOMLEFT", 0, -10)
     scale:SetWidth(280)
 
     -- ─── RIGHT COLUMN: cache + stats ────────────────────────────────────
-    local cacheHeader = Options:CreateSectionHeader(content, "Character cache")
+    local cacheHeader = Options:CreateSectionHeader(content, L["Character cache"])
     cacheHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
     local cacheHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -77,16 +78,16 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
     cacheHint:SetWidth(380)
     cacheHint:SetJustifyH("LEFT")
     cacheHint:SetTextColor(0.65, 0.65, 0.65)
-    cacheHint:SetText("Per-character chain progress is cached account-wide so alts can browse what your other characters have completed. Clearing the cache removes that cross-character data; live completions stay (Blizzard tracks those).")
+    cacheHint:SetText(L["Per-character chain progress is cached account-wide so alts can browse what your other characters have completed. Clearing the cache removes that cross-character data; live completions stay (Blizzard tracks those)."])
 
-    local clear = Options:CreateYellowButton(content, "Clear chain cache", function()
+    local clear = Options:CreateYellowButton(content, L["Clear chain cache"], function()
         local Dialog = ns:GetSubsystem("Dialog")
         if not Dialog then return end
         Dialog:Show({
             title   = "Everything Quests",
-            text    = "Clear all cached chain-completion data across every character?",
-            button1 = "Clear",
-            button2 = "Cancel",
+            text    = L["Clear all cached chain-completion data across every character?"],
+            button1 = L["Clear"],
+            button2 = L["Cancel"],
             onAccept = function()
                 _G.EverythingQuestsChainCache = {}
                 ReloadUI()
@@ -122,12 +123,12 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
             for _ in pairs(CDB.chains)     do nChains = nChains + 1 end
         end
 
-        local text = ("Cached: |cffffffff%d|r characters, |cffffffff%d|r waypoint locations\n|cffffffff%d|r chains across |cffffffff%d|r categories")
+        local text = L["Cached: |cffffffff%d|r characters, |cffffffff%d|r waypoint locations\n|cffffffff%d|r chains across |cffffffff%d|r categories"]
             :format(nChars, nCoords, nChains, nCats)
         if cache.lastPrune and cache.lastPrune > 0 then
             local days = math.floor((time() - cache.lastPrune) / 86400)
-            local when = (days <= 0 and "today") or (days == 1 and "1 day ago") or (("%d days ago"):format(days))
-            text = text .. "\n|cffaaaaaaLast pruned: " .. when .. "|r"
+            local when = (days <= 0 and L["today"]) or (days == 1 and L["1 day ago"]) or (L["%d days ago"]:format(days))
+            text = text .. L["\n|cffaaaaaaLast pruned: %s|r"]:format(when)
         end
         stats:SetText(text)
     end
@@ -135,12 +136,12 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", "Chain Guide", function(content)
     -- Soft alternative to the wipe above: drop only stale entries (deleted-alt
     -- records + waypoints unused past their TTL). Everything dropped is
     -- re-derivable, so no reload is needed.
-    local prune = Options:CreateYellowButton(content, "Prune stale entries now", function()
+    local prune = Options:CreateYellowButton(content, L["Prune stale entries now"], function()
         local DB = ns:GetSubsystem("DB")
         if not (DB and DB.MaybePruneChainCache) then return end
         local nRec, nCoord = DB:MaybePruneChainCache(true)
         refreshStats()
-        print(("|cffEBB706EQ|r: pruned |cffffffff%d|r stale character record(s) and |cffffffff%d|r waypoint(s)."):format(nRec or 0, nCoord or 0))
+        print(L["|cffEBB706EQ|r: pruned |cffffffff%d|r stale character record(s) and |cffffffff%d|r waypoint(s)."]:format(nRec or 0, nCoord or 0))
     end)
     prune:SetSize(180, 24)
     prune:SetPoint("TOPLEFT", clear, "BOTTOMLEFT", 0, -8)

@@ -4,6 +4,7 @@
 -- scrollable expansion-grouped faction list on the right.
 
 local _, ns = ...
+local L = ns.L
 
 local Options = ns:GetSubsystem("Options")
 
@@ -39,33 +40,33 @@ local function filterSetting(key)
 end
 
 local FILTER_ROWS = {
-    { key = "gold",       label = "Gold",                   icon = "Interface\\MoneyFrame\\UI-MoneyIcons", coords = { 0, 0.25, 0, 1 } },
-    { key = "gear",       label = "Gear / Items",           icon = "Interface\\Icons\\INV_Helmet_06" },
-    { key = "rep",        label = "Reputation tokens",      icon = "Interface\\Icons\\Achievement_Reputation_01" },
-    { key = "resource",   label = "Resources / Currencies", icon = "Interface\\Icons\\Trade_Mining" },
-    { key = "ap",         label = "Artifact Power",         icon = "Interface\\Icons\\INV_7XP_Inscription_TalentTome01" },
-    { key = "profession", label = "Profession quests",      icon = "Interface\\Icons\\Trade_Engineering" },
-    { key = "pvp",        label = "PvP",                    icon = "Interface\\Icons\\Achievement_Bg_TopDmg" },
-    { key = "pet",        label = "Pet battles",            icon = "Interface\\Icons\\INV_Pet_Achievement_CaptureAPet" },
-    { key = "other",      label = "Other / Uncategorized",  icon = "Interface\\Icons\\INV_Misc_QuestionMark" },
+    { key = "gold",       label = L["Gold"],                   icon = "Interface\\MoneyFrame\\UI-MoneyIcons", coords = { 0, 0.25, 0, 1 } },
+    { key = "gear",       label = L["Gear / Items"],           icon = "Interface\\Icons\\INV_Helmet_06" },
+    { key = "rep",        label = L["Reputation tokens"],      icon = "Interface\\Icons\\Achievement_Reputation_01" },
+    { key = "resource",   label = L["Resources / Currencies"], icon = "Interface\\Icons\\Trade_Mining" },
+    { key = "ap",         label = L["Artifact Power"],         icon = "Interface\\Icons\\INV_7XP_Inscription_TalentTome01" },
+    { key = "profession", label = L["Profession quests"],      icon = "Interface\\Icons\\Trade_Engineering" },
+    { key = "pvp",        label = L["PvP"],                    icon = "Interface\\Icons\\Achievement_Bg_TopDmg" },
+    { key = "pet",        label = L["Pet battles"],            icon = "Interface\\Icons\\INV_Pet_Achievement_CaptureAPet" },
+    { key = "other",      label = L["Other / Uncategorized"],  icon = "Interface\\Icons\\INV_Misc_QuestionMark" },
 }
 
 -- Map LE_EXPANSION_* IDs to human names. Blizzard ships these as numeric
 -- enums; the names here are the canonical marketing names so users
 -- recognize them. Any expansionID we don't know about lands in "Other".
 local EXPANSION_NAMES = {
-    [0]  = "Classic",
-    [1]  = "The Burning Crusade",
-    [2]  = "Wrath of the Lich King",
-    [3]  = "Cataclysm",
-    [4]  = "Mists of Pandaria",
-    [5]  = "Warlords of Draenor",
-    [6]  = "Legion",
-    [7]  = "Battle for Azeroth",
-    [8]  = "Shadowlands",
-    [9]  = "Dragonflight",
-    [10] = "The War Within",
-    [11] = "Midnight",
+    [0]  = L["Classic"],
+    [1]  = L["The Burning Crusade"],
+    [2]  = L["Wrath of the Lich King"],
+    [3]  = L["Cataclysm"],
+    [4]  = L["Mists of Pandaria"],
+    [5]  = L["Warlords of Draenor"],
+    [6]  = L["Legion"],
+    [7]  = L["Battle for Azeroth"],
+    [8]  = L["Shadowlands"],
+    [9]  = L["Dragonflight"],
+    [10] = L["The War Within"],
+    [11] = L["Midnight"],
 }
 
 local function setAllFilters(value)
@@ -108,7 +109,7 @@ local function listFactionsByExpansion()
             local exp = data.expansionID or -1
             local g = groupByExp[exp]
             if not g then
-                g = { expansionID = exp, name = EXPANSION_NAMES[exp] or "Other", factions = {} }
+                g = { expansionID = exp, name = EXPANSION_NAMES[exp] or L["Other"], factions = {} }
                 groupByExp[exp] = g
                 groups[#groups + 1] = g
             end
@@ -126,9 +127,9 @@ local function listFactionsByExpansion()
     return groups
 end
 
-Options:AddTab("worldQuests", "World Quests", function(content)
+Options:AddTab("worldQuests", L["World Quests"], function(content)
     -- ─── LEFT COLUMN ────────────────────────────────────────────────────
-    local header = Options:CreateSectionHeader(content, "World Quests")
+    local header = Options:CreateSectionHeader(content, L["World Quests"])
     header:SetPoint("TOPLEFT", 8, -8)
 
     -- Master switch for the World Quests MAP features (everything this
@@ -146,7 +147,7 @@ Options:AddTab("worldQuests", "World Quests", function(content)
         refreshWQ()
     end
     local wqMaster = Options:CreateCheckbox(content,
-        "Enable World Quests map features  |cffaaaaaa(pins, summary, zone list)|r",
+        L["Enable World Quests map features  |cffaaaaaa(pins, summary, zone list)|r"],
         wqMasterGet, wqMasterSet)
     wqMaster:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -16)
 
@@ -154,28 +155,28 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     wqMasterHint:SetPoint("TOPLEFT", wqMaster, "BOTTOMLEFT", 0, -2)
     wqMasterHint:SetWidth(430)
     wqMasterHint:SetJustifyH("LEFT")
-    wqMasterHint:SetText("Off: Everything Quests stops putting World Quests on the map — no world-map pins, no reward summary box, no zone quest list. The boxes below do nothing while this is off. This switch is ONLY for World Quests. It does NOT remove the red \"!\" / \"?\" quest rings — those are your normal quests, and you turn them off on the General tab. It also does NOT change the World Quests list in your tracker (that's on the Tracker tab).")
+    wqMasterHint:SetText(L["Off: Everything Quests stops putting World Quests on the map — no world-map pins, no reward summary box, no zone quest list. The boxes below do nothing while this is off. This switch is ONLY for World Quests. It does NOT remove the red \"!\" / \"?\" quest rings — those are your normal quests, and you turn them off on the General tab. It also does NOT change the World Quests list in your tracker (that's on the Tracker tab)."])
 
     local showWMGet, showWMSet = wqSetting("showOnWorldMap")
     local showWM = Options:CreateCheckbox(
-        content, "Show world quest pins on the world map",
+        content, L["Show world quest pins on the world map"],
         showWMGet, showWMSet)
     showWM:SetPoint("TOPLEFT", wqMasterHint, "BOTTOMLEFT", 0, -12)
 
     local showZMGet, showZMSet = wqSetting("showOnZoneMap")
     local showZM = Options:CreateCheckbox(
-        content, "Show zone quest list on zone maps",
+        content, L["Show zone quest list on zone maps"],
         showZMGet, showZMSet)
     showZM:SetPoint("TOPLEFT", showWM, "BOTTOMLEFT", 0, -2)
 
-    local filtersHeader = Options:CreateSectionHeader(content, "Filters by reward type")
+    local filtersHeader = Options:CreateSectionHeader(content, L["Filters by reward type"])
     filtersHeader:SetPoint("TOPLEFT", showZM, "BOTTOMLEFT", 0, -24)
 
-    local allBtn = Options:CreateYellowButton(content, "Enable All", function() setAllFilters(true) end)
+    local allBtn = Options:CreateYellowButton(content, L["Enable All"], function() setAllFilters(true) end)
     allBtn:SetSize(90, 22)
     allBtn:SetPoint("LEFT", filtersHeader, "RIGHT", 16, 0)
 
-    local noneBtn = Options:CreateYellowButton(content, "Disable All", function() setAllFilters(false) end)
+    local noneBtn = Options:CreateYellowButton(content, L["Disable All"], function() setAllFilters(false) end)
     noneBtn:SetSize(90, 22)
     noneBtn:SetPoint("LEFT", allBtn, "RIGHT", 6, 0)
 
@@ -211,7 +212,7 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     noneBtn:HookScript("OnClick", syncCheckboxes)
 
     -- ─── RIGHT COLUMN: faction filter panel (scrollable) ────────────────
-    local factionHeader = Options:CreateSectionHeader(content, "Filter by faction")
+    local factionHeader = Options:CreateSectionHeader(content, L["Filter by faction"])
     factionHeader:SetPoint("TOPLEFT", header, "TOPLEFT", 460, 0)
 
     local factionHelp = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -219,7 +220,7 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     factionHelp:SetWidth(380)
     factionHelp:SetJustifyH("LEFT")
     factionHelp:SetTextColor(0.65, 0.65, 0.65)
-    factionHelp:SetText("Uncheck a faction to hide its world quests on the map.")
+    factionHelp:SetText(L["Uncheck a faction to hide its world quests on the map."])
 
     local scroll = CreateFrame("ScrollFrame", nil, content, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", factionHelp, "BOTTOMLEFT", 0, -8)
@@ -254,7 +255,7 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     if #groups == 0 then
         local empty = list:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         empty:SetPoint("TOPLEFT", 0, 0)
-        empty:SetText("No major factions unlocked on this character yet.")
+        empty:SetText(L["No major factions unlocked on this character yet."])
         list:SetHeight(20)
     else
         local y = 0
@@ -273,8 +274,8 @@ Options:AddTab("worldQuests", "World Quests", function(content)
 
             for _, data in ipairs(g.factions) do
                 local fid = data.factionID
-                local labelText = ("%s  |cffaaaaaa(Renown %d)|r"):format(
-                    data.name or ("Faction " .. fid), data.renownLevel or 0)
+                local labelText = L["%s  |cffaaaaaa(Renown %d)|r"]:format(
+                    data.name or L["Faction %d"]:format(fid), data.renownLevel or 0)
                 local cb = Options:CreateCheckbox(list, labelText,
                     function() return factionGet(fid) end,
                     function(v) factionSet(fid, v) end)
@@ -288,20 +289,20 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     end
 
     -- ─── Display section (left column, below filters) ───────────────────
-    local displayHeader = Options:CreateSectionHeader(content, "Display")
+    local displayHeader = Options:CreateSectionHeader(content, L["Display"])
     -- Right column, under the faction list (not the left column — that
     -- stack overflowed the 510px tab once the master toggle was added).
     -- sortRadio / pinSlider / hint are chained to this, so they follow.
     displayHeader:SetPoint("TOPLEFT", scroll, "BOTTOMLEFT", 0, -16)
 
     local SORT_OPTIONS = {
-        { value = "time",    label = "Time left" },
-        { value = "type",    label = "Reward"    },
-        { value = "faction", label = "Faction"   },
-        { value = "alpha",   label = "A-Z"       },
+        { value = "time",    label = L["Time left"] },
+        { value = "type",    label = L["Reward"]    },
+        { value = "faction", label = L["Faction"]   },
+        { value = "alpha",   label = L["A-Z"]       },
     }
     local sortGet, sortSet = wqSetting("zoneListSort")
-    local sortRadio = Options:CreateRadioGroup(content, "Sort zone quest list by",
+    local sortRadio = Options:CreateRadioGroup(content, L["Sort zone quest list by"],
         SORT_OPTIONS, sortGet, sortSet)
     sortRadio:SetPoint("TOPLEFT", displayHeader, "BOTTOMLEFT", 0, -8)
 
@@ -314,7 +315,7 @@ Options:AddTab("worldQuests", "World Quests", function(content)
         if DB then DB.db.profile.worldQuests.pinScale = value end
         refreshWQ()
     end
-    local pinSlider = Options:CreateSlider(content, "World map pin scale",
+    local pinSlider = Options:CreateSlider(content, L["World map pin scale"],
         0.5, 2.0, 0.05, pinScaleGet, pinScaleSet)
     pinSlider:SetPoint("TOPLEFT", sortRadio, "BOTTOMLEFT", 0, -16)
     pinSlider:SetWidth(280)
@@ -323,5 +324,5 @@ Options:AddTab("worldQuests", "World Quests", function(content)
     hint:SetPoint("TOPLEFT", pinSlider, "BOTTOMLEFT", 0, -4)
     hint:SetWidth(440)
     hint:SetJustifyH("LEFT")
-    hint:SetText("Filters apply immediately when the world map is open.")
+    hint:SetText(L["Filters apply immediately when the world map is open."])
 end)

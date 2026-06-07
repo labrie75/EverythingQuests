@@ -3,8 +3,9 @@
 -- profile management, reset button.
 
 local _, ns = ...
+local L = ns.L
 
-ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
+ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
     local Options = ns:GetSubsystem("Options")
 
     local function generalSetting(key)
@@ -22,7 +23,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     end
 
     -- ─── LEFT COLUMN: behavior toggles ───────────────────────────────────
-    local h = Options:CreateSectionHeader(content, "General")
+    local h = Options:CreateSectionHeader(content, L["General"])
     h:SetPoint("TOPLEFT", 8, -8)
 
     -- Top-level toggle for EQ's own world-map quest pins (the red rings).
@@ -45,7 +46,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         end
     end
     local qpins = Options:CreateCheckbox(content,
-        "Show quest pins on the world map  |cffaaaaaa(EQ's red \"!\" / \"?\" rings)|r",
+        L["Show quest pins on the world map  |cffaaaaaa(EQ's red \"!\" / \"?\" rings)|r"],
         questPinsGet, questPinsSet)
     qpins:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
 
@@ -53,7 +54,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     qpinsHint:SetPoint("TOPLEFT", qpins, "BOTTOMLEFT", 0, -2)
     qpinsHint:SetWidth(430)
     qpinsHint:SetJustifyH("LEFT")
-    qpinsHint:SetText("These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away.")
+    qpinsHint:SetText(L["These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away."])
 
     -- Lock = no drag-to-move AND no resize. Dedicated setter (not the shared
     -- generalSetting) so it also reconciles the resize grip: ApplyLockState
@@ -70,49 +71,49 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         if Tracker and Tracker.ApplyLockState then Tracker:ApplyLockState() end
     end
     local lock = Options:CreateCheckbox(content,
-        "Lock tracker  |cffaaaaaa(disable drag-to-move and resize)|r",
+        L["Lock tracker  |cffaaaaaa(disable drag-to-move and resize)|r"],
         lockGet, lockSet)
     lock:SetPoint("TOPLEFT", qpinsHint, "BOTTOMLEFT", 0, -12)
 
     local combatGet, combatSet = generalSetting("hideInCombat")
     local combat = Options:CreateCheckbox(content,
-        "Hide tracker in combat",
+        L["Hide tracker in combat"],
         combatGet, combatSet)
     combat:SetPoint("TOPLEFT", lock, "BOTTOMLEFT", 0, -2)
 
     local instGet, instSet = generalSetting("hideInInstances")
     local inst = Options:CreateCheckbox(content,
-        "Hide tracker in instances  |cffaaaaaa(raids, dungeons, delves)|r",
+        L["Hide tracker in instances  |cffaaaaaa(raids, dungeons, delves)|r"],
         instGet, instSet)
     inst:SetPoint("TOPLEFT", combat, "BOTTOMLEFT", 0, -2)
 
     local mapGet, mapSet = generalSetting("hideOnMapOpen")
     local mapHide = Options:CreateCheckbox(content,
-        "Hide tracker when world map is open",
+        L["Hide tracker when world map is open"],
         mapGet, mapSet)
     mapHide:SetPoint("TOPLEFT", inst, "BOTTOMLEFT", 0, -2)
 
     local autoGet, autoSet = generalSetting("autoTrackAccepted")
     local auto = Options:CreateCheckbox(content,
-        "Auto-track accepted quests  |cffaaaaaa(matches Blizzard's default)|r",
+        L["Auto-track accepted quests  |cffaaaaaa(matches Blizzard's default)|r"],
         autoGet, autoSet)
     auto:SetPoint("TOPLEFT", mapHide, "BOTTOMLEFT", 0, -2)
 
     local autoAccGet, autoAccSet = generalSetting("autoAcceptQuests")
     local autoAcc = Options:CreateCheckbox(content,
-        "Auto-accept quests  |cffaaaaaa(hold Alt to pause)|r",
+        L["Auto-accept quests  |cffaaaaaa(hold Alt to pause)|r"],
         autoAccGet, autoAccSet)
     autoAcc:SetPoint("TOPLEFT", auto, "BOTTOMLEFT", 0, -2)
 
     local autoTIGet, autoTISet = generalSetting("autoTurnInQuests")
     local autoTI = Options:CreateCheckbox(content,
-        "Auto-turn-in quests  |cffaaaaaa(skips reward-choice screens)|r",
+        L["Auto-turn-in quests  |cffaaaaaa(skips reward-choice screens)|r"],
         autoTIGet, autoTISet)
     autoTI:SetPoint("TOPLEFT", autoAcc, "BOTTOMLEFT", 0, -2)
 
     local restoreGet, restoreSet = generalSetting("restoreSuperTrackOnLogin")
     local restore = Options:CreateCheckbox(content,
-        "Keep focused quest after relog  |cffaaaaaa(restores the waypoint arrow)|r",
+        L["Keep focused quest after relog  |cffaaaaaa(restores the waypoint arrow)|r"],
         restoreGet, restoreSet)
     restore:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
@@ -131,7 +132,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         if QI and QI.ApplyEnabled then QI:ApplyEnabled() end
     end
     local nameplates = Options:CreateCheckbox(content,
-        "Quest icons on nameplates  |cffaaaaaa(shows the \"!\" + count on objective mobs)|r",
+        L["Quest icons on nameplates  |cffaaaaaa(shows the \"!\" + count on objective mobs)|r"],
         npGet, npSet)
     nameplates:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -2)
 
@@ -149,18 +150,18 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
             if value then LDBI:Show("EverythingQuests") else LDBI:Hide("EverythingQuests") end
         end
     end
-    local mm = Options:CreateCheckbox(content, "Show minimap button", mmGet, mmSet)
+    local mm = Options:CreateCheckbox(content, L["Show minimap button"], mmGet, mmSet)
     mm:SetPoint("TOPLEFT", nameplates, "BOTTOMLEFT", 0, -2)
 
     -- ─── Reset profile button ───────────────────────────────────────────
-    local reset = Options:CreateYellowButton(content, "Reset all settings", function()
+    local reset = Options:CreateYellowButton(content, L["Reset all settings"], function()
         local Dialog = ns:GetSubsystem("Dialog")
         if not Dialog then return end
         Dialog:Show({
             title   = "Everything Quests",
-            text    = "Reset every Everything Quests setting to defaults?",
-            button1 = "Reset",
-            button2 = "Cancel",
+            text    = L["Reset every Everything Quests setting to defaults?"],
+            button1 = L["Reset"],
+            button2 = L["Cancel"],
             onAccept = function()
                 local DB = ns:GetSubsystem("DB")
                 if DB and DB.db and DB.db.ResetProfile then DB.db:ResetProfile() end
@@ -172,7 +173,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     reset:SetPoint("TOPLEFT", mm, "BOTTOMLEFT", 0, -16)
 
     -- ─── RIGHT COLUMN: profiles + slash command list ────────────────────
-    local profilesHeader = Options:CreateSectionHeader(content, "Profiles")
+    local profilesHeader = Options:CreateSectionHeader(content, L["Profiles"])
     profilesHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
     -- profileList is passed as a function (not a static table) so the
@@ -212,7 +213,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         end
         ReloadUI()
     end
-    local profDD = Options:CreateDropdown(content, "Active profile",
+    local profDD = Options:CreateDropdown(content, L["Active profile"],
         profileList, currentProfile, setProfile)
     profDD:SetPoint("TOPLEFT", profilesHeader, "BOTTOMLEFT", 0, -16)
     profDD:SetWidth(280)
@@ -225,12 +226,12 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
         local Dialog = ns:GetSubsystem("Dialog")
         if not Dialog then return end
         Dialog:Show({
-            title      = "New Profile",
-            text       = "Profile name:",
+            title      = L["New Profile"],
+            text       = L["Profile name:"],
             hasEditBox = true,
             maxLetters = 32,
-            button1    = "Create",
-            button2    = "Cancel",
+            button1    = L["Create"],
+            button2    = L["Cancel"],
             onAccept = function(text)
                 local name = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
                 if name == "" then return end
@@ -238,7 +239,7 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
             end,
         })
     end
-    local newProfileBtn = Options:CreateYellowButton(content, "New Profile", promptNewProfile)
+    local newProfileBtn = Options:CreateYellowButton(content, L["New Profile"], promptNewProfile)
     newProfileBtn:SetSize(120, 22)
     newProfileBtn:SetPoint("LEFT", profDD.button, "RIGHT", 6, 0)
 
@@ -247,14 +248,14 @@ ns:GetSubsystem("Options"):AddTab("general", "General", function(content)
     profHint:SetWidth(380)
     profHint:SetJustifyH("LEFT")
     profHint:SetTextColor(0.65, 0.65, 0.65)
-    profHint:SetText("Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot.")
+    profHint:SetText(L["Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot."])
 
-    local slashHeader = Options:CreateSectionHeader(content, "Slash commands")
+    local slashHeader = Options:CreateSectionHeader(content, L["Slash commands"])
     slashHeader:SetPoint("TOPLEFT", profHint, "BOTTOMLEFT", 0, -24)
 
     local slashText = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     slashText:SetPoint("TOPLEFT", slashHeader, "BOTTOMLEFT", 0, -8)
     slashText:SetJustifyH("LEFT")
     slashText:SetTextColor(0.92, 0.72, 0.02)
-    slashText:SetText("/eqs\n/everythingquests\n\n|cff999999Both open this options window.|r\n\n/eqs whatsnew\n\n|cff999999Show what's new in the latest update.|r\n\n/eqs session\n\n|cff999999Show a recap of your current play session.|r")
+    slashText:SetText(L["/eqs\n/everythingquests\n\n|cff999999Both open this options window.|r\n\n/eqs whatsnew\n\n|cff999999Show what's new in the latest update.|r\n\n/eqs session\n\n|cff999999Show a recap of your current play session.|r"])
 end)

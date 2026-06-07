@@ -7,6 +7,7 @@
 -- FEATURE_POPUP_VERSION stay silent.
 
 local _, ns = ...
+local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
@@ -119,7 +120,7 @@ function WN:Build()
     openBg:SetColorTexture(0.10, 0.10, 0.10, 0.95)
     f.openBtn.text = f.openBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.openBtn.text:SetPoint("CENTER")
-    f.openBtn.text:SetText("Open Options")
+    f.openBtn.text:SetText(L["Open Options"])
     f.openBtn.text:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     f.openBtn:SetScript("OnClick", function()
         dismiss()
@@ -135,7 +136,7 @@ function WN:Build()
     gotBg:SetColorTexture(HEADER_RED[1], HEADER_RED[2], HEADER_RED[3], 0.95)
     f.gotBtn.text = f.gotBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.gotBtn.text:SetPoint("CENTER")
-    f.gotBtn.text:SetText("Got it")
+    f.gotBtn.text:SetText(L["Got it"])
     f.gotBtn.text:SetTextColor(1, 1, 1)
     f.gotBtn:SetScript("OnClick", dismiss)
 
@@ -155,7 +156,7 @@ function WN:Build()
     f.discordBtn.icon:SetTexture("Interface\\AddOns\\EverythingQuests\\Media\\Textures\\discord.tga")
     f.discordBtn.text = f.discordBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.discordBtn.text:SetPoint("LEFT", f.discordBtn.icon, "RIGHT", 6, 0)
-    f.discordBtn.text:SetText("Join our Discord!")
+    f.discordBtn.text:SetText(L["Join our Discord!"])
     f.discordBtn.text:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
     f.discordBtn:SetWidth(10 + 16 + 6 + f.discordBtn.text:GetStringWidth() + 12)
     f.discordBtn:SetScript("OnClick", function() ns:ShowDiscord() end)
@@ -170,7 +171,7 @@ function WN:Build()
     -- it'll start nagging on every login.
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     f.hint:SetPoint("BOTTOM", 0, 44)
-    f.hint:SetText("(This message shows once and won't appear again.)")
+    f.hint:SetText(L["(This message shows once and won't appear again.)"])
     f.hint:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
 
     self.frame = f

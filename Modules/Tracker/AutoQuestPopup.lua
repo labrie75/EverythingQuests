@@ -14,6 +14,7 @@
 -- every call is guarded.
 
 local _, ns = ...
+local L = ns.L
 
 local S = ns:RegisterSubsystem("TrackerAutoQuestPopup", {})
 
@@ -110,7 +111,7 @@ local function buildBox()
 
     box.hint = box:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     box.hint:SetJustifyH("CENTER")
-    box.hint:SetText("Click to view quest")
+    box.hint:SetText(L["Click to view quest"])
 
     -- Centered three-line stack (matches Blizzard/ElvUI), icon floating left.
     box.header:SetPoint("TOP", box, "TOP", 0, -PAD)
@@ -158,7 +159,7 @@ function S:Render(content, contentWidth, yStart)
             box.questID   = questID
             box.popUpType = popUpType
 
-            box.header:SetText(popUpType == "COMPLETE" and "Quest Complete!" or "Quest Discovered!")
+            box.header:SetText(popUpType == "COMPLETE" and L["Quest Complete!"] or L["Quest Discovered!"])
             box.title:SetText(popupTitle(questID))
 
             -- Crisp, high-res "!" badge: the normal-classification glow + face

@@ -1,8 +1,9 @@
 local _, ns = ...
+local L = ns.L
 
 local V = ns:RegisterSubsystem("TrackerEvents", {})
 
-local HEADER_H     = 24        -- compact WQ title row (Blizzard-tight)
+local HEADER_H     = 30        -- compact WQ title row (fits the 32px medallion)
 local LINE_H       = 14
 local ROW_GAP      = 2
 local ICON_SIZE    = 26        -- match Blocks.lua so WQ rows visually align
@@ -10,11 +11,12 @@ local ICON_PAD     = 4
 local LABEL_PAD    = 6
 local LINE_INDENT  = ICON_PAD + ICON_SIZE + LABEL_PAD
 local TICKER_INTERVAL = 30
--- Stock WQ marker sizes. The brown ring is the background; the gold star (or
--- type icon) sits centered on it. Ratio mirrors Blizzard's atlases (ring 44 /
--- icon 32 ≈ 0.73). The ring swaps to its gold "selected" variant when focused.
-local WQ_RING_SIZE = 26
-local WQ_STAR_SIZE = 19
+-- Stock WQ marker sizes. The brown medallion is the background; the gold star
+-- (or type icon) sits centered on it. The star is kept well under the medallion
+-- so the brown rim reads clearly at tracker scale (a near-equal star buries it).
+-- The medallion swaps to its gold "selected" frame when focused.
+local WQ_RING_SIZE = 33
+local WQ_STAR_SIZE = 18
 
 
 V.headerPool   = {}
@@ -37,11 +39,12 @@ local function buildHeader(parent)
     hl:SetAllPoints()
     hl:SetColorTexture(1, 1, 1, 0.06)
 
-    -- Stock Blizzard WQ tracker visuals: the brown ring background
-    -- ("worldquest-tracker-ring") with the gold star / type icon centered on
-    -- it ("Worldquest-icon" and friends). The ring swaps to its gold
-    -- "selected" variant when the quest is super-tracked (focused) — the same
-    -- atlases Blizzard's own objective tracker uses.
+    -- Stock Blizzard WQ map-pin visuals: the brown medallion background (the
+    -- same Interface/WorldMap/UI-QuestPoi-NumberIcons frame Blizzard's
+    -- QuestUtil.SetupWorldQuestButton draws for Common-quality world quests)
+    -- with the gold star / type icon centered on it ("Worldquest-icon" and
+    -- friends, via QuestUtil.GetWorldQuestAtlasInfo). The medallion swaps to its
+    -- gold "super-tracked" frame when the quest is focused. See V:Render.
     r.iconHolder = CreateFrame("Frame", nil, r)
     r.iconHolder:SetSize(ICON_SIZE, ICON_SIZE)
     r.iconHolder:SetPoint("LEFT", ICON_PAD, 0)
@@ -80,8 +83,8 @@ local function buildHeader(parent)
     end)
     r.groupFinder:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:SetText("Find Group", 1, 1, 1)
-        GameTooltip:AddLine("Open the Premade Group Finder for this quest.", 0.7, 0.7, 0.7, true)
+        GameTooltip:SetText(L["Find Group"], 1, 1, 1)
+        GameTooltip:AddLine(L["Open the Premade Group Finder for this quest."], 0.7, 0.7, 0.7, true)
         GameTooltip:Show()
     end)
     r.groupFinder:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -452,10 +455,18 @@ function V:Render(content, contentWidth, yStart, collapsed)
             atlas = QuestUtil.GetWorldQuestAtlasInfo(qid, tagInfo, false) or atlas
         end
         row.icon:SetAtlas(atlas)
-        -- Brown ring normally; gold "selected" ring when super-tracked, so the
-        -- whole marker turns gold to show focus (like the quest icons light up).
-        row.ring:SetAtlas((qid == superID)
-            and "worldquest-tracker-ring-selected" or "worldquest-tracker-ring")
+        -- Stock brown WQ medallion behind the icon: the Interface/WorldMap/
+        -- UI-QuestPoi-NumberIcons frame Blizzard uses for Common-quality world
+        -- quests (QuestUtil.SetupWorldQuestButton -> ApplyStandardTexturesToPOI).
+        -- Swap to its gold "super-tracked" frame when focused so the whole marker
+        -- turns gold. SetTexture + SetTexCoord rather than SetAtlas because this
+        -- medallion lives in a fixed-grid texture, not the atlas system.
+        row.ring:SetTexture("Interface/WorldMap/UI-QuestPoi-NumberIcons")
+        if qid == superID then
+            row.ring:SetTexCoord(0.500, 0.625, 0.375, 0.5)   -- selected (gold) frame
+        else
+            row.ring:SetTexCoord(0.875, 1.000, 0.375, 0.5)   -- normal (brown) frame
+        end
         row.iconHolder:Show()
         row.title:ClearAllPoints()
         row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)

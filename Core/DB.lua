@@ -118,6 +118,23 @@ DB.defaults = {
             showProfessionSection = true,
             showAchievementsSection = true,
             showWorldQuestsSection = true,
+            -- Optional per-zone quest progress bar (questline-based,
+            -- approximate). OFF by default: it's slightly heavier (questline
+            -- discovery + quest-list caching) and not everyone wants it. Can
+            -- live as a tracker section OR as its own movable/scalable frame.
+            -- See Modules/Tracker/ZoneProgress.lua.
+            showZoneProgressBar = false,
+            -- "tracker" = a section at the top of the on-screen tracker;
+            -- "floating" = a standalone frame the user can drag anywhere.
+            -- Defaults to floating so it never crowds the tracker.
+            zoneProgressLocation = "floating",
+            -- Floating-frame state (position / scale / lock). Position is a
+            -- standard point+offset relative to UIParent, saved on drag-stop.
+            zoneProgressBar = {
+                point = "CENTER", relPoint = "CENTER", x = 0, y = 220,
+                scale = 1.0,
+                locked = false,
+            },
             -- Auto-list every world quest available in the player's CURRENT
             -- zone in the tracker's World Quests section, without having to
             -- track each one. OFF by default — in WQ-dense zones this can be
@@ -188,6 +205,12 @@ DB.defaults = {
         -- hard-coded FEATURE_POPUP_VERSION in WhatsNew.lua — when they
         -- don't match, the popup shows once then writes the version here.
         whatsNewSeen = "",
+        -- Per-zone progress bar: account-wide cache of each questline's quest
+        -- list (static game data, identical for every character). Stored
+        -- monotonically by ZoneProgress so the denominator never shrinks.
+        zoneProgress = {
+            qlQuests = {},            -- [questLineID] = { questID, ... }
+        },
     },
     char = {
         favorites = {},               -- [questID] = true
@@ -198,6 +221,12 @@ DB.defaults = {
         trackerCollapsed = false,     -- whole on-screen tracker collapsed to just the header
         minimap = { hide = false, minimapPos = 220 },
         lastOptionsTab = "general",
+        -- Per-zone progress bar: this character's discovered questlines per
+        -- zone root. Per-character (not account-wide) so a faction/class-locked
+        -- questline seen on one alt can't inflate another alt's denominator.
+        zoneProgress = {
+            questlines = {},          -- [zoneRootID] = { [questLineID] = true }
+        },
     },
 }
 

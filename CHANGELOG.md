@@ -5,6 +5,17 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-06-06
+
+### New Features
+
+- **French translation (frFR) and localization support** — Everything Quests now ships with a full localization layer and French translations. On a French game client the entire options window appears in French, with more of the interface following in a future update; every other language keeps displaying in English, and any untranslated text falls back to English automatically. *(French translation contributed by Zox.)*
+- **Zone progress bar** — An optional bar showing approximate questline progress for your current zone. It can float as a movable standalone bar (drag to move; right-click to lock or reset) or appear as a section on the on-screen tracker. Off by default — enable it under Tracker → Zone Progress Bar, and adjust its size under Appearance → Zone Bar Scale.
+
+### Improvements
+
+- **Options window sizing** — The options window is a little taller and the History tab's description text is wider, so longer text (including translations and larger fonts) no longer pushes the bottom buttons off-screen.
+
 ## [1.13.1] - 2026-06-05
 
 ### Bug Fixes

@@ -5,6 +5,7 @@
 -- dead. Pure surface — no events, no allocation per render.
 
 local _, ns = ...
+local L = ns.L
 local QMB = ns:RegisterSubsystem("ChainGuideQuestMapButton", {})
 
 -- Walk the chain database for an item (or item-variation) matching the
@@ -153,7 +154,7 @@ local function ensureButton()
 
     b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     b.text:SetPoint("CENTER")
-    b.text:SetText("Chain")
+    b.text:SetText(L["Chain"])
     b.text:SetTextColor(0.92, 0.72, 0.02)                                   -- EQ yellow
 
     b:SetScript("OnClick", onClick)
@@ -164,9 +165,9 @@ local function ensureButton()
     b:SetScript("OnEnter", function(self)
         local tip = ns.Util.PinTooltip()
         tip:SetOwner(self, "ANCHOR_TOPLEFT")
-        tip:SetText("Find this quest in EQ's Chain Guide", 1, 1, 1)
+        tip:SetText(L["Find this quest in EQ's Chain Guide"], 1, 1, 1)
         tip:AddLine(
-            "Falls back to a Wowhead link in chat if EQ doesn't have a chain for this quest yet.",
+            L["Falls back to a Wowhead link in chat if EQ doesn't have a chain for this quest yet."],
             0.7, 0.7, 0.7, true)
         tip:Show()
     end)

@@ -6,7 +6,7 @@ local addonName, ns = ...
 
 _G.EverythingQuests = ns
 ns.NAME = addonName
-ns.VERSION = "1.13.1"
+ns.VERSION = "1.14.0"
 
 -- Community Discord. WoW can't open a browser, so ns:ShowDiscord() pops a
 -- copyable invite via EQ's own Dialog (never a Blizzard StaticPopup — see
@@ -17,10 +17,11 @@ ns.DISCORD_URL = "https://discord.gg/vm8K2WfQUE"
 function ns:ShowDiscord()
     local D = self:GetSubsystem("Dialog")
     if not D then return end
+    local L = ns.L
     D:Show({
-        title       = "Everything Quests Discord",
-        text        = "Join the community for help, feedback, and updates.\nCopy the invite below (it's pre-selected — just press Ctrl+C):",
-        button1     = "Close",
+        title       = L["Everything Quests Discord"],
+        text        = L["Join the community for help, feedback, and updates.\nCopy the invite below (it's pre-selected — just press Ctrl+C):"],
+        button1     = L["Close"],
         hasEditBox  = true,
         editBoxText = self.DISCORD_URL,
         highlightEditBox = true,

@@ -12,6 +12,7 @@
 -- The canvas lives inside a ScrollFrame so chains can be arbitrarily tall.
 
 local _, ns = ...
+local L = ns.L
 
 local CV = ns:RegisterSubsystem("ChainGuideView", {})
 
@@ -200,17 +201,17 @@ local function buildQuestTooltip(item, statusKey)
     GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR_RIGHT")
     GameTooltip:SetText(title, 1, 0.82, 0)
     if statusKey == "complete" then
-        GameTooltip:AddLine("Completed", 0.5, 1, 0.5)
+        GameTooltip:AddLine(L["Completed"], 0.5, 1, 0.5)
     elseif statusKey == "turnin" then
-        GameTooltip:AddLine("Ready to turn in", 1, 0.82, 0)
+        GameTooltip:AddLine(L["Ready to turn in"], 1, 0.82, 0)
     elseif statusKey == "active" then
-        GameTooltip:AddLine("In your quest log", 1, 1, 1)
+        GameTooltip:AddLine(L["In your quest log"], 1, 1, 1)
     elseif statusKey == "skipped" then
-        GameTooltip:AddLine("Skipped", 1.0, 0.65, 0.0)
-        GameTooltip:AddLine("A later quest in this chain has already passed this one.", 0.7, 0.7, 0.7, true)
-        GameTooltip:AddLine("May be worth going back to pick up.", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine(L["Skipped"], 1.0, 0.65, 0.0)
+        GameTooltip:AddLine(L["A later quest in this chain has already passed this one."], 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine(L["May be worth going back to pick up."], 0.7, 0.7, 0.7, true)
     else
-        GameTooltip:AddLine("Not started", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(L["Not started"], 0.7, 0.7, 0.7)
     end
     GameTooltip:AddLine("ID: " .. tostring(item.id), 0.5, 0.5, 0.5)
 
@@ -224,13 +225,13 @@ local function buildQuestTooltip(item, statusKey)
             if t > 0 then
                 GameTooltip:AddLine("Completed: " .. date("%Y-%m-%d %H:%M", t), 0.55, 0.85, 0.55)
             else
-                GameTooltip:AddLine("Completed (before tracking)", 0.55, 0.85, 0.55)
+                GameTooltip:AddLine(L["Completed (before tracking)"], 0.55, 0.85, 0.55)
             end
         end
     end
 
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Shift-click to link in chat", 0.6, 0.6, 0.6)
+    GameTooltip:AddLine(L["Shift-click to link in chat"], 0.6, 0.6, 0.6)
     GameTooltip:Show()
 end
 
@@ -314,7 +315,7 @@ function CV:Render(pane, chain)
 
     if not chain then
         pane._cvHeader:SetText("")
-        pane._cvMeta:SetText("Pick a chain on the left to view its quests.")
+        pane._cvMeta:SetText(L["Pick a chain on the left to view its quests."])
         pane._cvMeta:SetTextColor(0.6, 0.6, 0.6)
         pane._cvEmpty:Hide()
         pane._cvCanvas:SetSize(1, 1)
@@ -462,7 +463,7 @@ function CV:Render(pane, chain)
         -- the eye skips past them when scanning the main path.
         if resolved.breadcrumb then
             node.title:SetTextColor(0.55, 0.55, 0.40)
-            node.subtitle:SetText("(optional)")
+            node.subtitle:SetText(L["(optional)"])
         end
 
         -- Hover & click
@@ -473,9 +474,9 @@ function CV:Render(pane, chain)
                 GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR_RIGHT")
                 GameTooltip:SetText((sub and sub.name) or ("Chain #" .. tostring(itemRef.id)), 0.92, 0.72, 0.02)
                 if sub and sub.range then
-                    GameTooltip:AddLine(("Level %d–%d"):format(sub.range[1], sub.range[2]), 0.7, 0.7, 0.7)
+                    GameTooltip:AddLine((L["Level %d–%d"]):format(sub.range[1], sub.range[2]), 0.7, 0.7, 0.7)
                 end
-                GameTooltip:AddLine("Click to open this chain", 1, 1, 1)
+                GameTooltip:AddLine(L["Click to open this chain"], 1, 1, 1)
                 GameTooltip:Show()
             end)
             node:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -553,6 +554,6 @@ function CV:_ensureUI(pane)
     pane._cvEmpty = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     pane._cvEmpty:SetPoint("TOPLEFT", scroll, "TOPLEFT", PAD, -PAD)
     pane._cvEmpty:SetTextColor(0.55, 0.55, 0.55)
-    pane._cvEmpty:SetText("(no quests defined for this chain yet)")
+    pane._cvEmpty:SetText(L["(no quests defined for this chain yet)"])
     pane._cvEmpty:Hide()
 end

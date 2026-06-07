@@ -5,6 +5,7 @@
 -- button by design — instant feedback while the user is tweaking.
 
 local _, ns = ...
+local L = ns.L
 
 local Options = ns:GetSubsystem("Options")
 
@@ -40,27 +41,27 @@ local function filterSetting(key)
 end
 
 local SORT_OPTIONS = {
-    { value = "zone",     label = "Zone"     },
-    { value = "status",   label = "Status"   },
-    { value = "type",     label = "Type"     },
-    { value = "level",    label = "Level"    },
-    { value = "distance", label = "Distance" },
-    { value = "recent",   label = "Recent"   },
-    { value = "manual",   label = "Manual"   },
+    { value = "zone",     label = L["Zone"]     },
+    { value = "status",   label = L["Status"]   },
+    { value = "type",     label = L["Type"]     },
+    { value = "level",    label = L["Level"]    },
+    { value = "distance", label = L["Distance"] },
+    { value = "recent",   label = L["Recent"]   },
+    { value = "manual",   label = L["Manual"]   },
 }
 
 local FILTER_ROWS = {
-    { key = "showNormal",      label = "Normal quests"   },
-    { key = "showDaily",       label = "Daily quests"    },
-    { key = "showWeekly",      label = "Weekly quests"   },
-    { key = "showCampaign",    label = "Campaign quests" },
-    { key = "showWorld",       label = "World quests"    },
-    { key = "onlyCurrentZone", label = "Show only quests in current zone" },
+    { key = "showNormal",      label = L["Normal quests"]   },
+    { key = "showDaily",       label = L["Daily quests"]    },
+    { key = "showWeekly",      label = L["Weekly quests"]   },
+    { key = "showCampaign",    label = L["Campaign quests"] },
+    { key = "showWorld",       label = L["World quests"]    },
+    { key = "onlyCurrentZone", label = L["Show only quests in current zone"] },
 }
 
-Options:AddTab("tracker", "Tracker", function(content)
+Options:AddTab("tracker", L["Tracker"], function(content)
     -- ─── On-Screen Tracker section ──────────────────────────────────────
-    local header = Options:CreateSectionHeader(content, "On-Screen Tracker")
+    local header = Options:CreateSectionHeader(content, L["On-Screen Tracker"])
     header:SetPoint("TOPLEFT", 8, -8)
 
     -- Show only watched quests (Blizzard-parity). When ON (default), only
@@ -69,14 +70,14 @@ Options:AddTab("tracker", "Tracker", function(content)
     local watchedGet, watchedSet = trackerSetting("showOnlyWatched")
     local watched = Options:CreateCheckbox(
         content,
-        "Show only watched quests  |cffaaaaaa(matches Blizzard's default tracker)|r",
+        L["Show only watched quests  |cffaaaaaa(matches Blizzard's default tracker)|r"],
         watchedGet, watchedSet)
     watched:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -16)
 
     local simplifyGet, simplifySet = trackerSetting("simplifyMode")
     local simplify = Options:CreateCheckbox(
         content,
-        "Simplify Mode  |cffaaaaaa(show only the first incomplete objective per quest)|r",
+        L["Simplify Mode  |cffaaaaaa(show only the first incomplete objective per quest)|r"],
         simplifyGet, simplifySet)
     simplify:SetPoint("TOPLEFT", watched, "BOTTOMLEFT", 0, -2)
 
@@ -97,29 +98,29 @@ Options:AddTab("tracker", "Tracker", function(content)
             if manual and manualHint then
                 filtersHeader:SetPoint("TOPLEFT", manualHint, "BOTTOMLEFT", 0, -10)
             else
-                filtersHeader:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -24)
+                filtersHeader:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -14)
             end
         end
     end
     sort = Options:CreateRadioGroup(
-        content, "Sort Order",
+        content, L["Sort Order"],
         SORT_OPTIONS, sortGet,
         function(v) sortSet(v); syncManualHint(v) end,
         440, 14)   -- maxWidth 440 = wrap before the right "Options" column (starts at
                    -- header+460). pad 14 (vs default 18) + the short "Recent" label keep
                    -- all 7 sort modes on ONE row even at the wider stock UI font, instead
                    -- of orphaning "Manual" onto a lonely second row.
-    sort:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -20)
+    sort:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -12)
 
     manualHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     manualHint:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -2)
     manualHint:SetWidth(440)        -- bound to the left column so it can't bleed into Options
     manualHint:SetJustifyH("LEFT")
     manualHint:SetTextColor(0.92, 0.72, 0.02)
-    manualHint:SetText("|cffaaaaaaDrag and drop the quests in the tracker to reorder them however you like.|r")
+    manualHint:SetText(L["|cffaaaaaaDrag and drop the quests in the tracker to reorder them however you like.|r"])
 
     -- ─── Filters section ────────────────────────────────────────────────
-    filtersHeader = Options:CreateSectionHeader(content, "Filters")
+    filtersHeader = Options:CreateSectionHeader(content, L["Filters"])
     syncManualHint(sortGet())   -- positions filtersHeader for the current sort mode
 
     local prev = filtersHeader
@@ -135,7 +136,7 @@ Options:AddTab("tracker", "Tracker", function(content)
     -- Reset button: restores every type filter + showOnlyWatched to defaults.
     -- Offered because "I unchecked something and now quests are missing" is a
     -- common confused-user state that's annoying to recover from manually.
-    local resetFilters = Options:CreateYellowButton(content, "Reset filters to defaults", function()
+    local resetFilters = Options:CreateYellowButton(content, L["Reset filters to defaults"], function()
         local DB = ns:GetSubsystem("DB")
         if not DB then return end
         local f = DB.db.profile.tracker.filters
@@ -158,72 +159,72 @@ Options:AddTab("tracker", "Tracker", function(content)
     resetFilters:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -10)
 
     -- ─── Options section (right column, parallel to On-Screen Tracker) ──
-    local optionsHeader = Options:CreateSectionHeader(content, "Options")
+    local optionsHeader = Options:CreateSectionHeader(content, L["Options"])
     optionsHeader:SetPoint("TOPLEFT", header, "TOPLEFT", 460, 0)
 
     local diffGet, diffSet = trackerSetting("colorByDifficulty")
     local diff = Options:CreateCheckbox(
         content,
-        "Quest Title Color By Difficulty",
+        L["Quest Title Color By Difficulty"],
         diffGet, diffSet)
     diff:SetPoint("TOPLEFT", optionsHeader, "BOTTOMLEFT", 0, -10)
 
     local lvlGet, lvlSet = trackerSetting("showLevelInTracker")
     local lvl = Options:CreateCheckbox(content,
-        "Show quest level prefix  |cffaaaaaa(e.g. [60] Title)|r",
+        L["Show quest level prefix  |cffaaaaaa(e.g. [60] Title)|r"],
         lvlGet, lvlSet)
     lvl:SetPoint("TOPLEFT", diff, "BOTTOMLEFT", 0, -2)
 
     local zoneGet, zoneSet = trackerSetting("showZoneTag")
     local zoneCheck = Options:CreateCheckbox(content,
-        "Show zone label under quest titles", zoneGet, zoneSet)
+        L["Show zone label under quest titles"], zoneGet, zoneSet)
     zoneCheck:SetPoint("TOPLEFT", lvl, "BOTTOMLEFT", 0, -2)
 
     local objGet, objSet = trackerSetting("showObjectiveNumbers")
     local objCheck = Options:CreateCheckbox(content,
-        "Show objective progress numbers  |cffaaaaaa(0/4, 1/1, etc.)|r",
+        L["Show objective progress numbers  |cffaaaaaa(0/4, 1/1, etc.)|r"],
         objGet, objSet)
     objCheck:SetPoint("TOPLEFT", zoneCheck, "BOTTOMLEFT", 0, -2)
 
     local qidGet, qidSet = trackerSetting("showQuestID")
     local qidCheck = Options:CreateCheckbox(content,
-        "Show quest ID  |cffaaaaaa(useful for bug reports)|r",
+        L["Show quest ID  |cffaaaaaa(useful for bug reports)|r"],
         qidGet, qidSet)
     qidCheck:SetPoint("TOPLEFT", objCheck, "BOTTOMLEFT", 0, -2)
 
     local qtotalGet, qtotalSet = trackerSetting("showQuestTotal")
     local qtotalCheck = Options:CreateCheckbox(content,
-        "Show tracked / total on the Quests & Campaign headers  |cffaaaaaa(e.g. 3/9)|r",
+        L["Show tracked / total on the Quests & Campaign headers  |cffaaaaaa(e.g. 3/9)|r"],
         qtotalGet, qtotalSet)
     qtotalCheck:SetPoint("TOPLEFT", qidCheck, "BOTTOMLEFT", 0, -2)
 
     local itemBtnGet, itemBtnSet = trackerSetting("showItemButtons")
     local itemBtnCheck = Options:CreateCheckbox(content,
-        "Show usable quest item buttons  |cffaaaaaa(click to use the quest's item)|r",
+        L["Show usable quest item buttons  |cffaaaaaa(click to use the quest's item)|r"],
         itemBtnGet, itemBtnSet)
     itemBtnCheck:SetPoint("TOPLEFT", qtotalCheck, "BOTTOMLEFT", 0, -2)
 
     local hideBarGet, hideBarSet = trackerSetting("hideScrollBar")
     local hideBarCheck = Options:CreateCheckbox(content,
-        "Hide scroll bar  |cffaaaaaa(scroll with the mouse wheel instead)|r",
+        L["Hide scroll bar  |cffaaaaaa(scroll with the mouse wheel instead)|r"],
         hideBarGet, hideBarSet)
     hideBarCheck:SetPoint("TOPLEFT", itemBtnCheck, "BOTTOMLEFT", 0, -2)
 
     local popupGet, popupSet = trackerSetting("showQuestPopups")
     local popupCheck = Options:CreateCheckbox(content,
-        "Show Quest Discovered popups  |cffaaaaaa(boxes for newly discovered / completed quests)|r",
+        L["Show Quest Discovered popups  |cffaaaaaa(boxes for newly discovered / completed quests)|r"],
         popupGet, popupSet)
     popupCheck:SetPoint("TOPLEFT", hideBarCheck, "BOTTOMLEFT", 0, -2)
 
     local newTagGet, newTagSet = trackerSetting("showRecentlyAddedTag")
     local newTagCheck = Options:CreateCheckbox(content,
-        "Show NEW tag on recently accepted quests  |cffaaaaaa(for about an hour after accepting)|r",
+        L["Show NEW tag on recently accepted quests  |cffaaaaaa(for about an hour after accepting)|r"],
         newTagGet, newTagSet)
     newTagCheck:SetPoint("TOPLEFT", popupCheck, "BOTTOMLEFT", 0, -2)
 
     local splitGet, splitSet = trackerSetting("splitQuestClick")
     local splitCheck = Options:CreateCheckbox(content,
-        "Split quest click  |cffaaaaaa(click the icon to focus, click the title to open the quest log)|r",
+        L["Split quest click  |cffaaaaaa(click the icon to focus, click the title to open the quest log)|r"],
         splitGet, splitSet)
     splitCheck:SetPoint("TOPLEFT", newTagCheck, "BOTTOMLEFT", 0, -2)
 
@@ -231,7 +232,7 @@ Options:AddTab("tracker", "Tracker", function(content)
     local soundGet, soundSet = trackerSetting("questSoundEnabled")
     local soundCheck = Options:CreateCheckbox(
         content,
-        "Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r",
+        L["Quest Sound  |cffaaaaaa(plays when a quest is ready to turn in)|r"],
         soundGet, soundSet)
     soundCheck:SetPoint("TOPLEFT", splitCheck, "BOTTOMLEFT", 0, -8)
 
@@ -243,7 +244,7 @@ Options:AddTab("tracker", "Tracker", function(content)
             PlaySoundFile(f, "Master")
         end
     end
-    local soundDD = Options:CreateDropdown(content, "Quest Complete Sound", soundList, sndChoiceGet, function(value)
+    local soundDD = Options:CreateDropdown(content, L["Quest Complete Sound"], soundList, sndChoiceGet, function(value)
         sndChoiceSet(value)
         playSound(value)
     end, playSound)
@@ -254,19 +255,22 @@ Options:AddTab("tracker", "Tracker", function(content)
     -- Per-section show/hide toggles for the on-screen tracker. Separate
     -- from Filters (which hide individual quests by type) because these
     -- hide whole tracker sections, which is a different mental model.
-    local visHeader = Options:CreateSectionHeader(content, "Tracker Visibility")
-    visHeader:SetPoint("TOPLEFT", soundDD, "BOTTOMLEFT", 0, -24)
+    -- Lives in the LEFT column beneath the Filters/Reset block: the right
+    -- "Options" column is already full-height, so a 5th toggle here would
+    -- overflow the panel. The left column has ample room below Reset.
+    local visHeader = Options:CreateSectionHeader(content, L["Tracker Visibility"])
+    visHeader:SetPoint("TOPLEFT", resetFilters, "BOTTOMLEFT", 0, -10)
 
     local profGet, profSet = trackerSetting("showProfessionSection")
-    local profCheck = Options:CreateCheckbox(content, "Profession section", profGet, profSet)
+    local profCheck = Options:CreateCheckbox(content, L["Profession section"], profGet, profSet)
     profCheck:SetPoint("TOPLEFT", visHeader, "BOTTOMLEFT", 0, -8)
 
     local achGet, achSet = trackerSetting("showAchievementsSection")
-    local achCheck = Options:CreateCheckbox(content, "Achievements section  |cffaaaaaa(achievements you're tracking)|r", achGet, achSet)
+    local achCheck = Options:CreateCheckbox(content, L["Achievements section  |cffaaaaaa(achievements you're tracking)|r"], achGet, achSet)
     achCheck:SetPoint("TOPLEFT", profCheck, "BOTTOMLEFT", 0, -2)
 
     local wqGet, wqSet = trackerSetting("showWorldQuestsSection")
-    local wqCheck = Options:CreateCheckbox(content, "World Quests section", wqGet, wqSet)
+    local wqCheck = Options:CreateCheckbox(content, L["World Quests section"], wqGet, wqSet)
     wqCheck:SetPoint("TOPLEFT", achCheck, "BOTTOMLEFT", 0, -2)
 
     -- Auto-list current-zone WQs. Custom setter: besides the usual save +
@@ -286,13 +290,61 @@ Options:AddTab("tracker", "Tracker", function(content)
         if Tracker then Tracker:Refresh() end
     end
     local autoWQCheck = Options:CreateCheckbox(content,
-        "Auto-list current-zone world quests  |cffaaaaaa(lists every WQ in your zone without tracking each)|r",
+        L["Auto-list current-zone world quests  |cffaaaaaa(lists every WQ in your zone without tracking each)|r"],
         autoWQGet, autoWQSet)
     autoWQCheck:SetPoint("TOPLEFT", wqCheck, "BOTTOMLEFT", 0, -2)
 
-    -- Helper hint at the bottom — no Apply button by design, so call out
-    -- the live-update behavior so the user knows changes are taking effect.
+    -- ─── Zone Progress Bar section ──────────────────────────────────────
+    -- Lives in the RIGHT column beneath the sound dropdown (which is now the
+    -- bottom of the Options column). Its own group because it can render as a
+    -- tracker section OR a standalone movable frame — see ZoneProgress.lua.
+    local zpHeader = Options:CreateSectionHeader(content, L["Zone Progress Bar"])
+    zpHeader:SetPoint("TOPLEFT", soundDD, "BOTTOMLEFT", 0, -16)
+
+    -- Master enable. Custom setter calls ZoneProgress:SetEnabled so toggling
+    -- ON discovers + paints the current zone immediately (and OFF clears the
+    -- cache + hides the frame). Off by default — questline-based (approximate)
+    -- and slightly heavier.
+    local zpEnableGet = function()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.showZoneProgressBar
+    end
+    local zpEnableSet = function(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.showZoneProgressBar = value end
+        local ZP = ns:GetSubsystem("TrackerZoneProgress")
+        if ZP and ZP.SetEnabled then
+            ZP:SetEnabled(value)
+        else
+            local Tracker = ns:GetSubsystem("Tracker")
+            if Tracker then Tracker:Refresh() end
+        end
+    end
+    local zpEnable = Options:CreateCheckbox(content,
+        L["Show zone progress bar  |cffaaaaaa(approximate questline progress)|r"],
+        zpEnableGet, zpEnableSet)
+    zpEnable:SetPoint("TOPLEFT", zpHeader, "BOTTOMLEFT", 0, -8)
+
+    -- Placement: floating standalone frame vs a section on the tracker.
+    local zpFloatGet = function()
+        local DB = ns:GetSubsystem("DB")
+        return DB and (DB.db.profile.tracker.zoneProgressLocation or "floating") == "floating"
+    end
+    local zpFloatSet = function(value)
+        local ZP = ns:GetSubsystem("TrackerZoneProgress")
+        if ZP and ZP.SetLocation then ZP:SetLocation(value and "floating" or "tracker") end
+    end
+    local zpFloat = Options:CreateCheckbox(content,
+        L["Float as a movable bar  |cffaaaaaa(drag to move; right-click to lock or reset)|r"],
+        zpFloatGet, zpFloatSet)
+    zpFloat:SetPoint("TOPLEFT", zpEnable, "BOTTOMLEFT", 0, -2)
+
+    -- Helper hint — no Apply button by design, so call out the live-update
+    -- behavior. Pinned to the bottom-RIGHT: the Tracker Visibility toggles now
+    -- fill the bottom-left column, and the right "Options" column ends higher
+    -- up (at the sound dropdown), leaving the bottom-right corner clear.
     local hint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    hint:SetPoint("BOTTOMLEFT", 8, 8)
-    hint:SetText("Changes apply immediately to the on-screen tracker.")
+    hint:SetPoint("BOTTOMRIGHT", -12, 8)
+    hint:SetJustifyH("RIGHT")
+    hint:SetText(L["Changes apply immediately to the on-screen tracker."])
 end)

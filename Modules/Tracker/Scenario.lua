@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local S = ns:RegisterSubsystem("TrackerScenario", {})
 
@@ -362,9 +363,9 @@ function S:Refresh()
         banner.Stage:ClearAllPoints()
         banner.Stage:SetPoint("TOPLEFT", banner, "TOPLEFT", 15, -10)
         if currentStage == numStages and numStages > 1 then
-            banner.Stage:SetText("Final Stage")
+            banner.Stage:SetText(L["Final Stage"])
         elseif numStages > 1 then
-            banner.Stage:SetFormattedText("Stage %d", currentStage)
+            banner.Stage:SetFormattedText(L["Stage %d"], currentStage)
         else
             banner.Stage:SetText("")
         end

@@ -17,6 +17,7 @@
 -- almost always 0–1 active widgets at a time.
 
 local _, ns = ...
+local L = ns.L
 
 local AC = ns:RegisterSubsystem("TrackerAutoComplete", {})
 
@@ -66,7 +67,7 @@ local function buildPopup()
     p.cta:SetPoint("TOPLEFT",  p.icon, "TOPRIGHT", ICON_GAP, -2)
     p.cta:SetPoint("TOPRIGHT", p, "TOPRIGHT", -PAD, -2)
     p.cta:SetJustifyH("LEFT")
-    p.cta:SetText("Click to complete quest")
+    p.cta:SetText(L["Click to complete quest"])
     p.cta:SetTextColor(0.92, 0.72, 0.02)
 
     -- Quest title — wrap so multi-line titles flow inside the widget.

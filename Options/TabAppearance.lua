@@ -3,8 +3,9 @@
 -- texture/alpha, color overrides. Pulls fonts/textures from LibSharedMedia.
 
 local _, ns = ...
+local L = ns.L
 
-ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
+ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(content)
     local Options = ns:GetSubsystem("Options")
 
     local function trackerSetting(key)
@@ -21,7 +22,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
             end
     end
 
-    local h = Options:CreateSectionHeader(content, "Appearance")
+    local h = Options:CreateSectionHeader(content, L["Appearance"])
     h:SetPoint("TOPLEFT", 8, -8)
 
     local Media = ns:GetSubsystem("Media")
@@ -30,12 +31,12 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     -- Use the custom font dropdown so each row's label renders in its own
     -- typeface. The generic dropdown's MenuUtil entries don't reliably
     -- accept per-row font overrides.
-    local fontDD = Options:CreateFontDropdown(content, "Font", fontList, fontGet, fontSet)
+    local fontDD = Options:CreateFontDropdown(content, L["Font"], fontList, fontGet, fontSet)
     fontDD:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
     fontDD:SetWidth(280)
 
     local sizeGet, sizeSet = trackerSetting("fontSize")
-    local sizeSlider = Options:CreateSlider(content, "Font Size", 8, 24, 1, sizeGet, sizeSet)
+    local sizeSlider = Options:CreateSlider(content, L["Font Size"], 8, 24, 1, sizeGet, sizeSet)
     sizeSlider:SetPoint("TOPLEFT", fontDD, "BOTTOMLEFT", 0, -16)
     sizeSlider:SetWidth(280)
 
@@ -43,21 +44,21 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     -- comma-joined combo (e.g. "MONOCHROME, OUTLINE") and ignores tokens
     -- it doesn't recognize, so an empty string == no outline.
     local OUTLINE_OPTIONS = {
-        { value = "",                          label = "None" },
-        { value = "OUTLINE",                   label = "Outline" },
-        { value = "THICKOUTLINE",              label = "Thick" },
-        { value = "MONOCHROME",                label = "Mono" },
-        { value = "MONOCHROME, OUTLINE",       label = "Mono Outline" },
-        { value = "MONOCHROME, THICKOUTLINE",  label = "Mono Thick" },
+        { value = "",                          label = L["None"] },
+        { value = "OUTLINE",                   label = L["Outline"] },
+        { value = "THICKOUTLINE",              label = L["Thick"] },
+        { value = "MONOCHROME",                label = L["Mono"] },
+        { value = "MONOCHROME, OUTLINE",       label = L["Mono Outline"] },
+        { value = "MONOCHROME, THICKOUTLINE",  label = L["Mono Thick"] },
     }
     local outlineGet, outlineSet = trackerSetting("fontOutline")
-    local outlineDD = Options:CreateDropdown(content, "Font Outline",
+    local outlineDD = Options:CreateDropdown(content, L["Font Outline"],
         OUTLINE_OPTIONS, outlineGet, outlineSet)
     outlineDD:SetPoint("TOPLEFT", sizeSlider, "BOTTOMLEFT", 0, -16)
     outlineDD:SetWidth(280)
 
     local bgGet, bgSet = trackerSetting("showBackground")
-    local bgCheck = Options:CreateCheckbox(content, "Background", bgGet, bgSet)
+    local bgCheck = Options:CreateCheckbox(content, L["Background"], bgGet, bgSet)
     bgCheck:SetPoint("TOPLEFT", outlineDD, "BOTTOMLEFT", 0, -16)
 
     local function bgColorGet()
@@ -70,13 +71,13 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local bgPicker = Options:CreateColorPicker(content, "Background Color", bgColorGet, bgColorSet)
+    local bgPicker = Options:CreateColorPicker(content, L["Background Color"], bgColorGet, bgColorSet)
     bgPicker:SetPoint("LEFT", bgCheck, "RIGHT", 120, 0)
 
     -- Scroll bar background: a strip behind the tracker's scroll bar so the
     -- low-contrast bar is easy to see. Toggle + colour.
     local sbGet, sbSet = trackerSetting("scrollBarBg")
-    local sbCheck = Options:CreateCheckbox(content, "Scroll Bar Background", sbGet, sbSet)
+    local sbCheck = Options:CreateCheckbox(content, L["Scroll Bar Background"], sbGet, sbSet)
     sbCheck:SetPoint("TOPLEFT", bgCheck, "BOTTOMLEFT", 0, -10)
 
     local function sbColorGet()
@@ -95,7 +96,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     -- anchoring the containers alone leaves the boxes a few px out of line.
     -- Re-anchor the swatch to bgPicker's swatch (shared X column, own row)
     -- and tuck this picker's label to the swatch's left.
-    local sbPicker = Options:CreateColorPicker(content, "Scroll Bar Color", sbColorGet, sbColorSet)
+    local sbPicker = Options:CreateColorPicker(content, L["Scroll Bar Color"], sbColorGet, sbColorSet)
     sbPicker:SetPoint("TOPLEFT", bgPicker, "BOTTOMLEFT", 0, -8)
     sbPicker.button:ClearAllPoints()
     sbPicker.button:SetPoint("TOP",  sbPicker, "TOP", 0, -1)
@@ -108,7 +109,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     -- options as every other EQ picker. Mirrors the scroll-bar row's
     -- anchoring so the swatch stays in the shared color column.
     local borderGet, borderSet = trackerSetting("showBorder")
-    local borderCheck = Options:CreateCheckbox(content, "Border", borderGet, borderSet)
+    local borderCheck = Options:CreateCheckbox(content, L["Border"], borderGet, borderSet)
     borderCheck:SetPoint("TOPLEFT", sbCheck, "BOTTOMLEFT", 0, -10)
 
     local function borderColorGet()
@@ -121,7 +122,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local borderPicker = Options:CreateColorPicker(content, "Border Color", borderColorGet, borderColorSet)
+    local borderPicker = Options:CreateColorPicker(content, L["Border Color"], borderColorGet, borderColorSet)
     borderPicker:SetPoint("TOPLEFT", sbPicker, "BOTTOMLEFT", 0, -8)
     borderPicker.button:ClearAllPoints()
     borderPicker.button:SetPoint("TOP",  borderPicker, "TOP", 0, -1)
@@ -130,12 +131,12 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     borderPicker.label:SetPoint("RIGHT", borderPicker.button, "LEFT", -8, 0)
 
     local bThickGet, bThickSet = trackerSetting("borderSize")
-    local borderThickSlider = Options:CreateSlider(content, "Border Thickness", 1, 5, 1, bThickGet, bThickSet)
+    local borderThickSlider = Options:CreateSlider(content, L["Border Thickness"], 1, 5, 1, bThickGet, bThickSet)
     borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
     borderThickSlider:SetWidth(280)
 
     -- ─── RIGHT COLUMN: colors + dimensions ──────────────────────────────
-    local colorsHeader = Options:CreateSectionHeader(content, "Colors & Dimensions")
+    local colorsHeader = Options:CreateSectionHeader(content, L["Colors & Dimensions"])
     colorsHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
     -- Quest title color override: when set, overrides difficulty / yellow.
@@ -156,10 +157,10 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local titlePicker = Options:CreateColorPicker(content, "Quest Title Color Override", titleColorGet, titleColorSet)
+    local titlePicker = Options:CreateColorPicker(content, L["Quest Title Color Override"], titleColorGet, titleColorSet)
     titlePicker:SetPoint("TOPLEFT", colorsHeader, "BOTTOMLEFT", 0, -16)
 
-    local clearBtn = Options:CreateYellowButton(content, "Clear", clearTitleColor)
+    local clearBtn = Options:CreateYellowButton(content, L["Clear"], clearTitleColor)
     clearBtn:SetSize(60, 18)
     clearBtn:SetPoint("LEFT", titlePicker, "RIGHT", 8, 0)
 
@@ -167,7 +168,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     titleHint:SetPoint("TOPLEFT", titlePicker, "BOTTOMLEFT", 0, -2)
     titleHint:SetWidth(380)
     titleHint:SetJustifyH("LEFT")
-    titleHint:SetText("When cleared, falls back to difficulty coloring or default yellow.")
+    titleHint:SetText(L["When cleared, falls back to difficulty coloring or default yellow."])
 
     -- Use the chosen title color for completed quests instead of the default
     -- "ready to turn in" green (recolors the title + completed objective lines;
@@ -176,7 +177,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
     -- nothing to override green with, so completed quests stay green.
     local recolorGet, recolorSet = trackerSetting("overrideCompleteGreen")
     local recolorCheck = Options:CreateCheckbox(content,
-        "Use title color for completed quests  |cffaaaaaa(instead of green)|r",
+        L["Use title color for completed quests  |cffaaaaaa(instead of green)|r"],
         recolorGet, recolorSet)
     recolorCheck:SetPoint("TOPLEFT", titleHint, "BOTTOMLEFT", 0, -10)
 
@@ -191,7 +192,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local headerPicker = Options:CreateColorPicker(content, "Section Header Color", headerColorGet, headerColorSet)
+    local headerPicker = Options:CreateColorPicker(content, L["Section Header Color"], headerColorGet, headerColorSet)
     headerPicker:SetPoint("TOPLEFT", recolorCheck, "BOTTOMLEFT", 0, -16)
 
     -- Tracker scale 0.7 - 1.5
@@ -214,7 +215,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
             Tracker:Refresh()
         end
     end
-    local scaleSlider = Options:CreateSlider(content, "Tracker Scale", 0.7, 1.5, 0.05, scaleGet, scaleSet)
+    local scaleSlider = Options:CreateSlider(content, L["Tracker Scale"], 0.7, 1.5, 0.05, scaleGet, scaleSet)
     scaleSlider:SetPoint("TOPLEFT", headerPicker, "BOTTOMLEFT", 0, -32)
     scaleSlider:SetWidth(280)
 
@@ -229,7 +230,28 @@ ns:GetSubsystem("Options"):AddTab("appearance", "Appearance", function(content)
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local spacingSlider = Options:CreateSlider(content, "Block Spacing", 0, 12, 1, spacingGet, spacingSet)
+    local spacingSlider = Options:CreateSlider(content, L["Block Spacing"], 0, 12, 1, spacingGet, spacingSet)
     spacingSlider:SetPoint("TOPLEFT", scaleSlider, "BOTTOMLEFT", 0, -16)
     spacingSlider:SetWidth(280)
+
+    -- Zone progress bar scale (only the floating bar; the tracker-section
+    -- variant follows the tracker's own scale). 0.5 - 2.0.
+    local function zbScaleGet()
+        local DB = ns:GetSubsystem("DB")
+        local st = DB and DB.db.profile.tracker.zoneProgressBar
+        return (st and st.scale) or 1.0
+    end
+    local function zbScaleSet(value)
+        local ZP = ns:GetSubsystem("TrackerZoneProgress")
+        if ZP and ZP.SetScale then
+            ZP:SetScale(value)
+        else
+            local DB = ns:GetSubsystem("DB")
+            local st = DB and DB.db.profile.tracker.zoneProgressBar
+            if st then st.scale = value end
+        end
+    end
+    local zbScaleSlider = Options:CreateSlider(content, L["Zone Bar Scale"], 0.5, 2.0, 0.05, zbScaleGet, zbScaleSet)
+    zbScaleSlider:SetPoint("TOPLEFT", spacingSlider, "BOTTOMLEFT", 0, -16)
+    zbScaleSlider:SetWidth(280)
 end)

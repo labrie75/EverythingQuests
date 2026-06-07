@@ -7,6 +7,7 @@
 -- Tabs are registered by Options/Tab*.lua files via Options:AddTab(id, label, builder).
 
 local _, ns = ...
+local L = ns.L
 
 local Options = ns:RegisterSubsystem("Options", {})
 Options.tabs = {}
@@ -39,7 +40,7 @@ function Options:Build()
     -- ran off the right edge at 900. Labels are left-aligned, so the extra room
     -- just reads as normal ragged-right whitespace. Everything is anchored to
     -- the left, the top-right, or both sides, so only right-side room is added.
-    f:SetSize(1020, 600)
+    f:SetSize(1020, 650)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -69,7 +70,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.13.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.14.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -86,7 +87,7 @@ function Options:Build()
     f.discord.icon:SetTexture("Interface\\AddOns\\EverythingQuests\\Media\\Textures\\discord.tga")
     f.discord.text = f.discord:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.discord.text:SetPoint("LEFT", f.discord.icon, "RIGHT", 5, 0)
-    f.discord.text:SetText("Join our Discord!")
+    f.discord.text:SetText(L["Join our Discord!"])
     f.discord.text:SetTextColor(unpack(YELLOW))
     f.discord:SetSize(16 + 5 + f.discord.text:GetStringWidth() + 4, 18)
     f.discord:SetPoint("TOPLEFT", 14, -15)
@@ -94,7 +95,7 @@ function Options:Build()
     f.discord:SetScript("OnEnter", function(s)
         s.text:SetTextColor(1, 1, 1)
         GameTooltip:SetOwner(s, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Join our Discord", YELLOW[1], YELLOW[2], YELLOW[3])
+        GameTooltip:SetText(L["Join our Discord"], YELLOW[1], YELLOW[2], YELLOW[3])
         GameTooltip:AddLine("Click to copy the invite link.", 0.8, 0.8, 0.8)
         GameTooltip:Show()
     end)
@@ -220,20 +221,19 @@ function Options:RegisterBlizzardCategory()
 
     local ver = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     ver:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-    ver:SetText("Version " .. (ns.VERSION or ""))
+    ver:SetText(L["Version %s"]:format(ns.VERSION or ""))
     ver:SetTextColor(unpack(YELLOW))
 
     local desc = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
     desc:SetPoint("TOPLEFT", ver, "BOTTOMLEFT", 0, -18)
     desc:SetWidth(560)
     desc:SetJustifyH("LEFT")
-    desc:SetText("Everything Quests opens its full options in a dedicated window. "
-        .. "Click the button below, or type |cffEBB706/eqs|r in chat.")
+    desc:SetText(L["Everything Quests opens its full options in a dedicated window. Click the button below, or type |cffEBB706/eqs|r in chat."])
 
     local btn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     btn:SetSize(240, 26)
     btn:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -18)
-    btn:SetText("Open Everything Quests Options")
+    btn:SetText(L["Open Everything Quests Options"])
     btn:SetScript("OnClick", function()
         -- Get out of the Settings window first so our DIALOG-strata window
         -- isn't stacked behind it.
@@ -817,7 +817,7 @@ local function eqSlashHandler(msg)
     end
     local ok, err = pcall(function() Options:Toggle() end)
     if not ok then
-        print("|cffEBB706Everything Quests|r: couldn't open Options \226\128\148 " .. tostring(err))
+        print(L["|cffEBB706Everything Quests|r: couldn't open Options \226\128\148 %s"]:format(tostring(err)))
     end
 end
 
