@@ -12,30 +12,22 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.13.0 is a feature release, so FEATURE_POPUP_VERSION is bumped to it:
--- everyone who hasn't already seen the 1.13.0 popup gets one on next login.
--- Bump this constant + rewrite POPUP_BODY for the next big release and a
--- fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.13.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.13.0"
+-- 1.14 adds French/localization + the Zone Progress Bar, so the popup is
+-- bumped: everyone who hasn't already seen the 1.14 popup gets one on next
+-- login. Bump this constant + rewrite POPUP_BODY for the next big release and
+-- a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.14.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.14"
 
--- This release is built entirely from community suggestions in our Discord —
--- the credits below are deliberate, not filler.
 local POPUP_BODY = [[
-|cffEBB706New: tracked achievements in the tracker|r
-Achievements you're tracking now show up in their own |cffffffffAchievements|r section of the tracker, with each criterion listed beneath — a checkmark when it's done, a colored X/Y while it's in progress. Turn it off under Tracker, Tracker Visibility. |cff999999(Suggested by LightsBeacon.)|r
+|cffEBB706New: French translation (and localization support)|r
+Everything Quests now speaks French. On a French game client the options window appears in French, with more of the interface following in future updates; every other language keeps displaying in English. Huge thanks to |cffffffffZox|r for the translation — and if you'd like to help translate EQ into your language, come say hi on our Discord. |cff999999(French translation by Zox.)|r
 
-|cffEBB706New: WoW's default fonts|r
-The Appearance font dropdown now includes WoW's own built-in fonts — |cffffffffWoW Default (Friz Quadrata)|r, |cffffffffWoW Arial Narrow|r, and |cffffffffWoW Morpheus|r — alongside the bundled selection. |cff999999(Suggested by Zox.)|r
+|cffEBB706New: Zone progress bar|r
+An optional bar that shows your approximate questline progress through the current zone. It can float as its own movable bar (drag to move; right-click to lock or reset) or sit as a section on the tracker. It's |cffffffffoff by default|r — turn it on under Tracker, Zone Progress Bar (and size it under Appearance).
 
-|cffEBB706New: world quests in the tracker|r
-Left-click a world quest on the map (or in the zone list) and it now follows |cffffffffand|r lists in the tracker. Tracked world quests now show Blizzard's stock world-quest icon (brown ring + gold star) that turns gold when focused, and there's a new Tracker option to auto-list every world quest in your current zone (off by default). |cff999999(Suggested by Zox.)|r
-
-|cffEBB706New: optional Blizzard-style quest clicks|r
-Turn on |cffffffffSplit quest click|r (Tracker tab) to click a quest's icon to focus it and its title to open the quest log — on World Quest rows the icon focuses and the title opens the map. It's |cffffffffoff by default|r — leave it off and a left-click anywhere on the row keeps focusing the quest like before. |cff999999(Suggested by Zox.)|r
-
-|cffEBB706Thanks for the ideas|r
-Every feature above came from our Discord. Join with the button below to suggest your own.
+|cffEBB706Thanks for being here|r
+EQ keeps growing thanks to our Discord community. Join with the button below to suggest features or lend a hand with translations.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

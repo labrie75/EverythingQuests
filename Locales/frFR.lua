@@ -5,10 +5,13 @@
 -- (contributed by the community). Untranslated phrases simply fall back
 -- to English via the metatable in Locales/enUS.lua.
 --
--- The --@localization@ token is retained for a possible future CurseForge
--- crowd-source workflow; it is an inert comment in raw git / bundled builds.
+-- NOTE: do NOT add a --@localization@ packager token here. CurseForge
+-- localization is not enabled on this project, so the BigWigs packager's
+-- localization export step fails the release build (errorCode 1002 "You do not
+-- have permission to manage localization on this project"). Translations are
+-- bundled directly as the L["..."] lines below instead.
 -- To add another language, copy this file, rename it to the locale code
--- (e.g. deDE.lua), change BOTH locale codes below, and add it to the .toc.
+-- (e.g. deDE.lua), change the locale code below, and add it to the .toc.
 --
 -- GENERATED: produced by docs/_merge_frfr.py (additive). Re-run after each
 -- translation batch; ordering mirrors Locales/enUS.lua.
@@ -17,8 +20,6 @@ if GetLocale() ~= "frFR" then return end
 
 local _, ns = ...
 local L = ns.L
-
---@localization(locale="frFR", format="lua_additive", handle-unlocalized="ignore")@
 
 
 -- ─── Options/TabGeneral.lua ───
