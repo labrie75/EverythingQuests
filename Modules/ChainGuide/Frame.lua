@@ -184,12 +184,21 @@ function CG:Build()
         b:SetSize(70, 22)
         return b
     end
-    f.backBtn = navBtn("Back",    function() self:Back()    end)
-    f.fwdBtn  = navBtn("Forward", function() self:Forward() end)
-    f.homeBtn = navBtn("Home",    function() self:NavigateHome() end)
+    f.backBtn = navBtn(L["Back"],    function() self:Back()    end)
+    f.fwdBtn  = navBtn(L["Forward"], function() self:Forward() end)
+    f.homeBtn = navBtn(L["Home"],    function() self:NavigateHome() end)
     f.backBtn:SetPoint("LEFT", 8, 0)
     f.fwdBtn:SetPoint("LEFT", f.backBtn, "RIGHT", 4, 0)
     f.homeBtn:SetPoint("LEFT", f.fwdBtn, "RIGHT", 4, 0)
+
+    -- Right-aligned shortcut back to the Chain Guide options (the guide is a
+    -- standalone reference panel with no menu bar, so this is the only in-window
+    -- way back to settings without re-typing /eqs).
+    f.optionsBtn = navBtn(L["Options"], function()
+        Options:Show()
+        Options:SelectTab("chainGuide")
+    end)
+    f.optionsBtn:SetPoint("RIGHT", -8, 0)
 
     -- Three panes below the nav bar.
     local function makePane()
@@ -459,7 +468,7 @@ function CG:RenderChains(activeCatID, activeChainID)
         if entry.id == activeChainID then row.selectedTex:Show() end
         row.navKind, row.navID = "chain", entry.id
         setRowTooltip(row, chainName,
-            total > 0 and ("%d / %d quests done"):format(complete, total) or nil)
+            total > 0 and (L["%d / %d quests done"]):format(complete, total) or nil)
         prev = row
     end
 

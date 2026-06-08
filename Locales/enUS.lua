@@ -241,13 +241,20 @@ L["Not started"] = true
 L["Completed (before tracking)"] = true
 L["Shift-click to link in chat"] = true
 L["Pick a chain on the left to view its quests."] = true
-L["(optional)"] = true
 L["Level %d–%d"] = true
+L["%d/%d done"] = true
+L["%d active"] = true
+L["|cffff9933%d skipped|r"] = true
+L["(optional)"] = true
 L["Click to open this chain"] = true
 L["(no quests defined for this chain yet)"] = true
 
 -- ─── Modules/ChainGuide/Frame.lua ───
+L["Back"] = true
+L["Forward"] = true
+L["Home"] = true
 L["Pick a category"] = true
+L["%d / %d quests done"] = true
 
 -- ─── Modules/ChainGuide/QuestMapButton.lua ───
 L["Chain"] = true
@@ -261,6 +268,12 @@ L["Click to expand"] = true
 L["Export"] = true
 L["Re-scan names"] = true
 L["Asks the server for the name of any \"Quest #12345\" entries. They'll fill in over the next minute or two as responses arrive."] = true
+L["Quests"] = true
+L["Streak"] = true
+L["Chain Timeline"] = true
+L["Activity"] = true
+L["Stats"] = true
+L["This Session"] = true
 L["Character:"] = true
 L["All characters"] = true
 L["Date:"] = true
@@ -319,7 +332,6 @@ L["Daily"] = true
 L["Weekly"] = true
 L["Show:"] = true
 L["XP"] = true
-L["Quests"] = true
 L["Gold is all income (loot, vendor, rewards) tracked forward from when this version was installed \226\128\148 past periods may read 0. XP and quest counts come from quest turn-ins."] = true
 L["This week"] = true
 L["last week"] = true

@@ -334,11 +334,11 @@ function CV:Render(pane, chain)
         local complete, active, total = Characters:ChainProgress(chain)
         wipe(_metaParts)
         if chain.range then
-            _metaParts[#_metaParts + 1] = ("Level %d–%d"):format(chain.range[1], chain.range[2])
+            _metaParts[#_metaParts + 1] = (L["Level %d–%d"]):format(chain.range[1], chain.range[2])
         end
         if total > 0 then
-            _metaParts[#_metaParts + 1] = ("%d/%d done"):format(complete, total)
-            if active > 0 then _metaParts[#_metaParts + 1] = ("%d active"):format(active) end
+            _metaParts[#_metaParts + 1] = (L["%d/%d done"]):format(complete, total)
+            if active > 0 then _metaParts[#_metaParts + 1] = (L["%d active"]):format(active) end
         end
         pane._cvMeta:SetText(table.concat(_metaParts, "  •  "))
         pane._cvMeta:SetTextColor(0.75, 0.75, 0.75)
@@ -406,13 +406,13 @@ function CV:Render(pane, chain)
     local complete, active, total = Characters:ChainProgress(chain)
     wipe(_metaParts)
     if chain.range then
-        _metaParts[#_metaParts + 1] = ("Level %d–%d"):format(chain.range[1], chain.range[2])
+        _metaParts[#_metaParts + 1] = (L["Level %d–%d"]):format(chain.range[1], chain.range[2])
     end
     if total > 0 then
-        _metaParts[#_metaParts + 1] = ("%d/%d done"):format(complete, total)
-        if active > 0 then _metaParts[#_metaParts + 1] = ("%d active"):format(active) end
+        _metaParts[#_metaParts + 1] = (L["%d/%d done"]):format(complete, total)
+        if active > 0 then _metaParts[#_metaParts + 1] = (L["%d active"]):format(active) end
         if skippedCount > 0 then
-            _metaParts[#_metaParts + 1] = ("|cffff9933%d skipped|r"):format(skippedCount)
+            _metaParts[#_metaParts + 1] = (L["|cffff9933%d skipped|r"]):format(skippedCount)
         end
     end
     pane._cvMeta:SetText(table.concat(_metaParts, "  •  "))

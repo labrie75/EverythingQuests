@@ -6,7 +6,9 @@ curse-id: 1544648
 enable-nolib-creation: no
 
 changelog-title: Everything Quests
-changelog-file: CHANGELOG.md
+manual-changelog:
+  filename: .release_changelog.md
+  markup-type: markdown
 
 ignore:
   - .pkgmeta
@@ -20,3 +22,4 @@ ignore:
   - claude.md
   - .claude
   - .luarc.json
+  - .release_changelog.md

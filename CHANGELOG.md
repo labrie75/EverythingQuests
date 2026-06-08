@@ -5,6 +5,17 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-06-07
+
+### New Features
+
+- **Options button in the Chain Guide** — The Chain Guide window now has an **Options** button in its navigation bar that opens the settings straight to the Chain Guide tab, so you no longer have to retype `/eqs` to get back to its options. *(Suggested by Zox.)*
+
+### Improvements
+
+- **More of the interface is translatable** — The History window's tab labels (Quests, Streak, Chain Timeline, Activity, Stats, This Session), the Chain Guide's navigation buttons, and its per-chain progress counts are now wrapped for translation. They display in English until translated and fall back to English automatically.
+- **French translation refinements** — A round of wording and fit corrections to the French (frFR) translation. *(French translation contributed by Zox.)*
+
 ## [1.14.1] - 2026-06-06
 
 ### Bug Fixes

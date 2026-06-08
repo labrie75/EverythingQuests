@@ -291,15 +291,15 @@ function HF:Build()
         b._id = id
         return b
     end
-    self._tabs.quests   = makeTab("quests",   "Quests")
-    self._tabs.streak   = makeTab("streak",   "Streak")
-    self._tabs.timeline = makeTab("timeline", "Chain Timeline")
-    self._tabs.activity = makeTab("activity", "Activity")
+    self._tabs.quests   = makeTab("quests",   L["Quests"])
+    self._tabs.streak   = makeTab("streak",   L["Streak"])
+    self._tabs.timeline = makeTab("timeline", L["Chain Timeline"])
+    self._tabs.activity = makeTab("activity", L["Activity"])
     -- Tab id stays "totals" (used throughout); the user-facing label is
     -- "Stats" because this tab now holds both the lifetime Totals view and
     -- the XP/gold/quests Trends view (toggled inside the pane).
-    self._tabs.totals   = makeTab("totals",   "Stats")
-    self._tabs.session  = makeTab("session",  "This Session")
+    self._tabs.totals   = makeTab("totals",   L["Stats"])
+    self._tabs.session  = makeTab("session",  L["This Session"])
     self._tabs.quests:SetPoint("LEFT", tabRow, "LEFT", 0, 0)
     self._tabs.streak:SetPoint("LEFT", self._tabs.quests, "RIGHT", 4, 0)
     self._tabs.timeline:SetPoint("LEFT", self._tabs.streak, "RIGHT", 4, 0)
