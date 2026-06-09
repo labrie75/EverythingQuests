@@ -159,13 +159,16 @@ function Media:GetFontFile(name)
 end
 
 -- Apply the user's tracker font to a FontString. sizeDelta is added to the
--- configured size (e.g., -2 for sub-text, -3 for category labels).
-function Media:ApplyTrackerFont(fontstring, sizeDelta)
+-- configured size (e.g., -2 for sub-text, -3 for category labels). fontOverride
+-- (optional) swaps just the typeface — size and outline still come from the
+-- tracker config — so a surface can use its own font while honoring the global
+-- size/outline (used by the floating Zone Bar's per-bar font option).
+function Media:ApplyTrackerFont(fontstring, sizeDelta, fontOverride)
     if not fontstring then return end
     local DB = ns:GetSubsystem("DB")
     if not DB then return end
     local cfg = DB.db.profile.tracker
-    local file = self:GetFontFile(cfg.font)
+    local file = self:GetFontFile(fontOverride or cfg.font)
     local size = math.max(8, (cfg.fontSize or 12) + (sizeDelta or 0))
     local outline = cfg.fontOutline or ""
     if file then fontstring:SetFont(file, size, outline) end

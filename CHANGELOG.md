@@ -5,6 +5,17 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-06-08
+
+### New Features
+
+- **Customize the floating zone progress bar** — A new **Zone Bar Appearance** section under the Appearance tab lets you restyle the floating zone progress bar: toggle its background and border, choose a border color, pick its font from the bundled typefaces, and set custom colors for the zone-name header and the x/x count. Defaults match the previous look, so nothing changes until you adjust it. *(The bar is off by default — enable it under Tracker → Zone Progress Bar.)*
+
+### Improvements
+
+- **More of the interface displays in French** — The History window's tab labels and the Chain Guide's navigation buttons and per-chain progress counts (made translatable in 1.15.0) now display in French on a French game client. Every other language continues to display in English. *(French translation contributed by Zox.)*
+- **Lighter Chain Guide rendering** — Viewing and navigating between chains in the Chain Guide allocates less memory per render, bringing it in line with the rest of the add-on's pooled UI.
+
 ## [1.15.0] - 2026-06-07
 
 ### New Features

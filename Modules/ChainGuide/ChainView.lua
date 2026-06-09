@@ -87,6 +87,12 @@ local function safeSetAtlas(tex, atlas)
     return false
 end
 
+-- Static node scripts. Assigned further down (once the tooltip/click helpers
+-- exist) and wired ONCE in buildNode; per-render data lives on node fields
+-- (_navKind/_ref/_status/_chain), so re-rendering a chain never reallocates a
+-- single closure. Forward-declared here because buildNode references them.
+local nodeOnEnter, nodeOnLeave, nodeOnClick
+
 -- ─── Node factory ──────────────────────────────────────────────────────
 local function buildNode(parent)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
@@ -127,6 +133,10 @@ local function buildNode(parent)
     b.hl:SetAllPoints()
     b.hl:SetColorTexture(1, 1, 1, 0.06)
 
+    b:SetScript("OnEnter", nodeOnEnter)
+    b:SetScript("OnLeave", nodeOnLeave)
+    b:SetScript("OnClick", nodeOnClick)
+
     return b
 end
 
@@ -145,9 +155,7 @@ local function releaseNodes()
         local b = CV.activeNodes[i]
         b:Hide()
         b:ClearAllPoints()
-        b:SetScript("OnEnter", nil)
-        b:SetScript("OnLeave", nil)
-        b:SetScript("OnClick", nil)
+        b._ref, b._chain = nil, nil          -- drop refs; static scripts stay wired
         b.statusIcon:SetTexture(nil)
         b.statusIcon:SetVertexColor(1, 1, 1, 1)
         b.border:SetColorTexture(0.20, 0.20, 0.20, 1)
@@ -235,6 +243,21 @@ local function buildQuestTooltip(item, statusKey)
     GameTooltip:Show()
 end
 
+-- Tooltip for a chain-navigation node (a "View chain >" stub that jumps to a
+-- nested chain). Resolves the database fresh so the hover can be a static,
+-- file-scope handler instead of a per-render closure.
+local function buildChainNavTooltip(item)
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    local sub = Database and Database.chains[item.id]
+    GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR_RIGHT")
+    GameTooltip:SetText((sub and sub.name) or ("Chain #" .. tostring(item.id)), 0.92, 0.72, 0.02)
+    if sub and sub.range then
+        GameTooltip:AddLine((L["Level %d–%d"]):format(sub.range[1], sub.range[2]), 0.7, 0.7, 0.7)
+    end
+    GameTooltip:AddLine(L["Click to open this chain"], 1, 1, 1)
+    GameTooltip:Show()
+end
+
 local function onNodeClickQuest(item, chain)
     -- Shift-click → chat link if we know the title. Plain click → drop a
     -- waypoint at the quest and open the map (Modules/ChainGuide/Waypoint).
@@ -252,6 +275,28 @@ end
 local function onNodeClickChain(item)
     local CG = ns:GetSubsystem("ChainGuide")
     if CG and CG.NavigateChain then CG:NavigateChain(item.id) end
+end
+
+-- Static node scripts (forward-declared near the top). Each reads the per-render
+-- data the render loop stamps onto the node, so no per-node closures allocate.
+function nodeOnEnter(self)
+    if self._navKind == "chain" then
+        buildChainNavTooltip(self._ref)
+    else
+        buildQuestTooltip(self._ref, self._status)
+    end
+end
+
+function nodeOnLeave()
+    GameTooltip:Hide()
+end
+
+function nodeOnClick(self)
+    if self._navKind == "chain" then
+        onNodeClickChain(self._ref)
+    else
+        onNodeClickQuest(self._ref, self._chain)
+    end
 end
 
 -- ─── Layout ────────────────────────────────────────────────────────────
@@ -466,26 +511,12 @@ function CV:Render(pane, chain)
             node.subtitle:SetText(L["(optional)"])
         end
 
-        -- Hover & click
-        local itemRef, statusRef = resolved, statusKey
-        if itemRef.type == "chain" then
-            node:SetScript("OnEnter", function()
-                local sub = Database.chains[itemRef.id]
-                GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR_RIGHT")
-                GameTooltip:SetText((sub and sub.name) or ("Chain #" .. tostring(itemRef.id)), 0.92, 0.72, 0.02)
-                if sub and sub.range then
-                    GameTooltip:AddLine((L["Level %d–%d"]):format(sub.range[1], sub.range[2]), 0.7, 0.7, 0.7)
-                end
-                GameTooltip:AddLine(L["Click to open this chain"], 1, 1, 1)
-                GameTooltip:Show()
-            end)
-            node:SetScript("OnLeave", function() GameTooltip:Hide() end)
-            node:SetScript("OnClick", function() onNodeClickChain(itemRef) end)
-        else
-            node:SetScript("OnEnter", function() buildQuestTooltip(itemRef, statusRef) end)
-            node:SetScript("OnLeave", function() GameTooltip:Hide() end)
-            node:SetScript("OnClick", function() onNodeClickQuest(itemRef, chain) end)
-        end
+        -- Hover & click — the static handlers wired in buildNode read these
+        -- fields, so a re-render never allocates a fresh closure per node.
+        node._ref     = resolved
+        node._status  = statusKey
+        node._chain   = chain
+        node._navKind = (resolved.type == "chain") and "chain" or "quest"
 
         nodes[i] = node
     end

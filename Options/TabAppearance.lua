@@ -254,4 +254,89 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local zbScaleSlider = Options:CreateSlider(content, L["Zone Bar Scale"], 0.5, 2.0, 0.05, zbScaleGet, zbScaleSet)
     zbScaleSlider:SetPoint("TOPLEFT", spacingSlider, "BOTTOMLEFT", 0, -16)
     zbScaleSlider:SetWidth(280)
+
+    -- ─── Zone Bar appearance (floating bar only) ────────────────────────
+    -- Mirrors the floating frame's chrome: background + border toggles, a font
+    -- override (typeface only — size/outline follow the tracker), and the header
+    -- + count text colors. The tracker-docked variant is unaffected (it uses the
+    -- tracker's own section header + font). All writes go through ZoneProgress
+    -- setters so the change previews live on a visible bar.
+    local function zbState()
+        local DB = ns:GetSubsystem("DB")
+        local p = DB and DB.db.profile.tracker
+        if not p then return nil end
+        p.zoneProgressBar = p.zoneProgressBar or {}
+        return p.zoneProgressBar
+    end
+    local function zbZP() return ns:GetSubsystem("TrackerZoneProgress") end
+
+    local zbHeader = Options:CreateSectionHeader(content, L["Zone Bar Appearance"])
+    zbHeader:SetPoint("TOPLEFT", zbScaleSlider, "BOTTOMLEFT", 0, -20)
+
+    -- Background + Border toggles (checked = shown), side by side.
+    local zbBgGet = function() local st = zbState(); return not (st and st.showBackground == false) end
+    local zbBgSet = function(v)
+        local st = zbState(); if st then st.showBackground = v end
+        local ZP = zbZP(); if ZP and ZP.SetShowBackground then ZP:SetShowBackground(v) end
+    end
+    local zbBgCheck = Options:CreateCheckbox(content, L["Background"], zbBgGet, zbBgSet)
+    zbBgCheck:SetPoint("TOPLEFT", zbHeader, "BOTTOMLEFT", 0, -12)
+
+    local zbBorderGet = function() local st = zbState(); return not (st and st.showBorder == false) end
+    local zbBorderSet = function(v)
+        local st = zbState(); if st then st.showBorder = v end
+        local ZP = zbZP(); if ZP and ZP.SetShowBorder then ZP:SetShowBorder(v) end
+    end
+    local zbBorderCheck = Options:CreateCheckbox(content, L["Border"], zbBorderGet, zbBorderSet)
+    zbBorderCheck:SetPoint("LEFT", zbBgCheck, "LEFT", 150, 0)
+
+    -- Border color sits right of the Border toggle (default brand red).
+    local function zbBorderColorGet()
+        local st = zbState()
+        return (st and st.borderColor) or { r = 0.427, g = 0.020, b = 0.004, a = 1 }
+    end
+    local function zbBorderColorSet(c)
+        local st = zbState(); if st then st.borderColor = c end
+        local ZP = zbZP(); if ZP and ZP.SetBorderColor then ZP:SetBorderColor(c) end
+    end
+    local zbBorderColorPicker = Options:CreateColorPicker(content, L["Border Color"], zbBorderColorGet, zbBorderColorSet)
+    zbBorderColorPicker:SetPoint("LEFT", zbBorderCheck, "LEFT", 90, 0)
+
+    -- Font typeface override. "" = follow the tracker font (the default row).
+    local zbFontList = { { value = "", label = L["Same as tracker font"] } }
+    do
+        local base = (Media and Media.GetFontList and Media:GetFontList()) or {}
+        for i = 1, #base do zbFontList[#zbFontList + 1] = base[i] end
+    end
+    local zbFontGet = function() local st = zbState(); return (st and st.font) or "" end
+    local zbFontSet = function(v)
+        local st = zbState(); if st then st.font = (v ~= "" and v) or nil end
+        local ZP = zbZP(); if ZP and ZP.SetBarFont then ZP:SetBarFont(v) end
+    end
+    local zbFontDD = Options:CreateFontDropdown(content, L["Font"], zbFontList, zbFontGet, zbFontSet)
+    zbFontDD:SetPoint("TOPLEFT", zbBgCheck, "BOTTOMLEFT", 0, -14)
+    zbFontDD:SetWidth(280)
+
+    -- Header (zone name) + count (x/x) text colors, side by side.
+    local function zbHeaderColorGet()
+        local st = zbState()
+        return (st and st.headerColor) or { r = 0.93, g = 0.32, b = 0.10, a = 1 }
+    end
+    local function zbHeaderColorSet(c)
+        local st = zbState(); if st then st.headerColor = c end
+        local ZP = zbZP(); if ZP and ZP.SetHeaderColor then ZP:SetHeaderColor(c) end
+    end
+    local zbHeaderPicker = Options:CreateColorPicker(content, L["Header Color"], zbHeaderColorGet, zbHeaderColorSet)
+    zbHeaderPicker:SetPoint("TOPLEFT", zbFontDD, "BOTTOMLEFT", 0, -16)
+
+    local function zbCountColorGet()
+        local st = zbState()
+        return (st and st.countColor) or { r = 0.92, g = 0.72, b = 0.02, a = 1 }
+    end
+    local function zbCountColorSet(c)
+        local st = zbState(); if st then st.countColor = c end
+        local ZP = zbZP(); if ZP and ZP.SetCountColor then ZP:SetCountColor(c) end
+    end
+    local zbCountPicker = Options:CreateColorPicker(content, L["Count Color"], zbCountColorGet, zbCountColorSet)
+    zbCountPicker:SetPoint("TOPLEFT", zbHeaderPicker, "TOPRIGHT", 40, 0)
 end)

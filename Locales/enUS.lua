@@ -189,6 +189,10 @@ L["Section Header Color"] = true
 L["Tracker Scale"] = true
 L["Block Spacing"] = true
 L["Zone Bar Scale"] = true
+L["Zone Bar Appearance"] = true
+L["Same as tracker font"] = true
+L["Header Color"] = true
+L["Count Color"] = true
 
 -- ─── Options/TabHistory.lua ───
 L["History"] = true
@@ -240,13 +244,13 @@ L["May be worth going back to pick up."] = true
 L["Not started"] = true
 L["Completed (before tracking)"] = true
 L["Shift-click to link in chat"] = true
-L["Pick a chain on the left to view its quests."] = true
 L["Level %d–%d"] = true
+L["Click to open this chain"] = true
+L["Pick a chain on the left to view its quests."] = true
 L["%d/%d done"] = true
 L["%d active"] = true
 L["|cffff9933%d skipped|r"] = true
 L["(optional)"] = true
-L["Click to open this chain"] = true
 L["(no quests defined for this chain yet)"] = true
 
 -- ─── Modules/ChainGuide/Frame.lua ───

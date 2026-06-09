@@ -522,12 +522,26 @@ function ZP:ApplySettings()
     f:SetPoint(st.point or "CENTER", UIParent, st.relPoint or st.point or "CENTER",
                st.x or 0, st.y or 220)
     f:SetScale(st.scale or 1.0)
-    if st.locked then
-        f:SetBackdropBorderColor(0, 0, 0, 0)
-        f:SetBackdropColor(0, 0, 0, 0.40)
+
+    -- Background fill (the dark panel behind the bar). Slightly more opaque when
+    -- unlocked so the grab target reads clearly. Off → fully transparent.
+    if st.showBackground == false then
+        f:SetBackdropColor(0, 0, 0, 0)
     else
-        f:SetBackdropBorderColor(0.427, 0.020, 0.004, 1)   -- brand red #6D0501
-        f:SetBackdropColor(0, 0, 0, 0.55)
+        f:SetBackdropColor(0, 0, 0, st.locked and 0.40 or 0.55)
+    end
+
+    -- Border. Shown whenever the Border option is on, in the user's chosen color
+    -- (default brand red #6D0501). Off → hidden in every state. Previously the
+    -- border was a lock affordance (hidden when locked); the colour option
+    -- supersedes that so a picked colour is actually visible during normal locked
+    -- use. The background-alpha shift above still hints at lock state.
+    if st.showBorder == false then
+        f:SetBackdropBorderColor(0, 0, 0, 0)
+    else
+        local bc = st.borderColor
+        if bc then f:SetBackdropBorderColor(bc.r, bc.g, bc.b, bc.a or 1)
+        else       f:SetBackdropBorderColor(0.427, 0.020, 0.004, 1) end   -- brand red #6D0501
     end
 end
 
@@ -644,11 +658,24 @@ function ZP:UpdateFrame()
     f.bar:SetValue(pct)
     f.bar.label:SetText(("%d%%"):format(math.floor(pct + 0.5)))
 
+    -- Header + count text colors: user overrides (Appearance → Zone Bar) or the
+    -- built-in defaults (section-header red / gold).
+    local st = barState() or {}
+    local hc = st.headerColor
+    if hc then f.title:SetTextColor(hc.r, hc.g, hc.b, hc.a or 1)
+    else       f.title:SetTextColor(0.93, 0.32, 0.10) end
+    local cc = st.countColor
+    if cc then f.count:SetTextColor(cc.r, cc.g, cc.b, cc.a or 1)
+    else       f.count:SetTextColor(0.92, 0.72, 0.02) end
+
+    -- Font: the bar's own typeface override (nil = follow the tracker font);
+    -- size and outline still come from the tracker's settings.
     local Media = ns:GetSubsystem("Media")
     if Media and Media.ApplyTrackerFont then
-        Media:ApplyTrackerFont(f.title, 0)
-        Media:ApplyTrackerFont(f.count, -2)
-        Media:ApplyTrackerFont(f.bar.label, -2)
+        local bf = st.font
+        Media:ApplyTrackerFont(f.title, 0, bf)
+        Media:ApplyTrackerFont(f.count, -2, bf)
+        Media:ApplyTrackerFont(f.bar.label, -2, bf)
     end
 
     f:Show()
@@ -671,6 +698,46 @@ function ZP:SetLocked(b)
     local st = barState()
     if st then st.locked = b end
     self:ApplySettings()
+end
+
+-- Live-apply an appearance change from the Appearance tab. ApplySettings repaints
+-- the backdrop (border/background); UpdateFrame repaints text/font/colors. Both
+-- no-op safely when the floating frame hasn't been built yet.
+function ZP:RefreshAppearance()
+    self:ApplySettings()
+    self:UpdateFrame()
+end
+
+function ZP:SetShowBorder(b)
+    local st = barState(); if st then st.showBorder = b and true or false end
+    self:RefreshAppearance()
+end
+
+function ZP:SetShowBackground(b)
+    local st = barState(); if st then st.showBackground = b and true or false end
+    self:RefreshAppearance()
+end
+
+-- nil c → fall back to the default brand red. Applied via ApplySettings (backdrop).
+function ZP:SetBorderColor(c)
+    local st = barState(); if st then st.borderColor = c end
+    self:ApplySettings()
+end
+
+-- name == "" / nil → follow the tracker font; otherwise an LSM font name.
+function ZP:SetBarFont(name)
+    local st = barState(); if st then st.font = (name ~= "" and name) or nil end
+    self:UpdateFrame()
+end
+
+function ZP:SetHeaderColor(c)
+    local st = barState(); if st then st.headerColor = c end
+    self:UpdateFrame()
+end
+
+function ZP:SetCountColor(c)
+    local st = barState(); if st then st.countColor = c end
+    self:UpdateFrame()
 end
 
 -- ── header + render ─────────────────────────────────────────────────────────

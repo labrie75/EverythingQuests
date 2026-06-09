@@ -12,20 +12,22 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.14.1 makes the Zone Progress Bar reliable for everyone and completes the
--- French translation. Bumping the version re-shows the popup once to everyone:
--- players who skipped 1.14.0 get caught up, and players already on 1.14.0 hear
--- about the fix. Bump this constant + rewrite POPUP_BODY for the next release
--- and a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.14.1"
-local POPUP_TITLE           = "What's New in Everything Quests v1.14.1"
+-- 1.16.0 adds full appearance customization for the floating zone progress bar
+-- and brings more of the interface into French. Bumping the version re-shows the
+-- popup once to everyone. Bump this constant + rewrite POPUP_BODY for the next
+-- release and a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.16.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.16.0"
 
 local POPUP_BODY = [[
-|cffEBB706Zone progress bar — now more reliable|r
-The optional zone progress bar shows how far through your current zone's questlines you are, tracked per character. A few players found it didn't show up for them — that's now sorted, and it appears reliably across all four Midnight zones. New to it? It's |cffffffffoff by default|r — turn it on under Tracker, Zone Progress Bar. It can float as its own movable bar (drag to move; right-click to lock or reset) or sit as a section on the tracker.
+|cffEBB706Make the zone bar your own|r
+The floating zone progress bar can now be restyled to match your UI. Under |cffffffffAppearance|r there's a new |cffffffffZone Bar Appearance|r section: turn the background and border on or off, pick a border color, choose the bar's font, and set your own colors for the zone name and the x/x count. The bar is still |cffffffffoff by default|r — turn it on under Tracker, Zone Progress Bar.
 
-|cffEBB706French translation complete|r
-Thanks to |cffffffffZox|r, EQ's French translation is now fully complete — the whole interface displays in French on a French game client. Every other language keeps displaying in English. Want to help bring EQ to your language? Come say hi on our Discord.
+|cffEBB706More of the interface in French|r
+Thanks to |cffffffffZox|r, the History window tabs and the Chain Guide's navigation and progress counts now display in French on a French game client. Every other language continues to display in English.
+
+|cffEBB706Under the hood|r
+The Chain Guide view is lighter on memory as you browse between chains.
 
 |cffEBB706Thanks for being here|r
 EQ keeps growing thanks to our Discord community. Join with the button below to suggest a feature or lend a hand.

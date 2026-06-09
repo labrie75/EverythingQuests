@@ -134,6 +134,13 @@ DB.defaults = {
                 point = "CENTER", relPoint = "CENTER", x = 0, y = 220,
                 scale = 1.0,
                 locked = false,
+                -- Floating-bar appearance (Appearance tab → Zone Bar section).
+                -- Defaults reproduce the original look. headerColor / countColor
+                -- / font are intentionally ABSENT (nil): nil header/count colors
+                -- fall back to the built-in red/gold, and a nil font follows the
+                -- tracker's own font. Only the show* toggles need a stored default.
+                showBorder = true,
+                showBackground = true,
             },
             -- Auto-list every world quest available in the player's CURRENT
             -- zone in the tracker's World Quests section, without having to
