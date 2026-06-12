@@ -5,6 +5,16 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2026-06-12
+
+### New Features
+
+- **Quest reward gear comparison** — Hovering a quest in the tracker now shows a tooltip with its rewards, and every equippable gear reward is compared against what you currently have equipped: it lists the reward's item level, your equipped item level for that slot, and whether it's an upgrade, a sidegrade, or lower. Pick-one-of-many quests compare *each* choice, an empty slot is flagged as a free equip, and rings/trinkets compare against the lower of your two equipped pieces. The same comparison now also appears on World Quest tooltips. *(Item-level only — it doesn't weigh stats or spec.)*
+
+### Improvements
+
+- **The tracker can stretch much taller** — The quest tracker's maximum height has been roughly doubled, so you can drag the bottom-right corner to keep far more quests in view at once (it still stays on-screen at smaller resolutions). *(Suggested by Spydawg2233.)*
+
 ## [1.16.0] - 2026-06-08
 
 ### New Features

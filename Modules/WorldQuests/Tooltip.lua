@@ -35,70 +35,6 @@ local function factionName(questID)
     return nil
 end
 
-local function addObjectives(tip, questID)
-    if not (C_QuestLog and C_QuestLog.GetQuestObjectives) then return end
-    local objs = C_QuestLog.GetQuestObjectives(questID)
-    if not (objs and #objs > 0) then return end
-    for i = 1, #objs do
-        local o = objs[i]
-        if o and o.text and o.text ~= "" then
-            local r, g, b = 0.95, 0.95, 0.95
-            if o.finished then r, g, b = 0.40, 0.85, 0.40 end
-            tip:AddLine("- " .. o.text, r, g, b, true)
-        end
-    end
-end
-
-local function addRewards(tip, questID)
-    local hasReward = false
-
-    -- Money
-    local _money = GetQuestLogRewardMoney
-    local money = _money and _money(questID) or 0
-    if money and money > 0 then
-        local txt = (GetCoinTextureString and GetCoinTextureString(money)) or tostring(money)
-        tip:AddLine(txt, 1, 1, 1)
-        hasReward = true
-    end
-
-    -- XP
-    local xp = GetQuestLogRewardXP and GetQuestLogRewardXP(questID) or 0
-    if xp and xp > 0 then
-        tip:AddLine(("%d XP"):format(xp), 1, 1, 1)
-        hasReward = true
-    end
-
-    -- Items
-    local numItems = GetNumQuestLogRewards and GetNumQuestLogRewards(questID) or 0
-    for i = 1, numItems do
-        local name, _, count, quality = GetQuestLogRewardInfo(i, questID)
-        if name then
-            local label = name
-            if count and count > 1 then label = label .. " ×" .. count end
-            local r, g, b = 1, 1, 1
-            if quality and GetItemQualityColor then
-                r, g, b = GetItemQualityColor(quality)
-            end
-            tip:AddLine(label, r, g, b)
-            hasReward = true
-        end
-    end
-
-    -- Currencies
-    local numCur = GetNumQuestLogRewardCurrencies and GetNumQuestLogRewardCurrencies(questID) or 0
-    for i = 1, numCur do
-        local name, _, count = GetQuestLogRewardCurrencyInfo(i, questID)
-        if name then
-            local label = name
-            if count and count > 1 then label = label .. " ×" .. count end
-            tip:AddLine(label, 0.85, 0.85, 1.0)
-            hasReward = true
-        end
-    end
-
-    return hasReward
-end
-
 -- Show tooltip for a world quest. `owner` is the frame to anchor against
 -- (typically a pin button or tracker row). Caller is responsible for hiding
 -- via GameTooltip:Hide() in OnLeave.
@@ -123,10 +59,12 @@ function T:Show(owner, questID)
         tip:AddLine(fname, 0.7, 0.7, 0.7)
     end
 
-    addObjectives(tip, questID)
-
-    if addRewards(tip, questID) then
-        tip:AddLine(" ")
+    local QR = ns:GetSubsystem("QuestRewards")
+    if QR then
+        QR:RenderObjectives(tip, questID)
+        if QR:RenderRewards(tip, questID) then
+            tip:AddLine(" ")
+        end
     end
 
     local mins = C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes

@@ -42,7 +42,9 @@ local WQ_PIN_FRACTION  = 0.40 -- fallback cap for the pinned World Quests
                               -- region (DB worldQuestsPinnedMaxFraction
                               -- overrides once loaded)
 local MIN_W, MIN_H     = 200, 100
-local MAX_W, MAX_H     = 600, 1000
+local MAX_W, MAX_H     = 600, 2000  -- MAX_H doubled (was 1000) so the tracker
+                                    -- can stretch nearly top-to-bottom; SetClampedToScreen still
+                                    -- keeps it on screen at smaller resolutions
 
 -- Header text color — fallback used when the DB hasn't loaded yet. Once
 -- the DB is available, getHeaderColor() returns the user-customizable

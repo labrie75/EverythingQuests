@@ -12,22 +12,19 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.16.0 adds full appearance customization for the floating zone progress bar
--- and brings more of the interface into French. Bumping the version re-shows the
--- popup once to everyone. Bump this constant + rewrite POPUP_BODY for the next
--- release and a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.16.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.16.0"
+-- 1.17.0 adds a reward gear-comparison tooltip and lets the tracker stretch
+-- much taller. Bumping the version re-shows the popup once to everyone. Bump
+-- this constant + rewrite POPUP_BODY for the next release and a fresh popup
+-- shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.17.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.17.0"
 
 local POPUP_BODY = [[
-|cffEBB706Make the zone bar your own|r
-The floating zone progress bar can now be restyled to match your UI. Under |cffffffffAppearance|r there's a new |cffffffffZone Bar Appearance|r section: turn the background and border on or off, pick a border color, choose the bar's font, and set your own colors for the zone name and the x/x count. The bar is still |cffffffffoff by default|r — turn it on under Tracker, Zone Progress Bar.
+|cffEBB706See if a quest reward is an upgrade|r
+Hover a quest in the tracker and its tooltip now shows the rewards with a built-in item-level comparison. Each gear reward lists its own item level, the item level of what you have equipped in that slot, and whether it's an |cffffffffupgrade|r, a sidegrade, or lower — including |cffffffffeach choice|r on pick-one-of-many quests. World Quest tooltips show the comparison too.
 
-|cffEBB706More of the interface in French|r
-Thanks to |cffffffffZox|r, the History window tabs and the Chain Guide's navigation and progress counts now display in French on a French game client. Every other language continues to display in English.
-
-|cffEBB706Under the hood|r
-The Chain Guide view is lighter on memory as you browse between chains.
+|cffEBB706Stretch the tracker taller|r
+The tracker can now be resized to nearly the full height of your screen, so you can keep many more quests in view at once. Grab the bottom-right corner and drag. Thanks |cffffffffSpydawg2233|r for the suggestion!
 
 |cffEBB706Thanks for being here|r
 EQ keeps growing thanks to our Discord community. Join with the button below to suggest a feature or lend a hand.

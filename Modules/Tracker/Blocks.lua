@@ -424,6 +424,18 @@ local function buildBlock()
         end
     end)
 
+    -- Hover tooltip: title / objectives / rewards with inline gear comparison.
+    -- Suppressed mid-drag so a reorder doesn't pop a tooltip over the ghost.
+    b:SetScript("OnEnter", function(self)
+        if self._wasDragging or not self.questID then return end
+        local RT = ns:GetSubsystem("TrackerRewardTooltip")
+        if RT then RT:Show(self, self.questID) end
+    end)
+    b:SetScript("OnLeave", function()
+        local RT = ns:GetSubsystem("TrackerRewardTooltip")
+        if RT then RT:Hide() end
+    end)
+
     local DD = ns:GetSubsystem("TrackerDragDrop")
     if DD and DD.WireBlock then DD:WireBlock(b) end
 

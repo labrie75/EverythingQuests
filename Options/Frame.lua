@@ -70,7 +70,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.16.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.17.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
