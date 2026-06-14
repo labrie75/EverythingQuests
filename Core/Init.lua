@@ -6,7 +6,7 @@ local addonName, ns = ...
 
 _G.EverythingQuests = ns
 ns.NAME = addonName
-ns.VERSION = "1.17.0"
+ns.VERSION = "1.18.0"
 
 -- Community Discord. WoW can't open a browser, so ns:ShowDiscord() pops a
 -- copyable invite via EQ's own Dialog (never a Blizzard StaticPopup — see
@@ -24,6 +24,24 @@ function ns:ShowDiscord()
         button1     = L["Close"],
         hasEditBox  = true,
         editBoxText = self.DISCORD_URL,
+        highlightEditBox = true,
+    })
+end
+
+-- Generic copyable-URL popup. WoW can't open a web browser, so every external
+-- link (the About tab, etc.) routes through here: a Dialog with the URL
+-- pre-selected so the user copies it with one Ctrl+C. Uses EQ's own Dialog
+-- rather than a Blizzard StaticPopup for the same taint reason as ShowDiscord.
+function ns:ShowURL(url)
+    local D = self:GetSubsystem("Dialog")
+    if not (D and url) then return end
+    local L = ns.L
+    D:Show({
+        title       = "Everything Quests",
+        text        = L["Copy the link below (it's pre-selected — just press Ctrl+C):"],
+        button1     = L["Close"],
+        hasEditBox  = true,
+        editBoxText = url,
         highlightEditBox = true,
     })
 end

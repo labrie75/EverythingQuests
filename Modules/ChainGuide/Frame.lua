@@ -200,6 +200,36 @@ function CG:Build()
     end)
     f.optionsBtn:SetPoint("RIGHT", -8, 0)
 
+    -- Quest-ID search. Quest names are localized (German, French, …) but quest
+    -- IDs are universal, so a player reading an English Wowhead guide can punch
+    -- the ID in here and jump straight to the chain that contains it — no name
+    -- translation needed. (Requested by Sparta | Phrenic.)
+    local searchLabel = nav:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    searchLabel:SetText(L["Find Quest ID"])
+    searchLabel:SetTextColor(0.92, 0.72, 0.02)
+    searchLabel:SetPoint("LEFT", f.homeBtn, "RIGHT", 20, 0)
+
+    local search = CreateFrame("EditBox", nil, nav, "InputBoxTemplate")
+    search:SetSize(80, 18)
+    search:SetPoint("LEFT", searchLabel, "RIGHT", 10, 0)
+    search:SetAutoFocus(false)
+    search:SetNumeric(true)              -- quest IDs are integers
+    search:SetMaxLetters(8)
+    search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    search:SetScript("OnEnterPressed", function(self)
+        local id = tonumber(self:GetText())
+        self:ClearFocus()
+        if id and id > 0 then self:SetText(""); CG:SearchByQuestID(id) end
+    end)
+    f.searchBox = search
+
+    local goBtn = navBtn(L["Go"], function()
+        local id = tonumber(search:GetText())
+        if id and id > 0 then search:SetText(""); CG:SearchByQuestID(id) end
+    end)
+    goBtn:SetSize(40, 22)
+    goBtn:SetPoint("LEFT", search, "RIGHT", 8, 0)
+
     -- Three panes below the nav bar.
     local function makePane()
         local p = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -230,7 +260,7 @@ function CG:Build()
     local function header(parent, text)
         local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         h:SetPoint("TOPLEFT", 8, -6)
-        h:SetTextColor(0.43, 0.02, 0.0)
+        h:SetTextColor(0.635, 0.0, 0.039)   -- #a2000a brand red
         h:SetText(text)
         return h
     end
@@ -298,10 +328,65 @@ function CG:NavigateCategory(catID)
     self:RenderCurrent()
 end
 
-function CG:NavigateChain(chainID)
+function CG:NavigateChain(chainID, highlightQuestID)
     local H = ns:GetSubsystem("ChainGuideHistory")
-    H:Push({ type = "chain", id = chainID })
+    H:Push({ type = "chain", id = chainID, highlight = highlightQuestID })
     self:RenderCurrent()
+end
+
+-- ─── Quest-ID search ───────────────────────────────────────────────────
+-- Walk every known chain's items for a quest matching `questID` (base id or
+-- any per-character variation id). Returns the chain id, or nil. Discovery +
+-- item population are memoized, so this is cheap on repeat calls.
+function CG:FindChainForQuest(questID)
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    local QLS      = ns:GetSubsystem("ChainGuideQuestLineSource")
+    if not Database then return nil end
+
+    -- Make sure every category's chains are discovered and their quest lists
+    -- populated before we scan (authored chains already carry items; API/
+    -- campaign chains get filled in here).
+    if QLS then
+        for id in pairs(Database.categories) do QLS:EnsureZoneChains(id) end
+    end
+    for _, chain in pairs(Database.chains) do
+        Database:NormalizeChain(chain)
+        if QLS then QLS:EnsureChainItems(chain) end
+        local items = chain.items
+        if items then
+            for i = 1, #items do
+                local it = items[i]
+                if it.type ~= "chain" then
+                    if it.id == questID then return chain.id end
+                    if it.variations then
+                        for v = 1, #it.variations do
+                            if it.variations[v].id == questID then return chain.id end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function CG:SearchByQuestID(questID)
+    -- Nudge Blizzard to load the title so the chat confirmation can name it
+    -- (it resolves to the player's own locale — German, French, etc.).
+    if C_QuestLog and C_QuestLog.RequestLoadQuestByID then
+        C_QuestLog.RequestLoadQuestByID(questID)
+    end
+    local chainID = self:FindChainForQuest(questID)
+    local name = ns.Util.QuestTitle(questID)
+    if chainID then
+        self:NavigateChain(chainID, questID)
+        print((L["|cffEBB706EQ Chain Guide:|r found quest |cffffffff%d|r%s — jumping to its chain."])
+            :format(questID, name and (" (" .. name .. ")") or ""))
+    else
+        print((L["|cffEBB706EQ Chain Guide:|r quest |cffffffff%d|r%s isn't in any chain I know about."])
+            :format(questID, name and (" (" .. name .. ")") or ""))
+        print(("  Wowhead: https://www.wowhead.com/quest=%d"):format(questID))
+    end
 end
 
 function CG:Back()    local H = ns:GetSubsystem("ChainGuideHistory"); H:Back();    self:RenderCurrent() end
@@ -328,7 +413,7 @@ function CG:RenderCurrent()
 
     self:RenderCategories(activeCatID)
     self:RenderChains(activeCatID, activeChainID)
-    self:RenderDetail(activeChainID)
+    self:RenderDetail(activeChainID, state.highlight)
 end
 
 function CG:RenderCategories(activeCatID)
@@ -479,9 +564,9 @@ function CG:RenderChains(activeCatID, activeChainID)
     content:SetHeight(totalH)
 end
 
-function CG:RenderDetail(activeChainID)
+function CG:RenderDetail(activeChainID, highlightQuestID)
     local CV = ns:GetSubsystem("ChainGuideView")
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     local chain = activeChainID and Database.chains[activeChainID]
-    CV:Render(self.frame.detailPane, chain)
+    CV:Render(self.frame.detailPane, chain, highlightQuestID)
 end

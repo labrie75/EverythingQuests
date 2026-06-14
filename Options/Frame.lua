@@ -58,7 +58,7 @@ function Options:Build()
         edgeSize = 1,
     })
     f:SetBackdropColor(unpack(FRAME_BG))
-    f:SetBackdropBorderColor(0.427, 0.020, 0.004, 1.0)   -- #6D0501
+    f:SetBackdropBorderColor(0.635, 0.000, 0.039, 1.0)   -- #a2000a
 
     -- Title
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -70,7 +70,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.17.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.18.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -276,12 +276,62 @@ function Options:CreateYellowButton(parent, label, onClick)
     return b
 end
 
+-- Strip WoW colour/escape sequences so a label carrying inline |cff..|r markup
+-- can be reused verbatim as a plain tooltip title.
+local function stripEscapes(s)
+    if not s then return "" end
+    return (s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
+-- Attach a hover tooltip (bold title + wrapped grey body) to a control. This is
+-- how the old standalone grey "explanation" FontStrings were de-cluttered off
+-- the panel and onto the option itself. We HOOK (not overwrite) OnEnter/OnLeave
+-- so any existing scripts survive, and EnableMouse on container widgets
+-- (sliders/dropdowns/colour pickers) that otherwise have no hit area.
+--   • Checkboxes: the hit rect is stretched across the label so the whole row
+--     is a hover (and click) target, not just the 22px box.
+--   • Section headers are FontStrings (no mouse) — we overlay an invisible
+--     mouse frame matching their text bounds and hover that instead.
+function Options:AttachTooltip(frame, title, body)
+    if not frame or (not title and not body) then return end
+    title = (title and title ~= "") and stripEscapes(title) or nil
+
+    -- Headers (and any bare FontString) can't take mouse scripts; wrap them.
+    if frame.GetObjectType and frame:GetObjectType() == "FontString" then
+        local overlay = CreateFrame("Frame", nil, frame:GetParent())
+        overlay:SetAllPoints(frame)
+        frame = overlay
+    elseif frame.label and frame.GetObjectType and frame:GetObjectType() == "CheckButton" then
+        local w = frame.label:GetStringWidth() or 0
+        if w > 0 then frame:SetHitRectInsets(0, -(w + 8), 0, 0) end
+    end
+
+    local targets = { frame }
+    if frame.slider then targets[#targets + 1] = frame.slider end
+    if frame.button then targets[#targets + 1] = frame.button end
+
+    for _, t in ipairs(targets) do
+        if t.EnableMouse then t:EnableMouse(true) end
+        t:HookScript("OnEnter", function(s)
+            GameTooltip:SetOwner(s, "ANCHOR_RIGHT")
+            -- GameTooltip:SetText(text, r, g, b, alpha, wrap) — the 5th arg is
+            -- ALPHA (a number), so pass 1 here, not the wrap flag (which is 6th).
+            if title then GameTooltip:SetText(title, YELLOW[1], YELLOW[2], YELLOW[3], 1, true) end
+            if body and body ~= "" then GameTooltip:AddLine(body, 0.82, 0.82, 0.82, true) end
+            GameTooltip:Show()
+        end)
+        t:HookScript("OnLeave", function() GameTooltip:Hide() end)
+    end
+end
+
 -- White-text checkbox using Blizzard's UICheckButtonTemplate. The template
 -- already provides the box artwork; we layer our own label so it matches the
 -- rest of the options panel (white text, GameFontNormal). `getter`/`setter`
 -- callbacks read/write the underlying setting; setter is called immediately
--- on click, so any side-effect (Tracker:Refresh, etc.) lives there.
-function Options:CreateCheckbox(parent, label, getter, setter)
+-- on click, so any side-effect (Tracker:Refresh, etc.) lives there. An optional
+-- `tooltip` body string moves the old grey explanation onto a hover tooltip
+-- (the label itself becomes the tooltip title).
+function Options:CreateCheckbox(parent, label, getter, setter, tooltip)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetSize(22, 22)
 
@@ -295,6 +345,7 @@ function Options:CreateCheckbox(parent, label, getter, setter)
     cb:SetScript("OnClick", function(btn)
         if setter then setter(btn:GetChecked() and true or false) end
     end)
+    if tooltip then self:AttachTooltip(cb, label, tooltip) end
     return cb
 end
 
@@ -322,7 +373,7 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
         for _, b in ipairs(buttons) do
             local isActive = (b.value == active)
             if isActive then
-                b.bg:SetColorTexture(0.43, 0.02, 0.0, 1)         -- EQ red
+                b.bg:SetColorTexture(0.635, 0.0, 0.039, 1)       -- EQ red #a2000a
                 b.txt:SetTextColor(1, 1, 1, 1)
             else
                 b.bg:SetColorTexture(0.10, 0.10, 0.10, 0.9)
@@ -752,6 +803,11 @@ local function eqSlashHandler(msg)
         local WN = ns:GetSubsystem("WhatsNew")
         if WN and WN.Show then WN:Show() end
         return
+    elseif msg == "about" then
+        -- Open Options straight to the About tab.
+        Options:Show()
+        Options:SelectTab("about")
+        return
     elseif msg:match("^discover") then
         local hint = msg:match("^discover%s+(.+)$")
         local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
@@ -782,6 +838,23 @@ local function eqSlashHandler(msg)
             print("|cffEBB706EQ ZoneBar|r debug " .. (ns.zoneBarDebug and "ON" or "OFF"))
         end
         if ZP and ZP.PrintStatus then ZP:PrintStatus() end
+        return
+    elseif msg == "skindebug" then
+        -- Dump the tracker scroll bar's widget shape so the scroll-bar skin can
+        -- be targeted to whatever Blizzard ships on this client.
+        local T = ns:GetSubsystem("Tracker")
+        local f = T and T.frame
+        local sf = f and f.scroll
+        local bar = sf and (sf.ScrollBar or sf.scrollBar)
+        if not bar then print("|cffEBB706EQ Skin|r: no scroll bar found"); return end
+        print(("|cffEBB706EQ Skin|r bar: %s  name=%s"):format(bar:GetObjectType(), bar:GetName() or "(unnamed)"))
+        print(("  GetThumbTexture=%s thumbTex=%s"):format(
+            tostring(bar.GetThumbTexture ~= nil),
+            tostring(bar.GetThumbTexture and bar:GetThumbTexture())))
+        print(("  .Thumb=%s  .Track=%s"):format(tostring(bar.Thumb), tostring(bar.Track)))
+        print(("  up: .ScrollUpButton=%s .Back=%s   down: .ScrollDownButton=%s .Forward=%s"):format(
+            tostring(bar.ScrollUpButton), tostring(bar.Back),
+            tostring(bar.ScrollDownButton), tostring(bar.Forward)))
         return
     elseif msg:match("^profile") then
         -- /eqs profile [show|reset|mem on|mem off]

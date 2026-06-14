@@ -133,6 +133,15 @@ local function buildNode(parent)
     b.hl:SetAllPoints()
     b.hl:SetColorTexture(1, 1, 1, 0.06)
 
+    -- Gold ring shown when the node is the target of a Quest-ID search. Sits a
+    -- few px outside the node (negative-inset BACKGROUND sublevel) so it reads
+    -- as an outline rather than a fill. Hidden until a search highlights it.
+    b.searchGlow = b:CreateTexture(nil, "BACKGROUND", nil, -2)
+    b.searchGlow:SetPoint("TOPLEFT", -3, 3)
+    b.searchGlow:SetPoint("BOTTOMRIGHT", 3, -3)
+    b.searchGlow:SetColorTexture(0.92, 0.72, 0.02, 0.95)
+    b.searchGlow:Hide()
+
     b:SetScript("OnEnter", nodeOnEnter)
     b:SetScript("OnLeave", nodeOnLeave)
     b:SetScript("OnClick", nodeOnClick)
@@ -159,6 +168,7 @@ local function releaseNodes()
         b.statusIcon:SetTexture(nil)
         b.statusIcon:SetVertexColor(1, 1, 1, 1)
         b.border:SetColorTexture(0.20, 0.20, 0.20, 1)
+        if b.searchGlow then b.searchGlow:Hide() end
         CV.nodePool[#CV.nodePool + 1] = b
         CV.activeNodes[i] = nil
     end
@@ -353,7 +363,7 @@ end
 -- ─── Public render ─────────────────────────────────────────────────────
 -- Builds header + scrollable canvas lazily on first call, then on every call
 -- repopulates nodes and lines from the chain definition.
-function CV:Render(pane, chain)
+function CV:Render(pane, chain, highlightQuestID)
     self:_ensureUI(pane)
     releaseNodes()
     releaseLines()
@@ -468,6 +478,7 @@ function CV:Render(pane, chain)
     -- look up endpoints. Wiped instead of reallocated each render.
     wipe(_nodes)
     local nodes = _nodes
+    local highlightRow            -- row of the Quest-ID search target, if any
     for i = 1, #items do
         local resolved = _resolved[i]
         local node = acquireNode(pane._cvCanvas)
@@ -518,6 +529,13 @@ function CV:Render(pane, chain)
         node._chain   = chain
         node._navKind = (resolved.type == "chain") and "chain" or "quest"
 
+        -- Quest-ID search target: ring it and remember its row so we can scroll
+        -- it into view once the canvas is sized below.
+        if highlightQuestID and resolved.type ~= "chain" and resolved.id == highlightQuestID then
+            node.searchGlow:Show()
+            highlightRow = rows[i]
+        end
+
         nodes[i] = node
     end
 
@@ -549,6 +567,19 @@ function CV:Render(pane, chain)
     local canvasW = (maxCol + 1) * CELL_W + maxCol * CELL_GAP_X
     local canvasH = (maxRow + 1) * CELL_H + maxRow * CELL_GAP_Y
     pane._cvCanvas:SetSize(math.max(canvasW, 1), math.max(canvasH, 1))
+
+    -- Scroll the Quest-ID search target into view. Deferred a frame so the
+    -- scroll range already reflects the canvas height we just set.
+    if highlightRow then
+        local sc = pane._cvScroll
+        local y  = highlightRow * (CELL_H + CELL_GAP_Y)
+        C_Timer.After(0, function()
+            if not (sc and sc:IsShown()) then return end
+            if sc.UpdateScrollChildRect then sc:UpdateScrollChildRect() end
+            local maxv = sc:GetVerticalScrollRange() or 0
+            sc:SetVerticalScroll(math.min(maxv, math.max(0, y - 20)))
+        end)
+    end
 end
 
 -- Lazy build of the per-pane UI scaffolding (header + scroll + canvas + empty

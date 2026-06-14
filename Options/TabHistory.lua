@@ -30,14 +30,9 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
     local enaGet, enaSet = historySetting("enabled")
     local ena = Options:CreateCheckbox(content,
         L["Record completed quests"],
-        enaGet, enaSet)
+        enaGet, enaSet,
+        L["When on, Everything Quests writes an entry to your account-wide quest history every time you turn in a quest. The data is shared across all of your characters; the history window can filter by character."])
     ena:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
-
-    local enaHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    enaHint:SetPoint("TOPLEFT", ena, "BOTTOMLEFT", 0, -2)
-    enaHint:SetWidth(650)
-    enaHint:SetJustifyH("LEFT")
-    enaHint:SetText(L["When on, Everything Quests writes an entry to your account-wide quest history every time you turn in a quest. The data is shared across all of your characters; the history window can filter by character."])
 
     -- Retention slider (200..10000 step 200; 0 means unlimited, set via a
     -- separate "unlimited" checkbox below the slider for clarity).
@@ -50,7 +45,7 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
         if DB then DB.db.profile.history.retention = value end
     end
     local retLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    retLabel:SetPoint("TOPLEFT", enaHint, "BOTTOMLEFT", 0, -16)
+    retLabel:SetPoint("TOPLEFT", ena, "BOTTOMLEFT", 0, -16)
     retLabel:SetText(L["Maximum entries kept"])
 
     local retSlider
@@ -58,21 +53,17 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
         retSlider = Options:CreateSlider(content, nil, 200, 10000, 200, retGet, retSet)
         retSlider:SetPoint("TOPLEFT", retLabel, "BOTTOMLEFT", 0, -8)
         retSlider:SetWidth(300)
+        Options:AttachTooltip(retSlider, L["Maximum entries kept"],
+            L["When the history grows past this many entries, the oldest ones are dropped. Set higher if you want a longer record, lower to save disk space. 5000 entries is enough for several months of heavy questing."])
     end
-
-    local retHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    retHint:SetPoint("TOPLEFT", retSlider or retLabel, "BOTTOMLEFT", 0, -8)
-    retHint:SetWidth(650)
-    retHint:SetJustifyH("LEFT")
-    retHint:SetText(L["When the history grows past this many entries, the oldest ones are dropped. Set higher if you want a longer record, lower to save disk space. 5000 entries is enough for several months of heavy questing."])
 
     -- ─── Actions ────────────────────────────────────────────────────────
     local openBtn = Options:CreateYellowButton(content, L["Open Quest History"], function()
         local HF = ns:GetSubsystem("HistoryFrame")
         if HF and HF.Open then HF:Open() end
     end)
-    openBtn:SetSize(200, 24)
-    openBtn:SetPoint("TOPLEFT", retHint, "BOTTOMLEFT", 0, -20)
+    openBtn:SetSize(280, 24)
+    openBtn:SetPoint("TOPLEFT", retSlider or retLabel, "BOTTOMLEFT", 0, -20)
 
     local backfillBtn = Options:CreateYellowButton(content, L["Populate from past completions"], function()
         local R = ns:GetSubsystem("History")
@@ -84,12 +75,8 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
     end)
     backfillBtn:SetSize(280, 24)
     backfillBtn:SetPoint("TOPLEFT", openBtn, "BOTTOMLEFT", 0, -10)
-
-    local backfillHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    backfillHint:SetPoint("TOPLEFT", backfillBtn, "BOTTOMLEFT", 0, -2)
-    backfillHint:SetWidth(650)
-    backfillHint:SetJustifyH("LEFT")
-    backfillHint:SetText(L["One-time per character: walks the list of quests this character has completed (according to the game's own record) and adds any that aren't already in your history. Entries created this way have no date — the game doesn't tell us when they happened."])
+    Options:AttachTooltip(backfillBtn, L["Populate from past completions"],
+        L["One-time per character: walks the list of quests this character has completed (according to the game's own record) and adds any that aren't already in your history. Entries created this way have no date — the game doesn't tell us when they happened."])
 
     local rescanBtn = Options:CreateYellowButton(content, L["Re-scan for quest names"], function()
         local R = ns:GetSubsystem("History")
@@ -103,13 +90,9 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
         end
     end)
     rescanBtn:SetSize(280, 24)
-    rescanBtn:SetPoint("TOPLEFT", backfillHint, "BOTTOMLEFT", 0, -16)
-
-    local rescanHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    rescanHint:SetPoint("TOPLEFT", rescanBtn, "BOTTOMLEFT", 0, -2)
-    rescanHint:SetWidth(650)
-    rescanHint:SetJustifyH("LEFT")
-    rescanHint:SetText(L["Some quests in the backfilled history show up as \"Quest #12345\" because Blizzard hasn't sent the client their name yet. This button asks the server for every missing one. Quests the server flatly has no data for (retired or internal IDs) will keep their numeric placeholder."])
+    rescanBtn:SetPoint("TOPLEFT", backfillBtn, "BOTTOMLEFT", 0, -10)
+    Options:AttachTooltip(rescanBtn, L["Re-scan for quest names"],
+        L["Some quests in the backfilled history show up as \"Quest #12345\" because Blizzard hasn't sent the client their name yet. This button asks the server for every missing one. Quests the server flatly has no data for (retired or internal IDs) will keep their numeric placeholder."])
 
     -- Restore from the automatic logout backup. EQ keeps a few rolling
     -- snapshots of your history and self-restores on load if it ever detects
@@ -139,13 +122,9 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
         })
     end)
     restoreBtn:SetSize(280, 24)
-    restoreBtn:SetPoint("TOPLEFT", rescanHint, "BOTTOMLEFT", 0, -16)
-
-    local restoreHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    restoreHint:SetPoint("TOPLEFT", restoreBtn, "BOTTOMLEFT", 0, -2)
-    restoreHint:SetWidth(650)
-    restoreHint:SetJustifyH("LEFT")
-    restoreHint:SetText(L["Everything Quests saves a rolling backup of your history when you log out, and automatically restores it if your history is ever found empty or missing a character on load. Use this button to restore manually."])
+    restoreBtn:SetPoint("TOPLEFT", rescanBtn, "BOTTOMLEFT", 0, -10)
+    Options:AttachTooltip(restoreBtn, L["Restore history from backup"],
+        L["Everything Quests saves a rolling backup of your history when you log out, and automatically restores it if your history is ever found empty or missing a character on load. Use this button to restore manually."])
 
     local wipeBtn = Options:CreateYellowButton(content, L["Wipe history"], function()
         local Dialog = ns:GetSubsystem("Dialog")
@@ -164,6 +143,9 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
             end,
         })
     end)
-    wipeBtn:SetSize(160, 24)
-    wipeBtn:SetPoint("TOPLEFT", restoreHint, "BOTTOMLEFT", 0, -16)
+    -- Full-width to align with the other four, but brand-red text + extra gap
+    -- above so the one destructive action clearly stands apart.
+    wipeBtn:SetSize(280, 24)
+    wipeBtn:SetPoint("TOPLEFT", restoreBtn, "BOTTOMLEFT", 0, -16)
+    if wipeBtn.text then wipeBtn.text:SetTextColor(0.635, 0.000, 0.039) end   -- #a2000a
 end)

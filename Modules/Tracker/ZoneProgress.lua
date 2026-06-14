@@ -541,7 +541,7 @@ function ZP:ApplySettings()
     else
         local bc = st.borderColor
         if bc then f:SetBackdropBorderColor(bc.r, bc.g, bc.b, bc.a or 1)
-        else       f:SetBackdropBorderColor(0.427, 0.020, 0.004, 1) end   -- brand red #6D0501
+        else       f:SetBackdropBorderColor(0.635, 0.000, 0.039, 1) end   -- brand red #a2000a
     end
 end
 

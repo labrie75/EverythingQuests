@@ -59,8 +59,9 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
         end
     end
     local unrouted = Options:CreateCheckbox(content,
-        L["Show unrouted questlines  |cffaaaaaa(API discoveries not in our routing table)|r"],
-        unroutedGet, unroutedSet)
+        L["Show unrouted questlines"],
+        unroutedGet, unroutedSet,
+        L["API discoveries not in our routing table."])
     unrouted:SetPoint("TOPLEFT", login, "BOTTOMLEFT", 0, -2)
 
     local scaleGet, scaleSet = chainSetting("scale")
@@ -73,12 +74,8 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
     local cacheHeader = Options:CreateSectionHeader(content, L["Character cache"])
     cacheHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
-    local cacheHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    cacheHint:SetPoint("TOPLEFT", cacheHeader, "BOTTOMLEFT", 0, -8)
-    cacheHint:SetWidth(380)
-    cacheHint:SetJustifyH("LEFT")
-    cacheHint:SetTextColor(0.65, 0.65, 0.65)
-    cacheHint:SetText(L["Per-character chain progress is cached account-wide so alts can browse what your other characters have completed. Clearing the cache removes that cross-character data; live completions stay (Blizzard tracks those)."])
+    Options:AttachTooltip(cacheHeader, L["Character cache"],
+        L["Per-character chain progress is cached account-wide so alts can browse what your other characters have completed. Clearing the cache removes that cross-character data; live completions stay (Blizzard tracks those)."])
 
     local clear = Options:CreateYellowButton(content, L["Clear chain cache"], function()
         local Dialog = ns:GetSubsystem("Dialog")
@@ -95,7 +92,7 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
         })
     end)
     clear:SetSize(180, 24)
-    clear:SetPoint("TOPLEFT", cacheHint, "BOTTOMLEFT", 0, -12)
+    clear:SetPoint("TOPLEFT", cacheHeader, "BOTTOMLEFT", 0, -12)
 
     -- Cache readout text. Created here, populated by refreshStats() below, and
     -- positioned beneath the buttons once they exist.

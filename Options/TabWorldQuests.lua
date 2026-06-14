@@ -147,21 +147,16 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
         refreshWQ()
     end
     local wqMaster = Options:CreateCheckbox(content,
-        L["Enable World Quests map features  |cffaaaaaa(pins, summary, zone list)|r"],
-        wqMasterGet, wqMasterSet)
+        L["Enable World Quests map features"],
+        wqMasterGet, wqMasterSet,
+        L["Off: Everything Quests stops putting World Quests on the map — no world-map pins, no reward summary box, no zone quest list. The boxes below do nothing while this is off. This switch is ONLY for World Quests. It does NOT remove the red \"!\" / \"?\" quest rings — those are your normal quests, and you turn them off on the General tab. It also does NOT change the World Quests list in your tracker (that's on the Tracker tab)."])
     wqMaster:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -16)
-
-    local wqMasterHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    wqMasterHint:SetPoint("TOPLEFT", wqMaster, "BOTTOMLEFT", 0, -2)
-    wqMasterHint:SetWidth(430)
-    wqMasterHint:SetJustifyH("LEFT")
-    wqMasterHint:SetText(L["Off: Everything Quests stops putting World Quests on the map — no world-map pins, no reward summary box, no zone quest list. The boxes below do nothing while this is off. This switch is ONLY for World Quests. It does NOT remove the red \"!\" / \"?\" quest rings — those are your normal quests, and you turn them off on the General tab. It also does NOT change the World Quests list in your tracker (that's on the Tracker tab)."])
 
     local showWMGet, showWMSet = wqSetting("showOnWorldMap")
     local showWM = Options:CreateCheckbox(
         content, L["Show world quest pins on the world map"],
         showWMGet, showWMSet)
-    showWM:SetPoint("TOPLEFT", wqMasterHint, "BOTTOMLEFT", 0, -12)
+    showWM:SetPoint("TOPLEFT", wqMaster, "BOTTOMLEFT", 0, -2)
 
     local showZMGet, showZMSet = wqSetting("showOnZoneMap")
     local showZM = Options:CreateCheckbox(
@@ -215,15 +210,11 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
     local factionHeader = Options:CreateSectionHeader(content, L["Filter by faction"])
     factionHeader:SetPoint("TOPLEFT", header, "TOPLEFT", 460, 0)
 
-    local factionHelp = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    factionHelp:SetPoint("TOPLEFT", factionHeader, "BOTTOMLEFT", 0, -4)
-    factionHelp:SetWidth(380)
-    factionHelp:SetJustifyH("LEFT")
-    factionHelp:SetTextColor(0.65, 0.65, 0.65)
-    factionHelp:SetText(L["Uncheck a faction to hide its world quests on the map."])
+    Options:AttachTooltip(factionHeader, L["Filter by faction"],
+        L["Uncheck a faction to hide its world quests on the map."])
 
     local scroll = CreateFrame("ScrollFrame", nil, content, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", factionHelp, "BOTTOMLEFT", 0, -8)
+    scroll:SetPoint("TOPLEFT", factionHeader, "BOTTOMLEFT", 0, -8)
     -- 380x260 (was 440): the list scrolls, so a shorter viewport is
     -- harmless and leaves room for the "Display" group (Sort + Pin
     -- scale) below it — that group moved here from the left column,
@@ -267,7 +258,7 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
             y = y + 18
 
             local underline = list:CreateTexture(nil, "ARTWORK")
-            underline:SetColorTexture(0.43, 0.02, 0.0, 0.7)
+            underline:SetColorTexture(0.635, 0.0, 0.039, 0.7)
             underline:SetSize(360, 1)
             underline:SetPoint("TOPLEFT", 0, -y + 2)
             y = y + 4
@@ -320,9 +311,6 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
     pinSlider:SetPoint("TOPLEFT", sortRadio, "BOTTOMLEFT", 0, -16)
     pinSlider:SetWidth(280)
 
-    local hint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    hint:SetPoint("TOPLEFT", pinSlider, "BOTTOMLEFT", 0, -4)
-    hint:SetWidth(440)
-    hint:SetJustifyH("LEFT")
-    hint:SetText(L["Filters apply immediately when the world map is open."])
+    Options:AttachTooltip(displayHeader, L["Display"],
+        L["Filters apply immediately when the world map is open."])
 end)

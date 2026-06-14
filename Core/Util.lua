@@ -10,13 +10,15 @@ local Util = ns:RegisterSubsystem("Util", {})
 -- two files shipped #6D0501 as {0.42,0.02,0.02}, a visibly purpler red).
 -- The brand red is exactly #6D0501 = 109/255, 5/255, 1/255 = 0.427,0.020,0.004
 -- (matches Core/DB.lua's borderColor default and Core/Dialog.lua).
+-- Brand red brightened from #6D0501 to #a2000a = 162/255, 0/255, 10/255 =
+-- 0.635, 0.000, 0.039 (the original was a touch too dark in-game).
 Util.color = {
     optionsBg     = { 0.00,  0.00,  0.00,  0.95 },
-    tabActive     = { 0.427, 0.020, 0.004, 1.00 },                      -- #6D0501
+    tabActive     = { 0.635, 0.000, 0.039, 1.00 },                      -- #a2000a
     tabInactive   = { 0.10,  0.10,  0.10,  0.85 },
     tabText       = { 1.00,  1.00,  1.00,  1.00 },
-    brandRed      = { 0.427, 0.020, 0.004, 1.00 },                      -- #6D0501 canonical
-    headerRed     = { 0.427, 0.020, 0.004, 1.00 },                      -- = brandRed (section headers)
+    brandRed      = { 0.635, 0.000, 0.039, 1.00 },                      -- #a2000a canonical
+    headerRed     = { 0.635, 0.000, 0.039, 1.00 },                      -- = brandRed (section headers)
     buttonYellow  = { 0.92,  0.72,  0.02,  1.00 },                      -- #EBB706
     statYellow    = { 0.92,  0.72,  0.02,  1.00 },                      -- = buttonYellow
     muted         = { 0.70,  0.70,  0.70,  1.00 },                      -- secondary label grey

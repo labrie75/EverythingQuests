@@ -5,6 +5,24 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0] - 2026-06-13
+
+### New Features
+
+- **Search the Chain Guide by Quest ID** — The Chain Guide now has a **Find Quest ID** box in its navigation bar. Type a quest's ID (the universal number from sites like Wowhead) and Everything Quests jumps to the chain that contains it, rings the quest, and scrolls it into view. Because quest *names* are localized but quest *IDs* aren't, this lets players on a non-English client follow an English guide without translating names back and forth. If the ID isn't part of any chain Everything Quests knows, a Wowhead link is printed in chat instead. *(Suggested by Sparta | Phrenic.)*
+- **Skin the tracker scroll bar** — A new **Tracker Skins** section on the Appearance tab lets you restyle the tracker's scroll bar: give it a flat single-color thumb with its own color and width, or hide the up/down arrow buttons. Off by default, so the stock bar is untouched until you enable it. *(Suggested by Fostot.)*
+- **About tab** — A new **About** tab (the seventh) gathers the live version, copyable links (Discord, CurseForge, GitHub, Report a Bug), the user-facing slash commands, credits, and the full changelog. Open it directly with `/eqs about`.
+
+### Improvements
+
+- **The tracker background wraps your quests** — The tracker's background and border now hug just the visible quests instead of spanning the full frame height, and disappear entirely when nothing is tracked, so a short quest list no longer floats in a tall empty box. *(Contributed by Spydawg2233.)*
+- **Cleaner option panels** — Every setting's grey explanatory text has moved into a hover tooltip. Mouse over any option to read what it does; the panels themselves now show clean, short labels.
+- **Brighter brand red** — The Everything-suite red used for section headers, borders, and accents was brightened a little (it had always read a touch too dark in-game).
+
+### Bug Fixes
+
+- **Newly accepted quests track reliably** — A freshly accepted quest could occasionally fail to appear in the tracker. Everything Quests was adding it as an *automatic* watch, which the game silently drops once you pass its small auto-watch cap; it now adds a stable *manual* watch (the same as ticking the checkbox in the quest log), for both auto-track-on-accept and the tracker's right-click **Track Quest**.
+
 ## [1.17.0] - 2026-06-12
 
 ### New Features

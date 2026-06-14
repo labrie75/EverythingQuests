@@ -54,7 +54,7 @@ DB.defaults = {
             -- Off by default; color is user-set (the picker carries the
             -- Class option). Default = suite brand red #6D0501.
             showBorder = false,
-            borderColor = { r = 0.427, g = 0.020, b = 0.004, a = 1 },
+            borderColor = { r = 0.635, g = 0.000, b = 0.039, a = 1 },
             borderSize  = 1,                                                      -- edge thickness in px (Appearance slider, 1-5)
             -- Default font. Bundled with the addon and registered with
             -- LibSharedMedia in Core/Media.lua, so this resolves for every
@@ -90,6 +90,14 @@ DB.defaults = {
             scrollBarBg          = true,                                         -- background strip behind the scroll bar
             scrollBarBgColor     = { r = 0.60, g = 0.60, b = 0.65, a = 0.25 },    -- pale grey, low alpha: barely visible but hints the bar is there
             hideScrollBar        = false,                                        -- hide the scroll bar entirely; mouse wheel still scrolls
+            -- Scroll-bar "skin" (Appearance > Tracker Skins). Opt-in so the
+            -- stock Blizzard bar is untouched until the user enables it.
+            -- skinScrollBar drives the solid-colour thumb (colour + width);
+            -- hideScrollArrows hides the up/down arrow buttons independently.
+            skinScrollBar        = false,
+            scrollBarThumbColor  = { r = 0.60, g = 0.60, b = 0.65, a = 0.90 },    -- solid thumb block colour when skinned
+            scrollBarThumbWidth  = 8,                                            -- thumb block width in px when skinned
+            hideScrollArrows     = false,                                        -- hide the scroll bar's up/down arrow buttons
             showQuestPopups      = true,                                         -- "Quest Discovered!"/"Quest Complete!" auto-quest popup boxes
             showRecentlyAddedTag = true,                                         -- "NEW" tag on quests accepted within the last hour
             -- Blizzard-style split click on tracker quest rows. OFF by

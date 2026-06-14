@@ -91,7 +91,7 @@ local function buildButton()
     b.bg = b:CreateTexture(nil, "BACKGROUND")
     b.bg:SetPoint("TOPLEFT", -1, 1)
     b.bg:SetPoint("BOTTOMRIGHT", 1, -1)
-    b.bg:SetColorTexture(0.43, 0.02, 0.0, 1)             -- brand-red 1px frame
+    b.bg:SetColorTexture(0.635, 0.0, 0.039, 1)           -- brand-red 1px frame
 
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()

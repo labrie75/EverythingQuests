@@ -156,7 +156,7 @@ function Z:Build()
 
     local function edge()
         local t = f:CreateTexture(nil, "BORDER")
-        t:SetColorTexture(0.43, 0.02, 0.0, 0.9)
+        t:SetColorTexture(0.635, 0.0, 0.039, 0.9)
         return t
     end
     local top = edge(); top:SetHeight(1); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT")

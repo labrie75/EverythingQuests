@@ -40,7 +40,7 @@ function Pin:OnAcquired(questID, x, y, isComplete)
     -- standard quest icon centered on top.
     if self.ring then
         self.ring:SetAtlas("worldquest-emissary-ring")
-        self.ring:SetVertexColor(0.43, 0.02, 0.0, 1)             -- #6D0501
+        self.ring:SetVertexColor(0.635, 0.0, 0.039, 1)           -- #a2000a
     end
     self.icon:SetTexture(isComplete and ICON_QUEST_TURNIN or ICON_QUEST_AVAILABLE)
     self.icon:SetVertexColor(1, 1, 1, 1)

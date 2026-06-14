@@ -59,7 +59,7 @@ local function ensureGhost()
 
     local border = g:CreateTexture(nil, "BORDER")
     border:SetAllPoints()
-    border:SetColorTexture(0.43, 0.02, 0.0, 1)              -- EQ red 1px outline (drawn behind bg)
+    border:SetColorTexture(0.635, 0.0, 0.039, 1)           -- EQ red 1px outline (drawn behind bg)
 
     g.text = g:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     g.text:SetPoint("LEFT",  4, 0)

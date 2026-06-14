@@ -74,11 +74,49 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local bgPicker = Options:CreateColorPicker(content, L["Background Color"], bgColorGet, bgColorSet)
     bgPicker:SetPoint("LEFT", bgCheck, "RIGHT", 120, 0)
 
-    -- Scroll bar background: a strip behind the tracker's scroll bar so the
-    -- low-contrast bar is easy to see. Toggle + colour.
+    -- Optional border around the tracker (wraps the background region).
+    -- Off by default; the color picker carries the same Class/Default
+    -- options as every other EQ picker. Sits directly under Background so the
+    -- swatch stays in the shared colour column with Background Color.
+    local borderGet, borderSet = trackerSetting("showBorder")
+    local borderCheck = Options:CreateCheckbox(content, L["Border"], borderGet, borderSet)
+    borderCheck:SetPoint("TOPLEFT", bgCheck, "BOTTOMLEFT", 0, -10)
+
+    local function borderColorGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.borderColor or { r = 0.635, g = 0.000, b = 0.039, a = 1 }
+    end
+    local function borderColorSet(c)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.borderColor = c end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    local borderPicker = Options:CreateColorPicker(content, L["Border Color"], borderColorGet, borderColorSet)
+    borderPicker:SetPoint("TOPLEFT", bgPicker, "BOTTOMLEFT", 0, -8)
+    borderPicker.button:ClearAllPoints()
+    borderPicker.button:SetPoint("TOP",  borderPicker, "TOP", 0, -1)
+    borderPicker.button:SetPoint("LEFT", bgPicker.button, "LEFT", 0, 0)
+    borderPicker.label:ClearAllPoints()
+    borderPicker.label:SetPoint("RIGHT", borderPicker.button, "LEFT", -8, 0)
+
+    local bThickGet, bThickSet = trackerSetting("borderSize")
+    local borderThickSlider = Options:CreateSlider(content, L["Border Thickness"], 1, 5, 1, bThickGet, bThickSet)
+    borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
+    borderThickSlider:SetWidth(280)
+
+    -- ─── Tracker Skins: scroll-bar styling ──────────────────────────────
+    -- All scroll-bar appearance in one place (requested by Fostot): the faint
+    -- background strip behind the bar (toggle + colour), an opt-in solid-colour
+    -- thumb block (colour + width), and hiding the up/down arrow buttons. The
+    -- thumb + arrow options drive the ScrollBar skin in Tracker/Frame.lua.
+    local skinsHeader = Options:CreateSectionHeader(content, L["Tracker Skins"])
+    skinsHeader:SetPoint("TOPLEFT", borderThickSlider, "BOTTOMLEFT", 0, -20)
+
+    -- Background strip behind the bar (toggle + colour).
     local sbGet, sbSet = trackerSetting("scrollBarBg")
     local sbCheck = Options:CreateCheckbox(content, L["Scroll Bar Background"], sbGet, sbSet)
-    sbCheck:SetPoint("TOPLEFT", bgCheck, "BOTTOMLEFT", 0, -10)
+    sbCheck:SetPoint("TOPLEFT", skinsHeader, "BOTTOMLEFT", 0, -10)
 
     local function sbColorGet()
         local DB = ns:GetSubsystem("DB")
@@ -90,50 +128,40 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    -- Align the Scroll Bar Color *box* directly under the Background Color
-    -- box. The picker positions its swatch relative to its own label, and
-    -- "Scroll Bar Color" is a different width than "Background Color", so
-    -- anchoring the containers alone leaves the boxes a few px out of line.
-    -- Re-anchor the swatch to bgPicker's swatch (shared X column, own row)
-    -- and tuck this picker's label to the swatch's left.
     local sbPicker = Options:CreateColorPicker(content, L["Scroll Bar Color"], sbColorGet, sbColorSet)
-    sbPicker:SetPoint("TOPLEFT", bgPicker, "BOTTOMLEFT", 0, -8)
-    sbPicker.button:ClearAllPoints()
-    sbPicker.button:SetPoint("TOP",  sbPicker, "TOP", 0, -1)
-    sbPicker.button:SetPoint("LEFT", bgPicker.button, "LEFT", 0, 0)
-    sbPicker.label:ClearAllPoints()
-    sbPicker.label:SetPoint("RIGHT", sbPicker.button, "LEFT", -8, 0)
+    sbPicker:SetPoint("LEFT", sbCheck, "RIGHT", 170, 0)
 
-    -- Optional border around the tracker (wraps the background region).
-    -- Off by default; the color picker carries the same Class/Default
-    -- options as every other EQ picker. Mirrors the scroll-bar row's
-    -- anchoring so the swatch stays in the shared color column.
-    local borderGet, borderSet = trackerSetting("showBorder")
-    local borderCheck = Options:CreateCheckbox(content, L["Border"], borderGet, borderSet)
-    borderCheck:SetPoint("TOPLEFT", sbCheck, "BOTTOMLEFT", 0, -10)
+    -- Solid-colour thumb (the draggable block). Opt-in: off = the stock
+    -- textured Blizzard bar. Colour + width apply only while this is on.
+    local thumbSkinGet, thumbSkinSet = trackerSetting("skinScrollBar")
+    local thumbSkinCheck = Options:CreateCheckbox(content, L["Solid color thumb"],
+        thumbSkinGet, thumbSkinSet,
+        L["Replaces the tracker scroll bar's textured thumb (the draggable block) with a flat single-colour block. Use the Thumb Color and Thumb Width controls to style it. Off restores the stock Blizzard bar."])
+    thumbSkinCheck:SetPoint("TOPLEFT", sbCheck, "BOTTOMLEFT", 0, -12)
 
-    local function borderColorGet()
+    local function thumbColorGet()
         local DB = ns:GetSubsystem("DB")
-        return DB and DB.db.profile.tracker.borderColor or { r = 0.427, g = 0.020, b = 0.004, a = 1 }
+        return DB and DB.db.profile.tracker.scrollBarThumbColor or { r = 0.60, g = 0.60, b = 0.65, a = 0.90 }
     end
-    local function borderColorSet(c)
+    local function thumbColorSet(c)
         local DB = ns:GetSubsystem("DB")
-        if DB then DB.db.profile.tracker.borderColor = c end
+        if DB then DB.db.profile.tracker.scrollBarThumbColor = c end
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local borderPicker = Options:CreateColorPicker(content, L["Border Color"], borderColorGet, borderColorSet)
-    borderPicker:SetPoint("TOPLEFT", sbPicker, "BOTTOMLEFT", 0, -8)
-    borderPicker.button:ClearAllPoints()
-    borderPicker.button:SetPoint("TOP",  borderPicker, "TOP", 0, -1)
-    borderPicker.button:SetPoint("LEFT", bgPicker.button, "LEFT", 0, 0)
-    borderPicker.label:ClearAllPoints()
-    borderPicker.label:SetPoint("RIGHT", borderPicker.button, "LEFT", -8, 0)
+    local thumbColorPicker = Options:CreateColorPicker(content, L["Thumb Color"], thumbColorGet, thumbColorSet)
+    thumbColorPicker:SetPoint("LEFT", thumbSkinCheck, "RIGHT", 170, 0)
 
-    local bThickGet, bThickSet = trackerSetting("borderSize")
-    local borderThickSlider = Options:CreateSlider(content, L["Border Thickness"], 1, 5, 1, bThickGet, bThickSet)
-    borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
-    borderThickSlider:SetWidth(280)
+    local twGet, twSet = trackerSetting("scrollBarThumbWidth")
+    local thumbWidthSlider = Options:CreateSlider(content, L["Thumb Width"], 4, 16, 1, twGet, twSet)
+    thumbWidthSlider:SetPoint("TOPLEFT", thumbSkinCheck, "BOTTOMLEFT", 0, -14)
+    thumbWidthSlider:SetWidth(280)
+
+    local hideArrowsGet, hideArrowsSet = trackerSetting("hideScrollArrows")
+    local hideArrowsCheck = Options:CreateCheckbox(content, L["Hide scroll bar arrows"],
+        hideArrowsGet, hideArrowsSet,
+        L["Hides the up and down arrow buttons at the ends of the tracker scroll bar. The bar still scrolls by dragging the thumb or using the mouse wheel."])
+    hideArrowsCheck:SetPoint("TOPLEFT", thumbWidthSlider, "BOTTOMLEFT", 0, -14)
 
     -- ─── RIGHT COLUMN: colors + dimensions ──────────────────────────────
     local colorsHeader = Options:CreateSectionHeader(content, L["Colors & Dimensions"])
@@ -164,11 +192,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     clearBtn:SetSize(60, 18)
     clearBtn:SetPoint("LEFT", titlePicker, "RIGHT", 8, 0)
 
-    local titleHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    titleHint:SetPoint("TOPLEFT", titlePicker, "BOTTOMLEFT", 0, -2)
-    titleHint:SetWidth(380)
-    titleHint:SetJustifyH("LEFT")
-    titleHint:SetText(L["When cleared, falls back to difficulty coloring or default yellow."])
+    Options:AttachTooltip(titlePicker, L["Quest Title Color Override"],
+        L["When cleared, falls back to difficulty coloring or default yellow."])
 
     -- Use the chosen title color for completed quests instead of the default
     -- "ready to turn in" green (recolors the title + completed objective lines;
@@ -177,9 +202,10 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     -- nothing to override green with, so completed quests stay green.
     local recolorGet, recolorSet = trackerSetting("overrideCompleteGreen")
     local recolorCheck = Options:CreateCheckbox(content,
-        L["Use title color for completed quests  |cffaaaaaa(instead of green)|r"],
-        recolorGet, recolorSet)
-    recolorCheck:SetPoint("TOPLEFT", titleHint, "BOTTOMLEFT", 0, -10)
+        L["Use title color for completed quests"],
+        recolorGet, recolorSet,
+        L["Instead of green."])
+    recolorCheck:SetPoint("TOPLEFT", titlePicker, "BOTTOMLEFT", 0, -10)
 
     -- Section header color — overrides the default orange-red.
     local function headerColorGet()
@@ -293,7 +319,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     -- Border color sits right of the Border toggle (default brand red).
     local function zbBorderColorGet()
         local st = zbState()
-        return (st and st.borderColor) or { r = 0.427, g = 0.020, b = 0.004, a = 1 }
+        return (st and st.borderColor) or { r = 0.635, g = 0.000, b = 0.039, a = 1 }
     end
     local function zbBorderColorSet(c)
         local st = zbState(); if st then st.borderColor = c end

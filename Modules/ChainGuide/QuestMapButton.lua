@@ -146,7 +146,7 @@ local function ensureButton()
     local border = b:CreateTexture(nil, "BORDER")
     border:SetPoint("TOPLEFT", -1, 1)
     border:SetPoint("BOTTOMRIGHT", 1, -1)
-    border:SetColorTexture(0.43, 0.02, 0.0, 1)                              -- brand-red 1px outline
+    border:SetColorTexture(0.635, 0.0, 0.039, 1)                            -- brand-red 1px outline
 
     local hl = b:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()

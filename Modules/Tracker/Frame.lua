@@ -162,7 +162,11 @@ function Tracker:BuildFrame()
     local DB = ns:GetSubsystem("DB")
     local cfg = DB.db.profile.tracker
 
-    local f = CreateFrame("Frame", "EQTrackerFrame", UIParent, "BackdropTemplate")
+    -- No BackdropTemplate on f itself: f is the secure boundary (it parents the
+    -- secure quest-item buttons), so we keep it backdrop-free and host all the
+    -- chrome (background fill + border) on a separate child frame, bgFrame,
+    -- which can be resized/restyled freely without touching the secure frame.
+    local f = CreateFrame("Frame", "EQTrackerFrame", UIParent)
     f:SetSize(cfg.width, cfg.maxHeight)
     f:SetScale(cfg.scale)
     self.frame = f
@@ -175,21 +179,29 @@ function Tracker:BuildFrame()
     end
     f:SetClampedToScreen(true)
 
-    f.background = f:CreateTexture(nil, "BACKGROUND")
+    -- Dedicated background/border frame, separate from the secure boundary f.
+    -- Anchored to f's top edge + width; its HEIGHT is (re)set in Render to wrap
+    -- just the visible content (top drag handle → bottom grip) rather than the
+    -- full frame height, so a short quest log doesn't sit in a tall empty box.
+    -- Sits one frame level below f. (Auto-sizing background + hide-when-empty
+    -- contributed by Spydawg2233.)
+    local bgFrame = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    bgFrame:SetPoint("TOPLEFT",  f, "TOPLEFT",  0, 0)
+    bgFrame:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
+    bgFrame:SetHeight(cfg.maxHeight)
+    bgFrame:SetFrameLevel(math.max(0, f:GetFrameLevel() - 1))
+    f.bgFrame = bgFrame
+
+    f.background = bgFrame:CreateTexture(nil, "BACKGROUND")
     f.background:SetAllPoints()
     f.background:Hide()
 
-    -- Optional border. f is a BackdropTemplate frame and f.background is
-    -- SetAllPoints(f), so a backdrop EDGE on f wraps the background region
-    -- exactly. Set the edge once here with NO bgFile (the border must not
-    -- add its own fill — f.background owns the fill); Tracker:Render
-    -- applies the user's color/visibility, mirroring how f.background is
-    -- created hidden here and shown/colored in Render. The edge auto-
-    -- tracks frame size on resize via BackdropTemplate.
+    -- Border edge on bgFrame, NO bgFile (f.background owns the fill). Render
+    -- applies the user's colour/visibility; the edge auto-tracks bgFrame's size.
     f._borderSize = math.max(1, cfg.borderSize or 1)
-    f:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = f._borderSize })
-    f:SetBackdropColor(0, 0, 0, 0)
-    f:SetBackdropBorderColor(0, 0, 0, 0)
+    bgFrame:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = f._borderSize })
+    bgFrame:SetBackdropColor(0, 0, 0, 0)
+    bgFrame:SetBackdropBorderColor(0, 0, 0, 0)
 
     -- Top drag handle: invisible strip across the top edge. Brightens slightly
     -- on hover so users discover it without it cluttering the UI when idle.
@@ -353,8 +365,8 @@ function Tracker:BuildFrame()
         sbBG:SetPoint("TOPLEFT",     sBar, "TOPLEFT",    -1, 0)
         sbBG:SetPoint("BOTTOMRIGHT", sBar, "BOTTOMRIGHT", 1, 0)
     else
-        sbBG:SetPoint("TOPLEFT",     scroll, "TOPRIGHT",    0, 1)
-        sbBG:SetPoint("BOTTOMRIGHT", f,      "BOTTOMRIGHT", -2, GRIP_SIZE + 2)
+        sbBG:SetPoint("TOPLEFT",     scroll,  "TOPRIGHT",    0, 1)
+        sbBG:SetPoint("BOTTOMRIGHT", bgFrame, "BOTTOMRIGHT", -2, GRIP_SIZE + 2)
     end
     sbBG:Hide()
     f.scrollBarBG = sbBG
@@ -540,7 +552,10 @@ function Tracker:ToggleHidden(questID)
     if watched and C_QuestLog.RemoveQuestWatch then
         C_QuestLog.RemoveQuestWatch(questID)
     elseif (not watched) and C_QuestLog.AddQuestWatch then
-        C_QuestLog.AddQuestWatch(questID)
+        -- Manual watch (uncapped + stable) — a typeless AddQuestWatch adds an
+        -- AUTOMATIC watch the engine can evict past its small cap (same fix as
+        -- auto-track in Tracker/Visibility.lua).
+        C_QuestLog.AddQuestWatch(questID, Enum and Enum.QuestWatchType and Enum.QuestWatchType.Manual)
     end
 end
 
@@ -715,6 +730,96 @@ local function setScrollBarHidden(sf, hidden)
     end
 end
 
+-- Resolve a scroll bar's up/down arrow buttons across template/version
+-- differences. The classic UIPanelScrollFrameTemplate exposes them by
+-- parentKey (.ScrollUpButton/.ScrollDownButton); some builds only expose the
+-- named globals, and the newer trim bar uses .Back/.Forward. Try each.
+local function scrollArrowButtons(bar)
+    local name = bar.GetName and bar:GetName()
+    local up = bar.ScrollUpButton or bar.Back
+        or (name and _G[name .. "ScrollUpButton"])
+    local down = bar.ScrollDownButton or bar.Forward
+        or (name and _G[name .. "ScrollDownButton"])
+    return up, down
+end
+
+-- Keep a button hidden even though the template re-shows it whenever the
+-- scroll range changes — same one-time OnShow guard pattern as the bar itself.
+local function setArrowHidden(btn, hidden)
+    if not btn then return end
+    btn._eqArrowHidden = hidden
+    if not btn._eqArrowHook then
+        btn._eqArrowHook = true
+        btn:HookScript("OnShow", function(b) if b._eqArrowHidden then b:Hide() end end)
+    end
+    if hidden then
+        if btn:IsShown() then btn:Hide() end
+    else
+        if not btn:IsShown() then btn:Show() end
+    end
+end
+
+-- Optional scroll-bar "skin" (Appearance > Tracker Skins). Opt-in via
+-- cfg.skinScrollBar: recolours the thumb to a solid block (colour + width) and
+-- can hide the up/down arrows. We snapshot the stock thumb atlas + width the
+-- first time we touch it so turning the skin back off restores the Blizzard
+-- look without a /reload. Everything is nil-guarded so an unexpected bar layout
+-- just no-ops instead of erroring.
+local function applyScrollBarSkin(sf, cfg)
+    if not (sf and cfg) then return end
+    local bar = sf.ScrollBar or sf.scrollBar
+    if not bar then return end
+    local on = cfg.skinScrollBar == true
+    local c  = cfg.scrollBarThumbColor or { r = 0.60, g = 0.60, b = 0.65, a = 0.90 }
+    local w  = cfg.scrollBarThumbWidth
+
+    -- Two bar shapes to support:
+    --  • Classic UIPanelScrollBar — the thumb is a TEXTURE via GetThumbTexture,
+    --    which we recolour directly (snapshotting the stock atlas so we can
+    --    restore it when the skin is switched off).
+    --  • Newer scroll bar — the thumb is a FRAME (bar.Thumb); we can't recolour
+    --    a frame, so we overlay our own texture on it and just hide that overlay
+    --    when off. This way EQ doesn't need to know the frame's internals.
+    local thumbTex = bar.GetThumbTexture and bar:GetThumbTexture()
+    if thumbTex then
+        if not bar._eqThumbCaptured then
+            bar._eqThumbCaptured = true
+            bar._eqThumbAtlas = thumbTex.GetAtlas and thumbTex:GetAtlas() or nil
+            bar._eqThumbW     = thumbTex:GetWidth()
+        end
+        if on then
+            thumbTex:SetTexture(nil)
+            thumbTex:SetColorTexture(c.r or 0.60, c.g or 0.60, c.b or 0.65, c.a or 0.90)
+            if w and w > 0 then thumbTex:SetWidth(w) end
+        elseif bar._eqThumbSkinned then
+            if bar._eqThumbAtlas then thumbTex:SetAtlas(bar._eqThumbAtlas, true) end
+            if bar._eqThumbW and bar._eqThumbW > 0 then thumbTex:SetWidth(bar._eqThumbW) end
+        end
+        bar._eqThumbSkinned = on
+    else
+        local tf = bar.Thumb or (bar.Track and bar.Track.Thumb)
+        if tf then
+            local skin = tf._eqSkinTex
+            if on then
+                if not skin then
+                    skin = tf:CreateTexture(nil, "OVERLAY")
+                    skin:SetAllPoints(tf)
+                    tf._eqSkinTex = skin
+                end
+                skin:SetColorTexture(c.r or 0.60, c.g or 0.60, c.b or 0.65, c.a or 0.90)
+                skin:Show()
+                if w and w > 0 then tf:SetWidth(w) end
+            elseif skin then
+                skin:Hide()
+            end
+        end
+    end
+
+    local up, down = scrollArrowButtons(bar)
+    setArrowHidden(up,   cfg.hideScrollArrows == true)
+    setArrowHidden(down, cfg.hideScrollArrows == true)
+end
+
 -- ── Distance sort support ─────────────────────────────────────────────
 -- Sample the player's normalized position on their current map. Returns
 -- (mapID, x, y); x/y are nil where the client can't resolve a position
@@ -837,32 +942,28 @@ function Tracker:Render()
     if _AC and _AC.ReleaseAll then _AC:ReleaseAll() end
 
     local DB = ns:GetSubsystem("DB")
-    if DB and f.background then
+    if DB and f.background and f.bgFrame then
         local cfg = DB.db.profile.tracker
-        if cfg.showBackground then
-            local c = cfg.backgroundColor or { r = 0, g = 0, b = 0, a = 0.6 }
-            f.background:SetColorTexture(c.r or 0, c.g or 0, c.b or 0, c.a or 0.6)
-            f.background:Show()
-        else
-            f.background:Hide()
-        end
-        -- Border wraps the same rect as f.background, independent of
-        -- whether the background fill is shown. Transparent = "off".
-        -- SetBackdrop is relatively heavy and the only way to change edge
-        -- thickness, so re-apply it ONLY when the size actually changed
-        -- (initial set is in BuildFrame); per-pass cost stays just the
-        -- cheap SetBackdropBorderColor below.
+        -- Set the fill COLOUR here; whether the background (and the bgFrame
+        -- itself) is actually shown is decided in the auto-sizing block at the
+        -- end of Render, which also knows whether the tracker is empty.
+        local c = cfg.backgroundColor or { r = 0, g = 0, b = 0, a = 0.6 }
+        f.background:SetColorTexture(c.r or 0, c.g or 0, c.b or 0, c.a or 0.6)
+        -- Border edge lives on bgFrame (not the secure boundary f). SetBackdrop
+        -- is heavy + the only way to change edge thickness, so re-apply it ONLY
+        -- when the size actually changed (initial set is in BuildFrame); per
+        -- pass we just pay the cheap SetBackdropBorderColor below.
         local bsz = math.max(1, cfg.borderSize or 1)
         if f._borderSize ~= bsz then
             f._borderSize = bsz
-            f:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = bsz })
-            f:SetBackdropColor(0, 0, 0, 0)
+            f.bgFrame:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = bsz })
+            f.bgFrame:SetBackdropColor(0, 0, 0, 0)
         end
         if cfg.showBorder then
-            local bc = cfg.borderColor or { r = 0.427, g = 0.020, b = 0.004, a = 1 }
-            f:SetBackdropBorderColor(bc.r or 0, bc.g or 0, bc.b or 0, bc.a or 1)
+            local bc = cfg.borderColor or { r = 0.635, g = 0.000, b = 0.039, a = 1 }
+            f.bgFrame:SetBackdropBorderColor(bc.r or 0, bc.g or 0, bc.b or 0, bc.a or 1)
         else
-            f:SetBackdropBorderColor(0, 0, 0, 0)
+            f.bgFrame:SetBackdropBorderColor(0, 0, 0, 0)
         end
         -- The bar BG strip only makes sense behind a visible bar, so it's
         -- suppressed when the bar is hidden. (The bars themselves are toggled
@@ -1099,9 +1200,14 @@ function Tracker:Render()
     -- accurate when we decide whether to restore a bar.
     do
         local DB2 = ns:GetSubsystem("DB")
-        local hideBar = DB2 and DB2.db.profile.tracker.hideScrollBar == true
+        local tcfg = DB2 and DB2.db.profile.tracker
+        local hideBar = tcfg and tcfg.hideScrollBar == true
         setScrollBarHidden(f.scroll, hideBar)
         setScrollBarHidden(f.eventsScroll, hideBar)
+        if tcfg then
+            applyScrollBarSkin(f.scroll, tcfg)
+            applyScrollBarSkin(f.eventsScroll, tcfg)
+        end
     end
 
     -- SWEEP: free every block not re-acquired this pass (quest turned in,
@@ -1115,6 +1221,28 @@ function Tracker:Render()
     -- AFTER Sweep so Blocks.byID reflects exactly this pass's quests. (_IB was
     -- resolved above for the secure-lock check; reuse it.)
     if _IB and _IB.Reposition then _IB:Reposition() end
+
+    -- ── Auto-sizing background (Spydawg2233) ────────────────────────────
+    -- Size the standalone bgFrame to wrap just the VISIBLE content — top drag
+    -- handle through the bottom grip — instead of the full (often much taller)
+    -- frame height, so a short quest log no longer floats in a tall empty box.
+    -- Clamped to maxHeight, and hidden entirely when the tracker has nothing to
+    -- show. bgFrame has no secure descendants, so this SetHeight is combat-safe.
+    if f.bgFrame and cfg then
+        local maxH = cfg.maxHeight or f:GetHeight() or 600
+        local isEmpty = (questContentH <= 0) and (wqRegionH <= 0) and (scenarioH <= 1)
+        if isEmpty then
+            f.bgFrame:Hide()
+            f.background:Hide()
+        else
+            local sH = math.min(questContentH, available - wqRegionH)
+            if sH < 1 then sH = 1 end
+            local neededHeight = DRAG_HANDLE_H + scenarioH + 2 + sH + 2 + wqRegionH + GRIP_SIZE + 6
+            f.bgFrame:SetHeight(math.min(neededHeight, maxH))
+            if cfg.showBackground then f.background:Show() else f.background:Hide() end
+            if cfg.showBackground or cfg.showBorder then f.bgFrame:Show() else f.bgFrame:Hide() end
+        end
+    end
 end
 
 -- Render the always-visible World Quests region pinned at the bottom of
@@ -1297,8 +1425,10 @@ end
 local function setWatched(questID, watch)
     if watch then
         if C_QuestLog.AddQuestWatch then
-            -- watchType 1 = Manual (what clicking the checkbox does).
-            C_QuestLog.AddQuestWatch(questID)   -- defaults to Manual watch type
+            -- Pass Manual explicitly: a typeless AddQuestWatch adds an AUTOMATIC
+            -- watch the engine can silently evict past its small cap (same fix
+            -- as auto-track in Tracker/Visibility.lua).
+            C_QuestLog.AddQuestWatch(questID, Enum and Enum.QuestWatchType and Enum.QuestWatchType.Manual)
         end
     elseif C_QuestLog.RemoveQuestWatch then
         C_QuestLog.RemoveQuestWatch(questID)

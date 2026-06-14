@@ -87,20 +87,29 @@ function V:OnEnable()
             return
         end
 
-        local watched = C_QuestLog.GetQuestWatchType
-                         and C_QuestLog.GetQuestWatchType(questID) ~= nil
-
         if cfg.autoTrackAccepted == false then
             -- Opted out: strip any watch so it never reaches the tracker.
+            local watched = C_QuestLog.GetQuestWatchType
+                             and C_QuestLog.GetQuestWatchType(questID) ~= nil
             if watched and C_QuestLog.RemoveQuestWatch then
                 C_QuestLog.RemoveQuestWatch(questID)
             end
-        elseif not watched then
-            -- Auto-track ON (default): add the watch ourselves (Manual,
-            -- same as ticking the quest-log checkbox) so every accepted
-            -- quest — campaign included — lands in the tracker at once.
+        else
+            -- Auto-track ON (default): ensure a MANUAL watch (same as ticking
+            -- the quest-log checkbox). This is the actual fix for "newly
+            -- accepted quests don't always track":
+            --   • AddQuestWatch(questID) with no type adds an AUTOMATIC watch,
+            --     and the engine silently evicts automatic watches once you
+            --     pass its small auto-watch cap — so the Nth accepted quest
+            --     would quietly drop out of the tracker.
+            --   • When Blizzard's own autoQuestWatch CVar already auto-watched
+            --     the quest (as AUTOMATIC), the old `not watched` guard skipped
+            --     it, leaving it evictable.
+            -- Forcing a MANUAL watch every accept is uncapped and stable, and
+            -- still covers campaign quests Blizzard never auto-watches at all.
             if C_QuestLog.AddQuestWatch then
-                C_QuestLog.AddQuestWatch(questID)
+                local manual = Enum and Enum.QuestWatchType and Enum.QuestWatchType.Manual
+                C_QuestLog.AddQuestWatch(questID, manual)
             end
         end
     end)

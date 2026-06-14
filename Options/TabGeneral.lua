@@ -46,15 +46,10 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         end
     end
     local qpins = Options:CreateCheckbox(content,
-        L["Show quest pins on the world map  |cffaaaaaa(EQ's red \"!\" / \"?\" rings)|r"],
-        questPinsGet, questPinsSet)
+        L["Show quest pins on the world map"],
+        questPinsGet, questPinsSet,
+        L["These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away."])
     qpins:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
-
-    local qpinsHint = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    qpinsHint:SetPoint("TOPLEFT", qpins, "BOTTOMLEFT", 0, -2)
-    qpinsHint:SetWidth(430)
-    qpinsHint:SetJustifyH("LEFT")
-    qpinsHint:SetText(L["These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away."])
 
     -- Lock = no drag-to-move AND no resize. Dedicated setter (not the shared
     -- generalSetting) so it also reconciles the resize grip: ApplyLockState
@@ -71,9 +66,10 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         if Tracker and Tracker.ApplyLockState then Tracker:ApplyLockState() end
     end
     local lock = Options:CreateCheckbox(content,
-        L["Lock tracker  |cffaaaaaa(disable drag-to-move and resize)|r"],
-        lockGet, lockSet)
-    lock:SetPoint("TOPLEFT", qpinsHint, "BOTTOMLEFT", 0, -12)
+        L["Lock tracker"],
+        lockGet, lockSet,
+        L["Disable drag-to-move and resize."])
+    lock:SetPoint("TOPLEFT", qpins, "BOTTOMLEFT", 0, -2)
 
     local combatGet, combatSet = generalSetting("hideInCombat")
     local combat = Options:CreateCheckbox(content,
@@ -83,8 +79,9 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
 
     local instGet, instSet = generalSetting("hideInInstances")
     local inst = Options:CreateCheckbox(content,
-        L["Hide tracker in instances  |cffaaaaaa(raids, dungeons, delves)|r"],
-        instGet, instSet)
+        L["Hide tracker in instances"],
+        instGet, instSet,
+        L["Raids, dungeons, delves."])
     inst:SetPoint("TOPLEFT", combat, "BOTTOMLEFT", 0, -2)
 
     local mapGet, mapSet = generalSetting("hideOnMapOpen")
@@ -95,26 +92,30 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
 
     local autoGet, autoSet = generalSetting("autoTrackAccepted")
     local auto = Options:CreateCheckbox(content,
-        L["Auto-track accepted quests  |cffaaaaaa(matches Blizzard's default)|r"],
-        autoGet, autoSet)
+        L["Auto-track accepted quests"],
+        autoGet, autoSet,
+        L["Matches Blizzard's default."])
     auto:SetPoint("TOPLEFT", mapHide, "BOTTOMLEFT", 0, -2)
 
     local autoAccGet, autoAccSet = generalSetting("autoAcceptQuests")
     local autoAcc = Options:CreateCheckbox(content,
-        L["Auto-accept quests  |cffaaaaaa(hold Alt to pause)|r"],
-        autoAccGet, autoAccSet)
+        L["Auto-accept quests"],
+        autoAccGet, autoAccSet,
+        L["Hold Alt to pause."])
     autoAcc:SetPoint("TOPLEFT", auto, "BOTTOMLEFT", 0, -2)
 
     local autoTIGet, autoTISet = generalSetting("autoTurnInQuests")
     local autoTI = Options:CreateCheckbox(content,
-        L["Auto-turn-in quests  |cffaaaaaa(skips reward-choice screens)|r"],
-        autoTIGet, autoTISet)
+        L["Auto-turn-in quests"],
+        autoTIGet, autoTISet,
+        L["Skips reward-choice screens."])
     autoTI:SetPoint("TOPLEFT", autoAcc, "BOTTOMLEFT", 0, -2)
 
     local restoreGet, restoreSet = generalSetting("restoreSuperTrackOnLogin")
     local restore = Options:CreateCheckbox(content,
-        L["Keep focused quest after relog  |cffaaaaaa(restores the waypoint arrow)|r"],
-        restoreGet, restoreSet)
+        L["Keep focused quest after relog"],
+        restoreGet, restoreSet,
+        L["Restores the waypoint arrow."])
     restore:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
     -- Nameplate quest icons. Custom get/set: the stored value is nil until the
@@ -132,8 +133,9 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         if QI and QI.ApplyEnabled then QI:ApplyEnabled() end
     end
     local nameplates = Options:CreateCheckbox(content,
-        L["Quest icons on nameplates  |cffaaaaaa(shows the \"!\" + count on objective mobs)|r"],
-        npGet, npSet)
+        L["Quest icons on nameplates"],
+        npGet, npSet,
+        L["Shows the \"!\" + count on objective mobs."])
     nameplates:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -2)
 
     -- Minimap button — uses LibDBIcon's hide flag stored in db.char.minimap.
@@ -243,15 +245,11 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
     newProfileBtn:SetSize(120, 22)
     newProfileBtn:SetPoint("LEFT", profDD.button, "RIGHT", 6, 0)
 
-    local profHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    profHint:SetPoint("TOPLEFT", profDD, "BOTTOMLEFT", 0, -4)
-    profHint:SetWidth(380)
-    profHint:SetJustifyH("LEFT")
-    profHint:SetTextColor(0.65, 0.65, 0.65)
-    profHint:SetText(L["Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot."])
+    Options:AttachTooltip(profilesHeader, L["Profiles"],
+        L["Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot."])
 
     local slashHeader = Options:CreateSectionHeader(content, L["Slash commands"])
-    slashHeader:SetPoint("TOPLEFT", profHint, "BOTTOMLEFT", 0, -24)
+    slashHeader:SetPoint("TOPLEFT", profDD, "BOTTOMLEFT", 0, -20)
 
     local slashText = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     slashText:SetPoint("TOPLEFT", slashHeader, "BOTTOMLEFT", 0, -8)

@@ -22,7 +22,7 @@ local PAD        = 7
 local LINE_GAP   = 2
 local BOX_GAP    = 6                              -- gap between stacked boxes
 local ICON_SIZE  = 34
-local RED_BORDER = { 0.427, 0.020, 0.004, 1 }     -- #6D0501 (suite border)
+local RED_BORDER = { 0.635, 0.000, 0.039, 1 }     -- #a2000a (suite border)
 local HILITE     = { 0.92, 0.72, 0.02, 1 }        -- yellow hover border
 
 S.pool   = {}

@@ -12,19 +12,29 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.17.0 adds a reward gear-comparison tooltip and lets the tracker stretch
--- much taller. Bumping the version re-shows the popup once to everyone. Bump
--- this constant + rewrite POPUP_BODY for the next release and a fresh popup
--- shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.17.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.17.0"
+-- 1.18.0: Chain Guide Quest-ID search, an auto-sizing tracker background,
+-- scroll-bar skinning, cleaner tooltip-based options, and a new About tab.
+-- Bumping the version re-shows the popup once to everyone. Bump this constant +
+-- rewrite POPUP_BODY for the next release and a fresh popup shows once more.
+-- Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.18.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.18.0"
 
 local POPUP_BODY = [[
-|cffEBB706See if a quest reward is an upgrade|r
-Hover a quest in the tracker and its tooltip now shows the rewards with a built-in item-level comparison. Each gear reward lists its own item level, the item level of what you have equipped in that slot, and whether it's an |cffffffffupgrade|r, a sidegrade, or lower — including |cffffffffeach choice|r on pick-one-of-many quests. World Quest tooltips show the comparison too.
+|cffEBB706Search the Chain Guide by Quest ID|r
+Reading an English guide on a non-English client? The Chain Guide now has a |cffffffffFind Quest ID|r box — type a quest's ID and it jumps to the chain that contains it and rings the quest, with no name-translating required. Thanks |cffffffffSparta || Phrenic|r for the idea.
 
-|cffEBB706Stretch the tracker taller|r
-The tracker can now be resized to nearly the full height of your screen, so you can keep many more quests in view at once. Grab the bottom-right corner and drag. Thanks |cffffffffSpydawg2233|r for the suggestion!
+|cffEBB706A tidier tracker background|r
+The tracker's background and border now wrap just your visible quests instead of a tall empty box, and disappear entirely when you have nothing tracked. Thanks |cffffffffSpydawg2233|r for coding this one up.
+
+|cffEBB706Skin the scroll bar|r
+New |cffffffffTracker Skins|r options on the Appearance tab let you give the tracker's scroll bar a flat single-color thumb, set its color and width, or hide the up/down arrows. Thanks |cffffffffFostot|r for the request.
+
+|cffEBB706Cleaner options, and a new About tab|r
+Every setting's grey description has moved into a hover tooltip, so the option panels read much cleaner — just mouse over a setting to see what it does. There's also a new |cffffffffAbout|r tab with links, slash commands, credits, and the full changelog.
+
+|cffEBB706Newly accepted quests track reliably|r
+Fixed a case where a freshly accepted quest could quietly fail to show up in the tracker.
 
 |cffEBB706Thanks for being here|r
 EQ keeps growing thanks to our Discord community. Join with the button below to suggest a feature or lend a hand.
