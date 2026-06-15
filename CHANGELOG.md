@@ -5,6 +5,26 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-06-14
+
+This release begins a multi-phase overhaul of the Chain Guide. **Phase 1** makes it *actionable* — it now tells you what to do next, shows rich quest info on hover, and can be searched by name. (Phase 2 will add a real branching graph you can drag and explore; Phase 3, map integration with quest-giver pins and auto-advancing waypoints.) Expect more frequent updates than usual while the overhaul is underway.
+
+### New Features
+
+- **The Chain Guide shows your next step** — Open any chain and Everything Quests highlights the next quest you should do: a gold border, a **NEXT** tag, and a **Continue** button that sets your course straight to it (super-tracking it if it's already in your log, or pointing you to where to pick it up). Opening a chain auto-scrolls to where you are.
+- **"On quest" tags** — Quests currently in your quest log are tagged **ON QUEST** in the guide, so you can see at a glance what you're already carrying.
+- **Rich quest tooltips** — Hovering a quest in a chain now shows its difficulty level, objectives, and rewards — including the same gear-upgrade comparison the tracker uses, so you can tell whether a reward beats what you're wearing.
+- **Search by name** — The Chain Guide's find box now accepts a quest *name* as well as an ID, and matches questline names too, jumping to the chain that contains your search.
+
+### Improvements
+
+- **Clearer chain nodes** — Each quest node now shows its difficulty level and ID, and a quest that's ready to turn in is highlighted in gold.
+- **Now available in Russian** — Everything Quests has a full Russian (ruRU) translation, with updated French (frFR). The newly added Chain Guide text will be translated once the overhaul is complete.
+
+### Bug Fixes
+
+- **No more "action blocked" when getting directions in combat** — Clicking a quest in the Chain Guide while in combat could trip a taint error as the world map retargeted (a protected map call during combat lockdown). The map now waits until you leave combat to open; the quest is still super-tracked immediately, so the on-screen objective arrow guides you right away.
+
 ## [1.18.0] - 2026-06-13
 
 ### New Features

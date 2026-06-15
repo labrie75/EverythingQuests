@@ -11,6 +11,23 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.19.0", date = "2026-06-14",
+        sections = {
+            { head = "New Features", items = {
+                "Chain Guide overhaul, Phase 1 of 3 — the guide now shows your NEXT step (gold border + a Continue button that routes you there) and tags quests already in your log as ON QUEST. Opening a chain scrolls to where you are.",
+                "Rich Chain Guide tooltips — hover a quest for its level, objectives, and rewards, including the gear-upgrade comparison.",
+                "Search the Chain Guide by quest name, not just ID (questline names match too).",
+            } },
+            { head = "Improvements", items = {
+                "Chain nodes show each quest's level and ID; a quest ready to turn in is highlighted gold.",
+                "Now available in Russian (ruRU), with updated French (frFR). New Chain Guide text will be translated once the overhaul is complete.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Getting directions from the Chain Guide in combat no longer trips an action-blocked error — the map open waits until you leave combat (the quest is still super-tracked immediately).",
+            } },
+        },
+    },
+    {
         version = "1.18.0", date = "2026-06-13",
         sections = {
             { head = "New Features", items = {

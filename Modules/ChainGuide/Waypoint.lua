@@ -174,17 +174,38 @@ end
 -- model. The only real mitigation is to not trigger the refresh needlessly.)
 -- So: if the map is already on this mapID, do nothing — that single guard is
 -- what actually keeps the providers clean for the common "already here" case.
-local function openMap(mapID)
-    if mapID and WorldMapFrame and WorldMapFrame:IsShown()
-       and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() == mapID then
-        return
-    end
+-- The actual map open/retarget, split out so the combat guard can defer JUST
+-- this protected work to PLAYER_REGEN_ENABLED.
+local function doOpenMap(mapID)
     if OpenWorldMap then
         OpenWorldMap(mapID)
     elseif WorldMapFrame then
         if ShowUIPanel then ShowUIPanel(WorldMapFrame) end
         if WorldMapFrame.SetMapID then WorldMapFrame:SetMapID(mapID) end
     end
+end
+
+local function openMap(mapID)
+    if mapID and WorldMapFrame and WorldMapFrame:IsShown()
+       and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() == mapID then
+        return
+    end
+    -- In COMBAT, retargeting the world map from our (insecure) click taints
+    -- Blizzard's map data providers — FlightPointDataProvider et al. call the
+    -- PROTECTED SetPropagateMouseClicks when they re-acquire pins after SetMapID,
+    -- which throws ADDON_ACTION_BLOCKED during combat lockdown. The quest's
+    -- super-track already ran (it isn't protected), so the on-screen objective
+    -- arrow still guides the player; we only need to hold the map OPEN itself
+    -- until combat ends. Never call doOpenMap while in combat. Fixed key →
+    -- latest target wins if several directions are requested mid-fight.
+    if InCombatLockdown() then
+        local Events = ns:GetSubsystem("Events")
+        if Events then
+            Events:RunWhenOutOfCombat("chainGuideOpenMap", function() doOpenMap(mapID) end)
+        end
+        return
+    end
+    doOpenMap(mapID)
 end
 
 -- ─── Live coordinate for an in-log quest ───────────────────────────────
@@ -305,6 +326,14 @@ local function nextActionableStep(chain)
         end
     end
     return nil
+end
+
+-- Public wrapper around the local nextActionableStep, so the chain-view
+-- renderer can highlight the chain's next step and the "Continue" button can
+-- route to it — both reading the SAME source of truth (no logic drift between
+-- the badge and the button). Returns the resolved item ({id, ...}) or nil.
+function W:NextActionableStep(chain)
+    return nextActionableStep(chain)
 end
 
 -- ─── Public: go to a quest ─────────────────────────────────────────────

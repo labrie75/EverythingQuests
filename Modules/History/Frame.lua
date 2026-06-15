@@ -202,13 +202,16 @@ function HF:Build()
     f:SetClampedToScreen(true)
     f:Hide()
 
+    -- Match the Main UI (Options) chrome exactly: flat near-black fill at the
+    -- same opacity + a 1px #a2000a red border, instead of the lighter tiled
+    -- tooltip backdrop (which read as more transparent than the Main UI).
+    -- Reuses ns.Util.color.optionsBg so the windows can't drift apart.
     f:SetBackdrop({
-        bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 14,
-        insets   = { left = 4, right = 4, top = 4, bottom = 4 },
+        bgFile   = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
     })
-    f:SetBackdropColor(0.02, 0.02, 0.02, 0.95)
+    f:SetBackdropColor(unpack(ns.Util.color.optionsBg))
     f:SetBackdropBorderColor(HEADER_RED[1], HEADER_RED[2], HEADER_RED[3], 1)
 
     -- Title bar

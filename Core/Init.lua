@@ -6,7 +6,7 @@ local addonName, ns = ...
 
 _G.EverythingQuests = ns
 ns.NAME = addonName
-ns.VERSION = "1.18.0"
+ns.VERSION = "1.19.0"
 
 -- Community Discord. WoW can't open a browser, so ns:ShowDiscord() pops a
 -- copyable invite via EQ's own Dialog (never a Blizzard StaticPopup — see

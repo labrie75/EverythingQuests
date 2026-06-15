@@ -2,7 +2,7 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.18.0
+## Version: 1.19.0
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache, EverythingQuestsHistory, EverythingQuestsHistoryBackups
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
@@ -27,6 +27,7 @@ Core\Init.lua
 # ─── Locales (define ns.L before any consumer; enUS first to create the table) ─
 Locales\enUS.lua
 Locales\frFR.lua
+Locales\ruRU.lua
 
 Core\DB.lua
 Core\Events.lua

@@ -37,7 +37,9 @@ local _revConn   = {}                            -- [i] = list of items that dep
 
 local STATUS = {
     complete = { atlas = "common-icon-checkmark",                color = { 0.55, 0.55, 0.55 } },
-    turnin   = { atlas = "QuestTurnin",                          color = { 1.00, 1.00, 1.00 } },
+    -- Ready to turn in: gold title so it stands out from a merely-active quest
+    -- (both keep distinct atlases too — QuestTurnin "?" vs Quest-Available "!").
+    turnin   = { atlas = "QuestTurnin",                          color = { 1.00, 0.82, 0.00 } },
     active   = { atlas = "Quest-Available",                      color = { 1.00, 1.00, 1.00 } },
     pending  = { atlas = nil,                                    color = { 0.78, 0.78, 0.78 } },
     -- Skipped breadcrumb: this item is still pending but a quest that
@@ -233,6 +235,24 @@ local function buildQuestTooltip(item, statusKey)
     end
     GameTooltip:AddLine("ID: " .. tostring(item.id), 0.5, 0.5, 0.5)
 
+    -- Difficulty level, tinted by difficulty. GetQuestDifficultyLevel returns 0
+    -- until the client has cached this quest's data (the node loop already fires
+    -- RequestLoadQuestByID for uncached quests and we re-render on
+    -- QUEST_DATA_LOAD_RESULT), so we only show it when > 0 — never "Level 0".
+    -- GetQuestDifficultyColor is a pure function of level vs the player's level
+    -- (no log/cache dependency) and hands back a SHARED, read-only {r,g,b} table.
+    if item.id and C_QuestLog and C_QuestLog.GetQuestDifficultyLevel then
+        local lvl = C_QuestLog.GetQuestDifficultyLevel(item.id)
+        if lvl and lvl > 0 then
+            local c = GetQuestDifficultyColor and GetQuestDifficultyColor(lvl)
+            if c then
+                GameTooltip:AddLine((L["Level %d"]):format(lvl), c.r, c.g, c.b)
+            else
+                GameTooltip:AddLine((L["Level %d"]):format(lvl), 0.8, 0.8, 0.8)
+            end
+        end
+    end
+
     -- Cross-link from the Quest History recorder: when did the player
     -- finish this one? Fast lookup; the History subsystem maintains the
     -- map incrementally so this hover doesn't walk the SV.
@@ -246,6 +266,17 @@ local function buildQuestTooltip(item, statusKey)
                 GameTooltip:AddLine(L["Completed (before tracking)"], 0.55, 0.85, 0.55)
             end
         end
+    end
+
+    -- Objectives + rewards (with the gear-upgrade comparison) via the shared
+    -- renderers in Core/QuestRewards.lua — the same content the tracker and WQ
+    -- tooltips show. Both degrade gracefully: a quest whose data isn't cached
+    -- yet adds no lines, and a re-hover picks them up once the data streams in.
+    local QR = ns:GetSubsystem("QuestRewards")
+    if QR then
+        local hadObjectives = QR:RenderObjectives(GameTooltip, item.id)
+        if hadObjectives then GameTooltip:AddLine(" ") end
+        QR:RenderRewards(GameTooltip, item.id)
     end
 
     GameTooltip:AddLine(" ")
@@ -309,6 +340,16 @@ function nodeOnClick(self)
     end
 end
 
+-- "Continue" button (detail-pane header). Routes to the chain's next actionable
+-- step via the same Waypoint logic a node click uses. Static handler wired once
+-- in _ensureUI; the per-render target (id + chain) rides on button fields so no
+-- closure allocates per render. Hidden whenever the chain has no next step.
+local function onContinueClick(self)
+    if not self._nextID then return end
+    local WP = ns:GetSubsystem("ChainGuideWaypoint")
+    if WP and WP.GoTo then WP:GoTo(self._nextID, self._chain) end
+end
+
 -- ─── Layout ────────────────────────────────────────────────────────────
 -- Resolve every item's (col, row): use authored x/y when present, otherwise
 -- derive col from longest-prereq-chain depth and row from authored order.
@@ -367,6 +408,24 @@ function CV:Render(pane, chain, highlightQuestID)
     self:_ensureUI(pane)
     releaseNodes()
     releaseLines()
+
+    -- Continue button shows only when a chain has a next actionable step; hide
+    -- it up front so the no-chain and empty-chain paths below leave it hidden.
+    pane._cvContinue:Hide()
+    pane._cvContinue._nextID, pane._cvContinue._chain = nil, nil
+
+    -- Did this render come from a genuine navigation (a different chain, or a
+    -- new search highlight), or is it one of the passive re-renders that
+    -- QUEST_DATA_LOAD_RESULT fires as quest data streams in? Only the former
+    -- should auto-scroll; re-scrolling on a passive re-render (e.g. after a node
+    -- click opened the map and loaded data) would yank the player's scroll
+    -- position away while they read. Tracked here — before the early returns —
+    -- so home/empty states still update the baseline (so navigating away and
+    -- back to the same chain scrolls again).
+    local navChanged = (chain ~= pane._cvScrolledChain)
+                       or (highlightQuestID ~= pane._cvScrolledHighlight)
+    pane._cvScrolledChain     = chain
+    pane._cvScrolledHighlight = highlightQuestID
 
     if not chain then
         pane._cvHeader:SetText("")
@@ -473,12 +532,20 @@ function CV:Render(pane, chain, highlightQuestID)
     pane._cvMeta:SetText(table.concat(_metaParts, "  •  "))
     pane._cvMeta:SetTextColor(0.75, 0.75, 0.75)
 
+    -- The chain's next actionable step (shared source of truth with the
+    -- Continue button). Matched against nodes by id, not table identity, since
+    -- GetVariation can hand back a fresh table for an item with variations.
+    local WP       = ns:GetSubsystem("ChainGuideWaypoint")
+    local nextStep = WP and WP.NextActionableStep and WP:NextActionableStep(chain)
+    local nextID   = nextStep and nextStep.id
+
     -- Place nodes. _nodes is a module-scoped scratch array mapping
     -- items[] index → node frame, used by the connector loop below to
     -- look up endpoints. Wiped instead of reallocated each render.
     wipe(_nodes)
     local nodes = _nodes
     local highlightRow            -- row of the Quest-ID search target, if any
+    local nextRow                 -- row of the next-actionable-step node, if any
     for i = 1, #items do
         local resolved = _resolved[i]
         local node = acquireNode(pane._cvCanvas)
@@ -502,6 +569,34 @@ function CV:Render(pane, chain, highlightQuestID)
             end
             title = resolved.name or cached or ("Quest #" .. tostring(resolved.id))
             statusKey = _statuses[i]
+
+            -- Subtitle: difficulty level (when cached; GetQuestDifficultyLevel
+            -- returns 0 until then, so we fall back to ID-only) + the quest ID,
+            -- which the search box and Wowhead guides key off. The chain's next
+            -- actionable step gets a gold "NEXT" prefix — the one string concat
+            -- here only ever runs for that single node per render.
+            -- id is effectively always present for a quest node, but the prior
+            -- code path was nil-safe (tostring), so keep that: guard the %d
+            -- formats so a stray nil-id item can never throw mid-render.
+            local id  = resolved.id
+            local lvl = id and C_QuestLog and C_QuestLog.GetQuestDifficultyLevel
+                        and C_QuestLog.GetQuestDifficultyLevel(id)
+            if lvl and lvl > 0 then
+                subtitle = (L["Lv %d  •  ID %d"]):format(lvl, id)
+            elseif id then
+                subtitle = ("ID %d"):format(id)
+            else
+                subtitle = ""
+            end
+            -- Leading tag: a quest in your log reads "ON QUEST" (cyan) so you
+            -- can see at a glance what you're currently carrying; the chain's
+            -- next not-yet-picked-up step reads "NEXT" (gold). In-log wins when
+            -- a node is both — the gold border already marks it as next.
+            if statusKey == "active" or statusKey == "turnin" then
+                subtitle = "|cff4db8ff" .. L["ON QUEST"] .. "|r  •  " .. subtitle
+            elseif id and nextID and id == nextID then
+                subtitle = "|cffEBB706" .. L["NEXT"] .. "|r  •  " .. subtitle
+            end
         end
 
         node.title:SetText(title)
@@ -536,6 +631,16 @@ function CV:Render(pane, chain, highlightQuestID)
             highlightRow = rows[i]
         end
 
+        -- Next actionable step: paint the card's border gold so it reads as
+        -- "do this next", and remember its row for the auto-scroll below. (The
+        -- subtitle already got its gold "NEXT" prefix when it was built above.)
+        -- The node-release path resets the border to grey, so this never leaks
+        -- to a pooled node.
+        if nextID and resolved.type ~= "chain" and resolved.id == nextID then
+            node.border:SetColorTexture(0.92, 0.72, 0.02, 1)
+            nextRow = rows[i]
+        end
+
         nodes[i] = node
     end
 
@@ -568,17 +673,25 @@ function CV:Render(pane, chain, highlightQuestID)
     local canvasH = (maxRow + 1) * CELL_H + maxRow * CELL_GAP_Y
     pane._cvCanvas:SetSize(math.max(canvasW, 1), math.max(canvasH, 1))
 
-    -- Scroll the Quest-ID search target into view. Deferred a frame so the
-    -- scroll range already reflects the canvas height we just set.
-    if highlightRow then
-        local sc = pane._cvScroll
-        local y  = highlightRow * (CELL_H + CELL_GAP_Y)
-        C_Timer.After(0, function()
-            if not (sc and sc:IsShown()) then return end
-            if sc.UpdateScrollChildRect then sc:UpdateScrollChildRect() end
-            local maxv = sc:GetVerticalScrollRange() or 0
-            sc:SetVerticalScroll(math.min(maxv, math.max(0, y - 20)))
-        end)
+    -- Surface the Continue button now that we know the chain has a next step.
+    -- The static OnClick reads these fields, so no closure allocates per render.
+    if nextStep and nextID then
+        pane._cvContinue._nextID = nextID
+        pane._cvContinue._chain  = chain
+        pane._cvContinue:Show()
+    end
+
+    -- Scroll the search target — or, absent a search, the next actionable step
+    -- — into view, but ONLY on a genuine navigation (navChanged), never on the
+    -- passive QUEST_DATA_LOAD_RESULT re-renders (see navChanged above). Deferred
+    -- a frame so the scroll range reflects the canvas height we just set. A
+    -- search highlight wins (the user explicitly asked for that quest). The
+    -- deferred callback is a single per-pane closure built once in _ensureUI, so
+    -- this allocates nothing per render (it reads pane._cvScrollY).
+    local scrollRow = highlightRow or nextRow
+    if scrollRow and navChanged then
+        pane._cvScrollY = scrollRow * (CELL_H + CELL_GAP_Y)
+        C_Timer.After(0, pane._cvDoScroll)
     end
 end
 
@@ -588,9 +701,18 @@ function CV:_ensureUI(pane)
     if pane._cvBuilt then return end
     pane._cvBuilt = true
 
+    -- "Continue" button, top-right of the header band. Created before the
+    -- header so the header can reserve room for it. Hidden until a render finds
+    -- a next step. Static OnClick (onContinueClick) reads per-render fields.
+    local Options = ns:GetSubsystem("Options")
+    pane._cvContinue = Options:CreateYellowButton(pane, L["Continue"], onContinueClick)
+    pane._cvContinue:SetSize(110, 24)
+    pane._cvContinue:SetPoint("TOPRIGHT", pane, "TOPRIGHT", -PAD, -PAD)
+    pane._cvContinue:Hide()
+
     pane._cvHeader = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     pane._cvHeader:SetPoint("TOPLEFT",  PAD, -PAD)
-    pane._cvHeader:SetPoint("TOPRIGHT", -PAD, -PAD)
+    pane._cvHeader:SetPoint("TOPRIGHT", pane._cvContinue, "TOPLEFT", -8, 0)
     pane._cvHeader:SetJustifyH("LEFT")
     pane._cvHeader:SetWordWrap(false)
     pane._cvHeader:SetTextColor(1.0, 0.82, 0.0)
@@ -605,6 +727,17 @@ function CV:_ensureUI(pane)
     scroll:SetPoint("TOPLEFT",     PAD, -HEADER_H)
     scroll:SetPoint("BOTTOMRIGHT", -PAD - 20, PAD)         -- reserve room for scrollbar
     pane._cvScroll = scroll
+
+    -- Reusable deferred-scroll callback, built once per pane so Render never
+    -- allocates a closure to bring the search target / next step into view. It
+    -- reads pane._cvScrollY, which Render sets just before C_Timer.After fires.
+    pane._cvDoScroll = function()
+        local sc = pane._cvScroll
+        if not (sc and sc:IsShown()) then return end
+        if sc.UpdateScrollChildRect then sc:UpdateScrollChildRect() end
+        local maxv = sc:GetVerticalScrollRange() or 0
+        sc:SetVerticalScroll(math.min(maxv, math.max(0, (pane._cvScrollY or 0) - 20)))
+    end
 
     local canvas = CreateFrame("Frame", nil, scroll)
     canvas:SetSize(1, 1)

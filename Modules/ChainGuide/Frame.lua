@@ -149,15 +149,25 @@ function CG:Build()
     f:SetScript("OnDragStop",  f.StopMovingOrSizing)
     f:Hide()
 
-    local bg = f:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0.05, 0.05, 0.05, 0.92)
+    -- Match the Main UI (Options) chrome exactly: same flat near-black fill at
+    -- the same opacity + a 1px #a2000a red border. Reuses ns.Util.color.optionsBg
+    -- so the two windows can't drift apart. (Was a lighter, more transparent
+    -- standalone texture with no border.)
+    f:SetBackdrop({
+        bgFile   = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    f:SetBackdropColor(unpack(ns.Util.color.optionsBg))
+    f:SetBackdropBorderColor(0.635, 0.000, 0.039, 1.0)   -- #a2000a
 
     -- Title bar
     local titleBar = CreateFrame("Frame", nil, f)
     titleBar:SetHeight(TITLE_BAR_H)
-    titleBar:SetPoint("TOPLEFT")
-    titleBar:SetPoint("TOPRIGHT")
+    -- 1px inset so the frame's red top border isn't painted over by this
+    -- (child frames render above the parent backdrop, incl. its border).
+    titleBar:SetPoint("TOPLEFT", 1, -1)
+    titleBar:SetPoint("TOPRIGHT", -1, -1)
     local tbg = titleBar:CreateTexture(nil, "ARTWORK")
     tbg:SetAllPoints()
     tbg:SetColorTexture(0, 0, 0, 0.85)
@@ -200,33 +210,44 @@ function CG:Build()
     end)
     f.optionsBtn:SetPoint("RIGHT", -8, 0)
 
-    -- Quest-ID search. Quest names are localized (German, French, …) but quest
-    -- IDs are universal, so a player reading an English Wowhead guide can punch
-    -- the ID in here and jump straight to the chain that contains it — no name
-    -- translation needed. (Requested by Sparta | Phrenic.)
+    -- Quest search. Accepts EITHER a quest ID or a (partial) quest NAME and
+    -- jumps to the chain that contains it. Quest IDs are universal across
+    -- locales — a player reading an English Wowhead guide can punch the ID in
+    -- regardless of client language (requested by Sparta | Phrenic) — while
+    -- name search is the natural path for players who know the title.
     local searchLabel = nav:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    searchLabel:SetText(L["Find Quest ID"])
+    searchLabel:SetText(L["Find quest"])
     searchLabel:SetTextColor(0.92, 0.72, 0.02)
     searchLabel:SetPoint("LEFT", f.homeBtn, "RIGHT", 20, 0)
 
     local search = CreateFrame("EditBox", nil, nav, "InputBoxTemplate")
-    search:SetSize(80, 18)
+    search:SetSize(150, 18)               -- wide enough for quest titles
     search:SetPoint("LEFT", searchLabel, "RIGHT", 10, 0)
     search:SetAutoFocus(false)
-    search:SetNumeric(true)              -- quest IDs are integers
-    search:SetMaxLetters(8)
+    search:SetMaxLetters(64)              -- fits the longest quest titles
     search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    search:SetScript("OnEnterPressed", function(self)
-        local id = tonumber(self:GetText())
-        self:ClearFocus()
-        if id and id > 0 then self:SetText(""); CG:SearchByQuestID(id) end
-    end)
     f.searchBox = search
+    Options:AttachTooltip(search, L["Find quest"],
+        L["Type a quest name or its ID to jump to the chain that contains it."])
 
-    local goBtn = navBtn(L["Go"], function()
-        local id = tonumber(search:GetText())
-        if id and id > 0 then search:SetText(""); CG:SearchByQuestID(id) end
-    end)
+    -- Route input: a pure-integer string → ID search; anything else → name
+    -- search. Defined once (Build runs a single time), so this is not a
+    -- per-render closure; the Enter key and the Go button share it.
+    local function runSearch()
+        local text = search:GetText()
+        text = text and text:match("^%s*(.-)%s*$")     -- trim surrounding space
+        search:ClearFocus()
+        if not text or text == "" then return end
+        search:SetText("")
+        if text:match("^%d+$") then
+            CG:SearchByQuestID(tonumber(text))
+        else
+            CG:SearchByName(text)
+        end
+    end
+    search:SetScript("OnEnterPressed", runSearch)
+
+    local goBtn = navBtn(L["Go"], runSearch)
     goBtn:SetSize(40, 22)
     goBtn:SetPoint("LEFT", search, "RIGHT", 8, 0)
 
@@ -351,12 +372,16 @@ function CG:FindChainForQuest(questID)
     end
     for _, chain in pairs(Database.chains) do
         Database:NormalizeChain(chain)
-        if QLS then QLS:EnsureChainItems(chain) end
+        -- pcall: chains are sourced live from Blizzard's questline/campaign
+        -- APIs, so one malformed entry (e.g. a campaign chapter whose ID isn't
+        -- actually a questline) must not throw and silently abort the whole
+        -- scan — that would kill the search for every quest after it.
+        if QLS then pcall(QLS.EnsureChainItems, QLS, chain) end
         local items = chain.items
         if items then
             for i = 1, #items do
                 local it = items[i]
-                if it.type ~= "chain" then
+                if it and it.type ~= "chain" then
                     if it.id == questID then return chain.id end
                     if it.variations then
                         for v = 1, #it.variations do
@@ -370,23 +395,151 @@ function CG:FindChainForQuest(questID)
     return nil
 end
 
-function CG:SearchByQuestID(questID)
+-- How long SearchByQuestID keeps re-scanning while Blizzard streams in the
+-- questline data the first scan triggered (see the comment in the function).
+local SEARCH_MAX_ATTEMPTS = 6
+local SEARCH_RETRY_DELAY  = 0.4
+
+function CG:SearchByQuestID(questID, _attempt)
+    _attempt = _attempt or 1
+
     -- Nudge Blizzard to load the title so the chat confirmation can name it
     -- (it resolves to the player's own locale — German, French, etc.).
     if C_QuestLog and C_QuestLog.RequestLoadQuestByID then
         C_QuestLog.RequestLoadQuestByID(questID)
     end
+
     local chainID = self:FindChainForQuest(questID)
-    local name = ns.Util.QuestTitle(questID)
     if chainID then
         self:NavigateChain(chainID, questID)
+        local name = ns.Util.QuestTitle(questID)
         print((L["|cffEBB706EQ Chain Guide:|r found quest |cffffffff%d|r%s — jumping to its chain."])
             :format(questID, name and (" (" .. name .. ")") or ""))
-    else
-        print((L["|cffEBB706EQ Chain Guide:|r quest |cffffffff%d|r%s isn't in any chain I know about."])
-            :format(questID, name and (" (" .. name .. ")") or ""))
-        print(("  Wowhead: https://www.wowhead.com/quest=%d"):format(questID))
+        return
     end
+
+    -- Not found yet. Every chain is sourced live: the scan above is also the
+    -- FIRST request for each chain's quest list, and C_QuestLine.GetQuestLineQuests
+    -- returns empty on first touch, filling in a few hundred ms later. So on a
+    -- cold search most chains are still empty and the quest legitimately can't
+    -- be found on pass 1. Retry a few times to let that data arrive before
+    -- declaring it unrouted — this is what lets the majority of quests resolve
+    -- instead of silently doing nothing.
+    if _attempt < SEARCH_MAX_ATTEMPTS then
+        C_Timer.After(SEARCH_RETRY_DELAY, function()
+            -- Stop retrying (and re-scanning / re-requesting quest data) once the
+            -- guide is closed — frame is only hidden, never nil'd, so check shown.
+            if self.frame and self.frame:IsShown() then self:SearchByQuestID(questID, _attempt + 1) end
+        end)
+        return
+    end
+
+    local name = ns.Util.QuestTitle(questID)
+    print((L["|cffEBB706EQ Chain Guide:|r quest |cffffffff%d|r%s isn't in any chain I know about."])
+        :format(questID, name and (" (" .. name .. ")") or ""))
+    print(("  Wowhead: https://www.wowhead.com/quest=%d"):format(questID))
+end
+
+-- ─── Name search ───────────────────────────────────────────────────────
+-- Walk every known chain's quests and return the first chain whose quest title
+-- CONTAINS `needle` (case-insensitive substring), plus the matching quest id so
+-- the detail view can ring it. Returns nil when nothing matches. Shares the
+-- memoized discovery FindChainForQuest uses, so repeat calls are cheap. A title
+-- only resolves for a quest the client has cached; for any uncached title we
+-- fire RequestLoadQuestByID so the SearchByName retry loop can match it once the
+-- data streams in — the same async pattern the ID search relies on for the
+-- quest LIST. (Deliberately a sibling of FindChainForQuest rather than a shared
+-- core, to avoid touching the just-shipped Quest-ID search path.)
+function CG:FindChainByName(needle)
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    local QLS      = ns:GetSubsystem("ChainGuideQuestLineSource")
+    if not (Database and needle and needle ~= "") then return nil end
+    needle = needle:lower()
+
+    if QLS then
+        for id in pairs(Database.categories) do QLS:EnsureZoneChains(id) end
+    end
+
+    -- Pass 1: match the chain (questline) NAME itself. These are exactly the
+    -- names shown in the middle list, they're always loaded (no async, no
+    -- per-quest cache dependency), and a player typing "nightbreaker" means the
+    -- chain "The Nightbreaker". This is why a chain whose quests aren't cached
+    -- yet (0/N done) is still findable — the earlier quest-title-only scan
+    -- couldn't see it. Returns the chain with no specific quest to ring.
+    for _, chain in pairs(Database.chains) do
+        if chain.name and chain.name:lower():find(needle, 1, true) then
+            return chain.id
+        end
+    end
+
+    -- Pass 2: match a quest TITLE within a chain (async/best-effort — titles
+    -- only resolve once cached; for misses we prime RequestLoadQuestByID so a
+    -- retry can match). This scan touches every quest; localize the hot globals.
+    local QuestTitle = ns.Util.QuestTitle
+    local reqLoad    = C_QuestLog and C_QuestLog.RequestLoadQuestByID
+
+    for _, chain in pairs(Database.chains) do
+        Database:NormalizeChain(chain)
+        if QLS then pcall(QLS.EnsureChainItems, QLS, chain) end
+        local items = chain.items
+        if items then
+            for i = 1, #items do
+                local it = items[i]
+                if it and it.type ~= "chain" then
+                    local title = it.id and QuestTitle(it.id)
+                    if title then
+                        if title:lower():find(needle, 1, true) then return chain.id, it.id end
+                    elseif reqLoad and it.id then
+                        reqLoad(it.id)               -- uncached: prime for a retry
+                    end
+                    if it.variations then
+                        for v = 1, #it.variations do
+                            local vid = it.variations[v].id
+                            local vt  = vid and QuestTitle(vid)
+                            if vt then
+                                if vt:lower():find(needle, 1, true) then return chain.id, vid end
+                            elseif reqLoad and vid then
+                                reqLoad(vid)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function CG:SearchByName(text, _attempt)
+    _attempt = _attempt or 1
+    local chainID, questID = self:FindChainByName(text)
+    if chainID then
+        self:NavigateChain(chainID, questID)
+        -- Label: the matched quest's title, else the matched chain's name
+        -- (chain-name match has no questID), else the raw text typed.
+        local Database = ns:GetSubsystem("ChainGuideDatabase")
+        local label = (questID and ns.Util.QuestTitle(questID))
+                      or (Database and Database.chains[chainID] and Database.chains[chainID].name)
+                      or text
+        print((L["|cffEBB706EQ Chain Guide:|r found |cffffffff%s|r — jumping to its chain."])
+            :format(label))
+        return
+    end
+
+    -- Titles (and the quest LIST itself) stream in asynchronously, so a cold
+    -- search can legitimately miss on the first pass. Retry a few times to let
+    -- the data arrive before giving up — mirrors SearchByQuestID.
+    if _attempt < SEARCH_MAX_ATTEMPTS then
+        C_Timer.After(SEARCH_RETRY_DELAY, function()
+            -- Same shown-check as SearchByQuestID: don't keep scanning/requesting
+            -- quest data after the user has closed the guide mid-search.
+            if self.frame and self.frame:IsShown() then self:SearchByName(text, _attempt + 1) end
+        end)
+        return
+    end
+
+    print((L["|cffEBB706EQ Chain Guide:|r no chain quest matches |cffffffff%s|r."])
+        :format(text))
 end
 
 function CG:Back()    local H = ns:GetSubsystem("ChainGuideHistory"); H:Back();    self:RenderCurrent() end

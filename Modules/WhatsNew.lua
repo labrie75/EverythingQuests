@@ -12,32 +12,39 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.18.0: Chain Guide Quest-ID search, an auto-sizing tracker background,
--- scroll-bar skinning, cleaner tooltip-based options, and a new About tab.
+-- 1.19.0: start of the multi-phase Chain Guide overhaul — Phase 1 (next-step
+-- guidance + Continue button, ON QUEST tags, rich hover tooltips, name search)
+-- plus Russian (ruRU) + updated French. Sets expectations for the frequent
+-- updates to come and recaps the plan (see the release-comms strategy).
 -- Bumping the version re-shows the popup once to everyone. Bump this constant +
 -- rewrite POPUP_BODY for the next release and a fresh popup shows once more.
 -- Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.18.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.18.0"
+local FEATURE_POPUP_VERSION = "1.19.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.19.0"
 
 local POPUP_BODY = [[
-|cffEBB706Search the Chain Guide by Quest ID|r
-Reading an English guide on a non-English client? The Chain Guide now has a |cffffffffFind Quest ID|r box — type a quest's ID and it jumps to the chain that contains it and rings the quest, with no name-translating required. Thanks |cffffffffSparta || Phrenic|r for the idea.
+|cffEBB706We're rebuilding the Chain Guide|r
+Over the next few updates we're overhauling the Chain Guide in three phases:
+|cffffffff1.|r Make it actionable — tell you what to do next  |cff999999(this update)|r
+|cffffffff2.|r A real branching graph you can drag and explore
+|cffffffff3.|r Map integration — quest-giver pins and auto-advancing waypoints
 
-|cffEBB706A tidier tracker background|r
-The tracker's background and border now wrap just your visible quests instead of a tall empty box, and disappear entirely when you have nothing tracked. Thanks |cffffffffSpydawg2233|r for coding this one up.
+Because of that, updates will land more often than usual for a little while. Sorry in advance for the extra What's New popups — each one will recap what's already shipped, so it's easy to catch up if you miss one.
 
-|cffEBB706Skin the scroll bar|r
-New |cffffffffTracker Skins|r options on the Appearance tab let you give the tracker's scroll bar a flat single-color thumb, set its color and width, or hide the up/down arrows. Thanks |cffffffffFostot|r for the request.
+|cffEBB706Phase 1: the guide now guides you|r
+Open any chain and it highlights your |cffffffffnext step|r with a gold border and a |cffffffffContinue|r button that sets your course straight to it. Quests already in your log are tagged |cff4db8ffON QUEST|r, and opening a chain scrolls to where you are.
 
-|cffEBB706Cleaner options, and a new About tab|r
-Every setting's grey description has moved into a hover tooltip, so the option panels read much cleaner — just mouse over a setting to see what it does. There's also a new |cffffffffAbout|r tab with links, slash commands, credits, and the full changelog.
+|cffEBB706Richer quest info, no clicking|r
+Hover any quest in a chain to see its level, objectives, and rewards — including whether a piece of reward gear is an upgrade over what you're wearing. Each quest also shows its level and ID, and a quest that's ready to turn in is highlighted.
 
-|cffEBB706Newly accepted quests track reliably|r
-Fixed a case where a freshly accepted quest could quietly fail to show up in the tracker.
+|cffEBB706Search by name or ID|r
+The Chain Guide's find box now accepts a quest |cffffffffname|r as well as an ID — type either and it jumps to the chain that contains it.
 
-|cffEBB706Thanks for being here|r
-EQ keeps growing thanks to our Discord community. Join with the button below to suggest a feature or lend a hand.
+|cffEBB706Also in this update|r
+Everything Quests is now available in |cffffffffRussian|r, with updated French. (Translations for the new Chain Guide text will follow once the overhaul is finished.)
+
+|cffEBB706Thanks for your patience|r
+Join our Discord with the button below to follow along, suggest features, or report anything that looks off.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]
