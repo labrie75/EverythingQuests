@@ -5,6 +5,25 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2026-06-16
+
+**Phase 2** of the Chain Guide overhaul is here, and it's a big one. Every quest chain in Midnight now draws as a real *branching graph* instead of a flat list, inside a redesigned window you can resize, drag to pan, and collapse. Phase 1 made the guide *actionable*; Phase 2 makes it a *map*. Phase 3 (map integration with quest-giver pins and auto-advancing waypoints) is next. As always while the overhaul is underway, expect more frequent updates — and if anything looks off, let me know on Discord or in the CurseForge comments.
+
+### New Features
+
+- **Every chain is now a branching graph** — Until now a quest chain was drawn as a flat top-to-bottom list. As of this update, *every* quest chain in Midnight — all of Eversong Woods, Zul'Aman, Harandar, Voidstorm, Arator, and the full campaign — renders as a true branching tree. You can see which quests unlock which, where a chain splits into parallel paths, and where those paths rejoin.
+- **Drag to pan** — Click and drag anywhere on the graph to move around the larger chains.
+- **Resizable, collapsible window** — Drag the bottom-right corner to resize the Chain Guide (your size is remembered between sessions), and use the new collapse button to hide the side list so the graph fills the whole window.
+
+### Improvements
+
+- More compact quest cards, so you see more of a chain at a glance.
+- Scenario and dungeon titles are now centered in their banner.
+
+### Bug Fixes
+
+- Opening the options from the Chain Guide no longer leaves the two windows overlapping on top of each other.
+
 ## [1.19.0] - 2026-06-14
 
 This release begins a multi-phase overhaul of the Chain Guide. **Phase 1** makes it *actionable* — it now tells you what to do next, shows rich quest info on hover, and can be searched by name. (Phase 2 will add a real branching graph you can drag and explore; Phase 3, map integration with quest-giver pins and auto-advancing waypoints.) Expect more frequent updates than usual while the overhaul is underway.

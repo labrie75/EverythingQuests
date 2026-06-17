@@ -207,18 +207,18 @@ function S:Build()
 
     banner.Stage = banner:CreateFontString(nil, "ARTWORK", "Game18Font")
     banner.Stage:SetSize(172, 18)
-    banner.Stage:SetJustifyH("LEFT")
+    banner.Stage:SetJustifyH("CENTER")
     banner.Stage:SetTextColor(1, 0.914, 0.682)
     banner.Stage:SetShadowOffset(1, -1)
     banner.Stage:SetShadowColor(0, 0, 0, 1)
 
     banner.Name = banner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     banner.Name:SetSize(172, 28)
-    banner.Name:SetJustifyH("LEFT")
+    banner.Name:SetJustifyH("CENTER")
     banner.Name:SetJustifyV("TOP")
     banner.Name:SetSpacing(2)
     banner.Name:SetTextColor(1, 0.831, 0.380)
-    banner.Name:SetPoint("TOPLEFT", banner.Stage, "BOTTOMLEFT", 0, -4)
+    banner.Name:SetPoint("TOP", banner.Stage, "BOTTOM", 0, -4)
 
     banner.WidgetContainer = CreateFrame("Frame", nil, banner, "UIWidgetContainerTemplate")
     banner.WidgetContainer.verticalAnchorPoint     = "TOP"
@@ -361,7 +361,7 @@ function S:Refresh()
         banner.WidgetContainer:Hide()
 
         banner.Stage:ClearAllPoints()
-        banner.Stage:SetPoint("TOPLEFT", banner, "TOPLEFT", 15, -10)
+        banner.Stage:SetPoint("TOP", banner, "TOP", 0, -10)
         if currentStage == numStages and numStages > 1 then
             banner.Stage:SetText(L["Final Stage"])
         elseif numStages > 1 then

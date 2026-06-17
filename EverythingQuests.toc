@@ -2,7 +2,7 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.19.0
+## Version: 1.20.0
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache, EverythingQuestsHistory, EverythingQuestsHistoryBackups
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
@@ -100,6 +100,12 @@ Data\RewardIcons.lua
 Data\QuestChains\_Index.lua
 Data\QuestChains\_QuestLineRouting.lua
 Data\QuestChains\_QuestCoords.lua
+Data\QuestChains\_Overlays.lua
+Data\QuestChains\_Overlays_Campaign.lua
+Data\QuestChains\_Overlays_Eversong.lua
+Data\QuestChains\_Overlays_Zulaman.lua
+Data\QuestChains\_Overlays_Harandar.lua
+Data\QuestChains\_Overlays_Voidstorm.lua
 Data\QuestChains\EversongWoods.lua
 Data\QuestChains\Zulaman.lua
 Data\QuestChains\Harandar.lua

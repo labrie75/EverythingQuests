@@ -11,6 +11,23 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.20.0", date = "2026-06-16",
+        sections = {
+            { head = "New Features", items = {
+                "Chain Guide overhaul, Phase 2 of 3 — every quest chain in Midnight (all zones and the campaign) now draws as a real branching graph instead of a flat list, so you can see which quests unlock which and where paths split and rejoin.",
+                "Drag anywhere on the graph to pan around larger chains.",
+                "The Chain Guide window is now resizable (drag the corner; your size is saved) with a button to collapse the side list so the graph fills the whole window.",
+            } },
+            { head = "Improvements", items = {
+                "More compact quest cards so you see more of a chain at a glance.",
+                "Scenario and dungeon titles are now centered in their banner.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Opening the options from the Chain Guide no longer leaves the two windows overlapping.",
+            } },
+        },
+    },
+    {
         version = "1.19.0", date = "2026-06-14",
         sections = {
             { head = "New Features", items = {
@@ -128,15 +145,6 @@ ns.Changelog = {
             } },
             { head = "Bug Fixes", items = {
                 "Manual tracker order no longer loses hidden quests; color pickers keep transparency on Cancel.",
-            } },
-        },
-    },
-    {
-        version = "1.11.0", date = "2026-06-01",
-        sections = {
-            { head = "New Features", items = {
-                "Stats tab with Trends — chart your quests, XP, and gold over time.",
-                "Real (all-source) gold tracking, and a community Discord link.",
             } },
         },
     },

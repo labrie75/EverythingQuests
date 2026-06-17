@@ -200,6 +200,12 @@ DB.defaults = {
         chainGuide = {
             scale = 1.0,
             showOnLogin = false,
+            -- Standalone window size (drag the bottom-right grip) and whether
+            -- the navigation rail is collapsed to give the graph the full
+            -- width. Persisted so the layout the player picks survives a relog.
+            width = 1160,
+            height = 720,
+            railCollapsed = false,
             -- Per-category uiMapID overrides discovered at runtime via /eqs
             -- discover. These take priority over the seeds in _Index.lua so
             -- patch-revamped zones don't require editing the data file.

@@ -210,6 +210,8 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
         .. GOLD .. THANKS .. CLOSE .. WHITE .. L[". Thank you!"] .. CLOSE)
     body(WHITE .. L["Special thanks to "] .. GOLD .. "Zox" .. CLOSE .. WHITE
         .. L[" for the many hours spent translating Everything Quests into French."] .. CLOSE)
+    body(WHITE .. L["Special thanks to "] .. GOLD .. "Malevi4" .. CLOSE .. WHITE
+        .. L[" for the many hours spent translating Everything Quests into Russian."] .. CLOSE)
     gap(10)
 
     -- ─── 7. Changelog (newest first; older versions on CurseForge) ──────

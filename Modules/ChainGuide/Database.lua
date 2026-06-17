@@ -70,7 +70,90 @@ function DBmod:NormalizeChain(chain)
         end
         chain.items = items
     end
+    -- Lay any authored graph overlay on top of the (now-present) items. For an
+    -- API/campaign chain whose items are still empty here (questline data not
+    -- loaded yet) this is a no-op that leaves _overlayApplied unset, so it
+    -- re-runs once EnsureChainItems populates the real list (see ApplyOverlay).
+    self:ApplyOverlay(chain)
     return chain
+end
+
+-- ─── Authored overlay ──────────────────────────────────────────────────
+-- Lay a hand-authored graph (Data/QuestChains/_Overlays.lua) over a chain's
+-- live items[]: apply per-quest x/y/optional/breadcrumb, rewrite connections,
+-- and splice in embedded chain-nav nodes. Authored data is keyed by STABLE
+-- quest IDs (and embeds by chainID); connections reference quest IDs and are
+-- translated here into the items[] INDICES the renderer expects. Idempotent
+-- (guarded by chain._overlayApplied) and only ever runs once a chain actually
+-- has items — so it allocates nothing per render and re-applies correctly when
+-- an empty API chain finally streams in its quest list.
+function DBmod:ApplyOverlay(chain)
+    if not chain or chain._overlayApplied then return end
+    local items = chain.items
+    if not items or #items == 0 then return end          -- wait for real items; don't latch the flag
+    local overlays = ns.CHAINGUIDE_OVERLAYS
+    local overlay  = overlays and (overlays[chain.questlineID] or overlays[chain.id])
+    if not overlay then chain._overlayApplied = true; return end   -- nothing to overlay; stop scanning
+
+    -- Map live items by quest ID so authored (id-keyed) data can find them
+    -- regardless of the order Blizzard returned the questline in.
+    local idIndex = {}
+    for i = 1, #items do
+        local it = items[i]
+        if it and it.id then idIndex[it.id] = i end
+    end
+
+    if overlay.layout then
+        for qid, lay in pairs(overlay.layout) do
+            local idx = idIndex[qid]
+            if idx then
+                local it = items[idx]
+                if lay.x ~= nil then it.x = lay.x end
+                if lay.y ~= nil then it.y = lay.y end
+                if lay.optional   ~= nil then it.optional   = lay.optional end
+                if lay.breadcrumb ~= nil then it.breadcrumb = lay.breadcrumb end
+            end
+        end
+    end
+
+    if overlay.connections then
+        for qid, prereqs in pairs(overlay.connections) do
+            local idx = idIndex[qid]
+            if idx then
+                local conn = {}
+                for j = 1, #prereqs do
+                    local pidx = idIndex[prereqs[j]]
+                    if pidx then conn[#conn + 1] = pidx end
+                end
+                -- Only overwrite when at least one authored prereq resolved. If
+                -- NONE did (Blizzard dropped/renamed those quests), leave the
+                -- node's existing spine edge alone — that's what "degrades to the
+                -- API spine" means; nil-ing it here would orphan the node to the
+                -- root column. Matches the embed branch's guard below.
+                if #conn > 0 then items[idx].connections = conn end
+            end
+        end
+    end
+
+    if overlay.embed then
+        for e = 1, #overlay.embed do
+            local em = overlay.embed[e]
+            if em and em.chainID then
+                local node = { type = "chain", id = em.chainID, x = em.x, y = em.y }
+                if em.connections then
+                    local conn = {}
+                    for j = 1, #em.connections do
+                        local pidx = idIndex[em.connections[j]]
+                        if pidx then conn[#conn + 1] = pidx end
+                    end
+                    if #conn > 0 then node.connections = conn end
+                end
+                items[#items + 1] = node
+            end
+        end
+    end
+
+    chain._overlayApplied = true
 end
 
 -- Walk `item.variations` and return the first variant whose restrictions match

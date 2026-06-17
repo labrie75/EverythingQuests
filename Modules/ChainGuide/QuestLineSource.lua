@@ -280,6 +280,10 @@ function QLS:EnsureChainItems(chain)
     chain.items = items
     chain._normalized = true
     self._populated[chain.id] = true
+    -- Now that the live quest list is in, lay any authored graph overlay over
+    -- it (idempotent; no-op when no overlay is registered for this chain).
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    if Database and Database.ApplyOverlay then Database:ApplyOverlay(chain) end
 end
 
 -- /eqs discover [<hint>]

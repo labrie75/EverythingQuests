@@ -1,0 +1,242 @@
+-- Data/QuestChains/_Overlays_Eversong.lua
+-- GENERATED DRAFT Eversong zone overlays - verify in-game, then graduate
+-- the verified ones into _Overlays.lua and drop them from here. Topology is
+-- from authored reference data; layout is auto-laid to the centred-tree
+-- convention. Only chains whose draft positions every LIVE quest (coverage-
+-- clean per the dump) are emitted, so these should render without
+-- stragglers - the open question per chain is purely whether the layout reads
+-- well. Regenerate: python docs/_check_coverage.py docs/_zonedump_eversong.txt --emit
+local _, ns = ...
+ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
+
+    -- The Drinking Debt  (questline 5784, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5784] = {
+        layout = {
+            [87455] = { x = 1, y = 0  },
+            [87456] = { x = 0, y = 1  },
+            [87457] = { x = 2, y = 1  },
+            [87458] = { x = 1, y = 2  },
+        },
+        connections = {
+            [87456] = { 87455 },
+            [87457] = { 87455 },
+            [87458] = { 87456, 87457 },
+        },
+    }
+
+    -- Theft Tracking  (questline 5804, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5804] = {
+        layout = {
+            [94388] = { x = 0, y = 0  },
+            [88978] = { x = 2, y = 0  },
+            [88977] = { x = 1, y = 1  },
+            [88979] = { x = 1, y = 2  },
+            [90544] = { x = 1, y = 3  },
+        },
+        connections = {
+            [88977] = { 94388 },
+            [88979] = { 88978, 88977 },
+            [90544] = { 88979 },
+        },
+    }
+
+    -- Port Detective  (questline 5805, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5805] = {
+        layout = {
+            [87392] = { x = 1, y = 0  },
+            [87394] = { x = 0, y = 1  },
+            [87393] = { x = 2, y = 1  },
+            [87395] = { x = 1, y = 2  },
+            [87396] = { x = 0, y = 3  },
+            [87397] = { x = 2, y = 3  },
+            [87398] = { x = 1, y = 4  },
+        },
+        connections = {
+            [87394] = { 87392 },
+            [87393] = { 87392 },
+            [87395] = { 87394, 87393 },
+            [87396] = { 87395 },
+            [87397] = { 87395 },
+            [87398] = { 87396, 87397 },
+        },
+    }
+
+    -- One Adventurous Hatchling  (questline 5898, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5898] = {
+        layout = {
+            [89383] = { x = 0, y = 0  },
+            [89386] = { x = 1, y = 0  },
+            [89384] = { x = 2, y = 0  },
+            [89385] = { x = 1, y = 1  },
+        },
+        connections = {
+            [89385] = { 89383, 89386, 89384 },
+        },
+    }
+
+    -- Paladin Rescue  (questline 5908, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5908] = {
+        layout = {
+            [90546] = { x = 1, y = 0  },
+            [90547] = { x = 1, y = 0  },
+            [90548] = { x = 0, y = 1  },
+            [90549] = { x = 1, y = 1  },
+            [90550] = { x = 2, y = 1  },
+            [90551] = { x = 1, y = 2  },
+            [90552] = { x = 1, y = 3  },
+            [90570] = { x = 1, y = 4  },
+            [90553] = { x = 0, y = 5  },
+            [90554] = { x = 1, y = 5  },
+            [90555] = { x = 2, y = 5  },
+            [90556] = { x = 1, y = 6  },
+        },
+        connections = {
+            [90548] = { 90546, 90547 },
+            [90549] = { 90546, 90547 },
+            [90550] = { 90546, 90547 },
+            [90551] = { 90548, 90549, 90550 },
+            [90552] = { 90551 },
+            [90570] = { 90552 },
+            [90553] = { 90570 },
+            [90554] = { 90570 },
+            [90555] = { 90570 },
+            [90556] = { 90553, 90554, 90555 },
+        },
+    }
+
+    -- Fear and Fel  (questline 5931, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5931] = {
+        layout = {
+            [90835] = { x = 1, y = 0  },
+            [90818] = { x = 0, y = 1  },
+            [90837] = { x = 2, y = 1  },
+            [90819] = { x = 1, y = 2  },
+            [90821] = { x = 1, y = 3  },
+            [90822] = { x = 1, y = 4  },
+        },
+        connections = {
+            [90818] = { 90835 },
+            [90837] = { 90835 },
+            [90819] = { 90818, 90837 },
+            [90821] = { 90819 },
+            [90822] = { 90821 },
+        },
+    }
+
+    -- How to Train Your Protege  (questline 5937, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5937] = {
+        layout = {
+            [94393] = { x = 1, y = 0  },
+            [91284] = { x = 1, y = 1  },
+            [91288] = { x = 0, y = 2  },
+            [91291] = { x = 1, y = 2  },
+            [91292] = { x = 2, y = 2  },
+            [91301] = { x = 1, y = 3  },
+        },
+        connections = {
+            [91284] = { 94393 },
+            [91288] = { 91284 },
+            [91291] = { 91284 },
+            [91292] = { 91284 },
+            [91301] = { 91288, 91291, 91292 },
+        },
+    }
+
+    -- Sunbath, Take Me Away  (questline 5949, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5949] = {
+        layout = {
+            [91271] = { x = 1, y = 0  },
+            [91090] = { x = 0, y = 1  },
+            [91328] = { x = 2, y = 1  },
+            [91137] = { x = 1, y = 2  },
+        },
+        connections = {
+            [91090] = { 91271 },
+            [91328] = { 91271 },
+            [91137] = { 91090, 91328 },
+        },
+    }
+
+    -- Daggerspine Landing  (questline 5958, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5958] = {
+        layout = {
+            [94370] = { x = 1, y = 0  },
+            [91493] = { x = 1, y = 1  },
+            [91505] = { x = 0, y = 2  },
+            [91495] = { x = 1, y = 2  },
+            [91494] = { x = 2, y = 2  },
+            [91504] = { x = 1, y = 3  },
+        },
+        connections = {
+            [91493] = { 94370 },
+            [91505] = { 91493 },
+            [91495] = { 91493 },
+            [91494] = { 91493 },
+            [91504] = { 91505, 91495, 91494 },
+        },
+    }
+
+    -- Far Striding  (questline 5969, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[5969] = {
+        layout = {
+            [94371] = { x = 1, y = 0  },
+            [91342] = { x = 0, y = 1  },
+            [91452] = { x = 2, y = 1  },
+            [91345] = { x = 0, y = 2  },
+            [91462] = { x = 2, y = 2  },
+            [91347] = { x = 0, y = 3  },
+            [91348] = { x = 2, y = 3  },
+            [91463] = { x = 1, y = 4  },
+            [91349] = { x = 1, y = 5  },
+            [91350] = { x = 1, y = 6  },
+            [91383] = { x = 0, y = 7  },
+            [91384] = { x = 2, y = 7  },
+            [91385] = { x = 1, y = 8  },
+        },
+        connections = {
+            [91342] = { 94371 },
+            [91452] = { 94371 },
+            [91345] = { 91342 },
+            [91462] = { 91342 },
+            [91347] = { 91345 },
+            [91348] = { 91462 },
+            [91463] = { 91347, 91348 },
+            [91349] = { 91463 },
+            [91350] = { 91349 },
+            [91383] = { 91350 },
+            [91384] = { 91350 },
+            [91385] = { 91383, 91384 },
+        },
+    }
+
+    -- Blinding Sun  (questline 6018, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[6018] = {
+        layout = {
+            [87399] = { x = 1, y = 0  },
+            [87400] = { x = 0, y = 1  },
+            [87401] = { x = 2, y = 1  },
+            [87402] = { x = 1, y = 2  },
+        },
+        connections = {
+            [87400] = { 87399 },
+            [87401] = { 87399 },
+            [87402] = { 87400, 87401 },
+        },
+    }
+
+    -- Flowers for Amalthea  (questline 6020, Eversong Woods)
+    ns.CHAINGUIDE_OVERLAYS[6020] = {
+        layout = {
+            [92021] = { x = 0, y = 0  },
+            [92022] = { x = 2, y = 0  },
+            [92023] = { x = 1, y = 1  },
+            [92024] = { x = 1, y = 2  },
+            [92025] = { x = 1, y = 3  },
+        },
+        connections = {
+            [92023] = { 92021, 92022 },
+            [92024] = { 92023 },
+            [92025] = { 92024 },
+        },
+    }
+

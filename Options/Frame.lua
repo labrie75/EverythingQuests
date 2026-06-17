@@ -70,7 +70,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.19.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.20.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -198,6 +198,13 @@ end
 function Options:Show()
     self:Build()
     self.frame:Show()
+    self.frame:Raise()
+    -- The Chain Guide is a same-strata (DIALOG) window of similar size; if it is
+    -- open it overlaps this panel and its rail text bleeds over the options (the
+    -- guide's own "Options" button routes through here too). Only one of the two
+    -- should be visible, so close the guide when the options open.
+    local CG = ns:GetSubsystem("ChainGuide")
+    if CG and CG.frame and CG.frame:IsShown() then CG.frame:Hide() end
 end
 
 -- Register a small proxy panel in Blizzard's Options > AddOns list. Our real
@@ -827,6 +834,129 @@ local function eqSlashHandler(msg)
         return
     elseif msg == "dir" then
         Options:DumpDirections()
+        return
+    elseif msg == "chaindump" then
+        -- /eqs chaindump — print the currently-open Chain Guide chain's
+        -- chainID/questlineID + every node (index, type, id, x/y, name) from the
+        -- player's OWN client, so an authored graph overlay can be built from
+        -- verified IDs (no guessing). For the Campaign Map each node id is a
+        -- chapter chainID; for a quest chain each id is a quest ID.
+        local DBm = ns:GetSubsystem("ChainGuideDatabase")
+        local H   = ns:GetSubsystem("ChainGuideHistory")
+        local state   = H and H.Current and H:Current()
+        local chainID = state and state.type == "chain" and state.id
+        local chain   = chainID and DBm and DBm.chains[chainID]
+        if not chain then
+            print("|cffEBB706EQ ChainDump|r: open the Chain Guide and select a chain first.")
+            return
+        end
+        local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
+        if QLS and QLS.EnsureChainItems then QLS:EnsureChainItems(chain) end
+        DBm:NormalizeChain(chain)
+        print(("|cffEBB706EQ ChainDump|r |cffffffff%s|r  chainID=|cff66ccff%s|r questlineID=|cff66ccff%s|r category=|cff66ccff%s|r"):format(
+            chain.name or "?", tostring(chain.id), tostring(chain.questlineID), tostring(chain.category)))
+        local items = chain.items or {}
+        print(("  %d item(s) (copy/paste this to share):"):format(#items))
+        for i = 1, #items do
+            local it = items[i]
+            local nm
+            if it.type == "chain" then
+                local sub = DBm.chains[it.id]
+                nm = (sub and sub.name) or "?"
+            else
+                nm = (ns.Util and ns.Util.QuestTitle and ns.Util.QuestTitle(it.id)) or "?"
+            end
+            print(("    [%d] %s id=%s x=%s y=%s  %s"):format(
+                i, it.type or "quest", tostring(it.id), tostring(it.x), tostring(it.y), nm))
+        end
+        return
+    elseif msg == "campdump" then
+        -- /eqs campdump — print every registered campaign's chapter spine straight
+        -- from the player's client. On 12.0 a chapter ID *is* its questline ID, so
+        -- this is the authoritative chapter→questline mapping for authoring/verifying
+        -- campaign overlays (no guessing). Also lists each chapter's live quest IDs.
+        -- Questline data loads async, so a chapter may report 0 quests on the first
+        -- run (the query primes it) — re-run /eqs campdump and it fills in.
+        local DBm = ns:GetSubsystem("ChainGuideDatabase")
+        if not (C_CampaignInfo and C_CampaignInfo.GetChapterIDs
+                and C_QuestLine and C_QuestLine.GetQuestLineQuests) then
+            print("|cffEBB706EQ CampDump|r: campaign/questline API unavailable on this build.")
+            return
+        end
+        local camps = {}
+        if DBm then
+            for _, cat in pairs(DBm.categories) do
+                if cat.campaignID then camps[#camps + 1] = { id = cat.campaignID, name = cat.name } end
+            end
+        end
+        if #camps == 0 then
+            print("|cffEBB706EQ CampDump|r: no campaign categories registered.")
+            return
+        end
+        table.sort(camps, function(a, b) return a.id < b.id end)
+        for c = 1, #camps do
+            local camp = camps[c]
+            local chapters = C_CampaignInfo.GetChapterIDs(camp.id) or {}
+            print(("|cffEBB706EQ CampDump|r |cffffffff%s|r  campaignID=|cff66ccff%d|r  %d chapter(s):"):format(
+                camp.name or "?", camp.id, #chapters))
+            for i = 1, #chapters do
+                local chID = chapters[i]
+                local ci = C_CampaignInfo.GetCampaignChapterInfo
+                           and C_CampaignInfo.GetCampaignChapterInfo(chID)
+                local quests = C_QuestLine.GetQuestLineQuests(chID) or {}
+                print(("    [%d] questlineID=|cff66ccff%d|r %s  (%d quest(s))"):format(
+                    i, chID, (ci and ci.name) or "?", #quests))
+                if #quests > 0 then
+                    print("        " .. table.concat(quests, ", "))
+                end
+            end
+        end
+        return
+    elseif msg:match("^zonedump") then
+        -- /eqs zonedump <zone> — print the live quest list for every routed
+        -- questline in a zone category (the zone counterpart of /eqs campdump),
+        -- so zone overlays can be authored/verified against real IDs. Re-run if a
+        -- questline reports 0 quests (questline data loads async on first touch).
+        local hint = msg:match("^zonedump%s+(.+)$")
+        local DBm  = ns:GetSubsystem("ChainGuideDatabase")
+        if not (hint and DBm and ns.QUESTLINE_ROUTING
+                and C_QuestLine and C_QuestLine.GetQuestLineQuests) then
+            print("|cffEBB706EQ ZoneDump|r: usage |cffffffff/eqs zonedump <zone>|r (eversong, zulaman, harandar, voidstorm, arator)")
+            return
+        end
+        -- Match punctuation/space-insensitively so "zulaman" finds "Zul'Aman".
+        local lower = hint:lower():gsub("[^%w]", "")
+        local catID, catName
+        for id, cat in pairs(DBm.categories) do
+            local cn = (cat.name or ""):lower():gsub("[^%w]", "")
+            if cn ~= "" and (cn == lower or cn:find(lower, 1, true) or lower:find(cn, 1, true)) then
+                catID, catName = id, cat.name
+                break
+            end
+        end
+        if not catID then
+            print(("|cffEBB706EQ ZoneDump|r: no category matches '%s'."):format(hint))
+            return
+        end
+        local qls = {}
+        for qlID, entry in pairs(ns.QUESTLINE_ROUTING) do
+            local ecat = (type(entry) == "table") and entry.cat or entry
+            if ecat == catID then
+                qls[#qls + 1] = { id = qlID, name = (type(entry) == "table") and entry.name or nil }
+            end
+        end
+        table.sort(qls, function(a, b) return a.id < b.id end)
+        print(("|cffEBB706EQ ZoneDump|r |cffffffff%s|r  categoryID=|cff66ccff%d|r  %d questline(s):"):format(
+            catName or "?", catID, #qls))
+        for i = 1, #qls do
+            local q = qls[i]
+            local quests = C_QuestLine.GetQuestLineQuests(q.id) or {}
+            print(("    [%d] questlineID=|cff66ccff%d|r %s  (%d quest(s))"):format(
+                i, q.id, q.name or "?", #quests))
+            if #quests > 0 then
+                print("        " .. table.concat(quests, ", "))
+            end
+        end
         return
     elseif msg:match("^zonebar") then
         -- /eqs zonebar [debug] — report what the Zone Progress bar resolved the

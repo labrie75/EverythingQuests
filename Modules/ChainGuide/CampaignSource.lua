@@ -21,6 +21,7 @@
 -- spine in story order instead of alphabetically.
 
 local _, ns = ...
+local L = ns.L
 
 local CS = ns:RegisterSubsystem("ChainGuideCampaignSource", {})
 
@@ -30,6 +31,11 @@ local CS = ns:RegisterSubsystem("ChainGuideCampaignSource", {})
 -- Campaign chapter 2) gets two independent chain entries keyed by distinct
 -- chainIDs instead of one silently clobbering the other in Database.chains.
 local CAMPAIGN_CHAIN_OFFSET = 6000000
+
+-- Overview-map chain IDs live in their own disjoint range (7,000,000+) so a
+-- "Campaign Map" chain can never collide with a chapter chain (6,000,000 +
+-- chapterID) — chapter/questline IDs are well under 1,000,000.
+local CAMPAIGN_MAP_OFFSET = 7000000
 
 CS._discovered = {}        -- [categoryID] = true (one successful pass)
 
@@ -116,6 +122,7 @@ function CS:EnsureCampaignChains(catID)
     local chapters = C_CampaignInfo.GetChapterIDs(campaignID)
     if not chapters or #chapters == 0 then return end
 
+    local mapItems = {}
     for i = 1, #chapters do
         local chapterID = chapters[i]
         local chainID   = CAMPAIGN_CHAIN_OFFSET + chapterID
@@ -134,6 +141,33 @@ function CS:EnsureCampaignChains(catID)
                 _campaignOrder   = i,
             })
         end
+        -- One overview node per chapter, in story order. type=="chain" makes it
+        -- a navigation node that opens the chapter's quest chain when clicked
+        -- (ChainView renders it with the chapter's name + live progress).
+        mapItems[i] = {
+            type        = "chain",
+            id          = chainID,
+            x           = 0,
+            y           = i - 1,
+            connections = (i > 1) and { i - 1 } or nil,
+        }
+    end
+
+    -- Campaign overview "map": a single chain whose nodes ARE the chapters,
+    -- laid out as a pannable story spine you can drill into. Sorts first in the
+    -- category (_campaignOrder 0). The chapter spine is verifiable story order
+    -- from C_CampaignInfo.GetChapterIDs — no guessing about branch structure;
+    -- any genuinely-parallel chapters can be re-laid via the overlay format.
+    local mapChainID = CAMPAIGN_MAP_OFFSET + campaignID
+    if not Database.chains[mapChainID] then
+        Database:RegisterChain(mapChainID, {
+            category         = catID,
+            name             = L["Campaign Map"],
+            items            = mapItems,
+            _campaignSourced = true,
+            _campaignOrder   = 0,
+            _campaignMap     = true,
+        })
     end
 
     self._discovered[catID] = true

@@ -12,39 +12,43 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.19.0: start of the multi-phase Chain Guide overhaul — Phase 1 (next-step
--- guidance + Continue button, ON QUEST tags, rich hover tooltips, name search)
--- plus Russian (ruRU) + updated French. Sets expectations for the frequent
--- updates to come and recaps the plan (see the release-comms strategy).
--- Bumping the version re-shows the popup once to everyone. Bump this constant +
--- rewrite POPUP_BODY for the next release and a fresh popup shows once more.
--- Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.19.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.19.0"
+-- 1.20.0: Chain Guide overhaul Phase 2 — every Midnight quest chain (all zones
+-- and the campaign) now renders as a real branching graph, plus a redesigned,
+-- resizable, drag-to-pan window with a collapsible side list and compact cards.
+-- Phase 2 of 3 complete; Phase 3 (map integration) is next. Recaps the plan and
+-- the cumulative "shipped so far / this update" status (see the release-comms
+-- strategy). Bumping the version re-shows the popup once to everyone. Bump this
+-- constant + rewrite POPUP_BODY for the next release and a fresh popup shows once
+-- more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.20.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.20.0"
 
 local POPUP_BODY = [[
-|cffEBB706We're rebuilding the Chain Guide|r
-Over the next few updates we're overhauling the Chain Guide in three phases:
-|cffffffff1.|r Make it actionable — tell you what to do next  |cff999999(this update)|r
-|cffffffff2.|r A real branching graph you can drag and explore
-|cffffffff3.|r Map integration — quest-giver pins and auto-advancing waypoints
+|cffEBB706The Chain Guide overhaul — Phase 2 is here|r
+This is a big one. We're rebuilding the Chain Guide in three phases:
+|cffffffff1.|r Make it actionable — tell you what to do next  |cff999999(done)|r
+|cffffffff2.|r A real branching graph you can drag and explore  |cff999999(this update)|r
+|cffffffff3.|r Map integration — quest-giver pins and auto-advancing waypoints  |cff999999(coming soon)|r
 
-Because of that, updates will land more often than usual for a little while. Sorry in advance for the extra What's New popups — each one will recap what's already shipped, so it's easy to catch up if you miss one.
+|cffEBB706Every chain is now a real map|r
+Until now a quest chain was drawn as a flat top-to-bottom list. As of this update, |cffffffffevery quest chain in Midnight|r — all of Eversong Woods, Zul'Aman, Harandar, Voidstorm, Arator, and the full campaign — draws as a true branching graph. You can finally see which quests unlock which, where a chain splits into parallel paths, and where those paths rejoin.
 
-|cffEBB706Phase 1: the guide now guides you|r
-Open any chain and it highlights your |cffffffffnext step|r with a gold border and a |cffffffffContinue|r button that sets your course straight to it. Quests already in your log are tagged |cff4db8ffON QUEST|r, and opening a chain scrolls to where you are.
+|cffEBB706A redesigned window|r
+The Chain Guide window is now |cffffffffresizable|r — drag the bottom-right corner to make it as large as you like, and your size is remembered between sessions. |cffffffffDrag anywhere|r on the graph to pan around the bigger chains. The new |cffffffff<<|r button collapses the side list so the graph fills the whole window, and quest cards are more compact so you see more of a chain at a glance.
 
-|cffEBB706Richer quest info, no clicking|r
-Hover any quest in a chain to see its level, objectives, and rewards — including whether a piece of reward gear is an upgrade over what you're wearing. Each quest also shows its level and ID, and a quest that's ready to turn in is highlighted.
+|cffEBB706What's shipped so far|r
+|cffffffffPhase 1|r (last update): your next step highlighted with a Continue button, ON QUEST tags, rich hover tooltips, and search by name or ID.
+|cffffffffPhase 2|r (this update): full branching graphs for every chain, plus the redesigned, resizable, drag-to-pan window.
+|cffffffffPhase 3|r (next): quest-giver pins on the world map and waypoints that advance as you complete each step.
 
-|cffEBB706Search by name or ID|r
-The Chain Guide's find box now accepts a quest |cffffffffname|r as well as an ID — type either and it jumps to the chain that contains it.
-
-|cffEBB706Also in this update|r
-Everything Quests is now available in |cffffffffRussian|r, with updated French. (Translations for the new Chain Guide text will follow once the overhaul is finished.)
+|cffEBB706A couple of fixes too|r
+Scenario and dungeon titles are now centered in their banner, and opening the options from the Chain Guide no longer leaves the two windows overlapping.
 
 |cffEBB706Thanks for your patience|r
-Join our Discord with the button below to follow along, suggest features, or report anything that looks off.
+These updates have come quickly while the overhaul is underway, and I really appreciate you sticking with it — Phase 3 will round it out. Translations of the new Chain Guide text will follow once all three phases are complete.
+
+|cffEBB706Found a problem? Let me know|r
+If anything looks off, please tell me on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r — your reports are what make this better.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

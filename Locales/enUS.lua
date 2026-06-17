@@ -277,6 +277,9 @@ L["ilvl %d"] = true
 L["%d XP"] = true
 L["Choose one:"] = true
 
+-- ─── Modules/ChainGuide/CampaignSource.lua ───
+L["Campaign Map"] = true
+
 -- ─── Modules/ChainGuide/ChainView.lua ───
 L["Completed"] = true
 L["Ready to turn in"] = true
@@ -302,17 +305,21 @@ L["Continue"] = true
 L["(no quests defined for this chain yet)"] = true
 
 -- ─── Modules/ChainGuide/Frame.lua ───
+L["Hide the navigation panel"] = true
+L["Collapse the category and chain list so the graph fills the whole window. Click again to bring it back."] = true
 L["Back"] = true
 L["Forward"] = true
 L["Home"] = true
 L["Find quest"] = true
 L["Type a quest name or its ID to jump to the chain that contains it."] = true
 L["Go"] = true
+L["Categories"] = true
 L["|cffEBB706EQ Chain Guide:|r found quest |cffffffff%d|r%s — jumping to its chain."] = true
 L["|cffEBB706EQ Chain Guide:|r quest |cffffffff%d|r%s isn't in any chain I know about."] = true
 L["|cffEBB706EQ Chain Guide:|r found |cffffffff%s|r — jumping to its chain."] = true
 L["|cffEBB706EQ Chain Guide:|r no chain quest matches |cffffffff%s|r."] = true
 L["Pick a category"] = true
+L["Chains"] = true
 L["%d / %d quests done"] = true
 
 -- ─── Modules/ChainGuide/QuestMapButton.lua ───
@@ -469,6 +476,7 @@ L["Built with feedback, reports, and ideas from the community — especially "] 
 L[". Thank you!"] = true
 L["Special thanks to "] = true
 L[" for the many hours spent translating Everything Quests into French."] = true
+L[" for the many hours spent translating Everything Quests into Russian."] = true
 L["Changelog"] = true
 L["Older versions are on CurseForge"] = true
 

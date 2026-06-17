@@ -18,12 +18,23 @@ local CV = ns:RegisterSubsystem("ChainGuideView", {})
 
 local PAD            = 10
 local HEADER_H       = 44
-local CELL_W         = 200
-local CELL_H         = 52
-local CELL_GAP_X     = 14
-local CELL_GAP_Y     = 14
-local STATUS_ICON_PX = 16
-local CONNECTOR_PX   = 2
+local CELL_W         = 210            -- card WIDTH (visual size of a node)
+local CELL_H         = 34             -- card HEIGHT
+-- GRID pitch. A column is a touch wider than a card so siblings sharing a row
+-- in a parallel tier don't overlap; half-column positions (x = 0.5, 1.5) are
+-- used to keep an even-width tier centred under the spine. The row pitch leaves
+-- a gap below each card for the horizontal connector "bus".
+local COL_PITCH      = 224            -- horizontal distance between columns
+local ROW_PITCH      = 72             -- vertical distance between rows (gap holds the merge funnel)
+local STATUS_ICON_PX = 14
+local CONNECTOR_PX   = 3
+
+-- Drag-to-pan tuning. Defined up here (not in the pan-handler section below)
+-- because nodeOnClick's flick guard — which sits ABOVE the handlers — needs
+-- PAN_CLICK_THRESH_SQ, and WHEEL_STEP keys off the cell metrics just above.
+local PAN_CLICK_THRESH    = 5            -- cursor travel (px) that turns a press into a drag
+local PAN_CLICK_THRESH_SQ = PAN_CLICK_THRESH * PAN_CLICK_THRESH
+local WHEEL_STEP          = ROW_PITCH
 
 -- Scratch tables reused across every Render call. wipe()d at the start of
 -- each use so the table identity stays constant but contents reset. This
@@ -34,6 +45,19 @@ local _nodes     = {}
 local _resolved  = {}                            -- [i] = variation-resolved item
 local _statuses  = {}                            -- [i] = status key
 local _revConn   = {}                            -- [i] = list of items that depend on i
+local _chainComplete = {}                        -- [i] = true if a chain-nav node's sub-chain is fully done
+local _slotLoserOf   = {}                        -- [i] = winner index when item i is a same-cell duplicate (hidden)
+local _slotWinner    = {}                        -- [cellKey] = winning item index (scratch, wiped per render)
+
+-- Status priority for the same-cell collapse in Render: keep the card the
+-- player actually has (completed / in-log) over an unreachable off-faction
+-- duplicate that happens to share the cell.
+local function slotRank(s)
+    if s == "complete" or s == "turnin" or s == "active" then return 4 end
+    if s == "chainnav" then return 3 end
+    if s == "pending"  then return 2 end
+    return 1   -- skipped / unknown
+end
 
 local STATUS = {
     complete = { atlas = "common-icon-checkmark",                color = { 0.55, 0.55, 0.55 } },
@@ -53,6 +77,7 @@ local STATUS = {
 
 CV.nodePool, CV.activeNodes = {}, {}
 CV.linePool, CV.activeLines = {}, {}
+CV.dotPool,  CV.activeDots  = {}, {}     -- junction-gate merge dots
 
 -- Watches QUEST_DATA_LOAD_RESULT. Each successful load fires once, so a
 -- fresh chain detail view typically generates one event per uncached quest;
@@ -113,20 +138,23 @@ local function buildNode(parent)
     b.inner:SetPoint("BOTTOMRIGHT", -1, 1)
     b.inner:SetColorTexture(0.05, 0.05, 0.05, 0.95)
 
+    -- Compact two-line card: title line + a small "Lv N • ID M" line, with the
+    -- status icon on the title row. The whole box is ~half its old height — the
+    -- old layout left a big empty middle band. Both text lines are single-line
+    -- (no wrap); long titles clip and the hover tooltip carries the full name.
     b.statusIcon = b:CreateTexture(nil, "OVERLAY")
     b.statusIcon:SetSize(STATUS_ICON_PX, STATUS_ICON_PX)
-    b.statusIcon:SetPoint("TOPLEFT", 4, -4)
+    b.statusIcon:SetPoint("TOPLEFT", 4, -3)
 
     b.title = b:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    b.title:SetPoint("TOPLEFT", STATUS_ICON_PX + 8, -6)
-    b.title:SetPoint("BOTTOMRIGHT", -6, 18)
+    b.title:SetPoint("TOPLEFT",  STATUS_ICON_PX + 7, -3)
+    b.title:SetPoint("TOPRIGHT", -6, -3)
     b.title:SetJustifyH("LEFT")
-    b.title:SetJustifyV("TOP")
-    b.title:SetWordWrap(true)
-    b.title:SetMaxLines(2)
+    b.title:SetWordWrap(false)
+    b.title:SetMaxLines(1)
 
     b.subtitle = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    b.subtitle:SetPoint("BOTTOMLEFT", 6, 4)
+    b.subtitle:SetPoint("BOTTOMLEFT",  6, 4)
     b.subtitle:SetPoint("BOTTOMRIGHT", -6, 4)
     b.subtitle:SetJustifyH("LEFT")
     b.subtitle:SetWordWrap(false)
@@ -147,6 +175,11 @@ local function buildNode(parent)
     b:SetScript("OnEnter", nodeOnEnter)
     b:SetScript("OnLeave", nodeOnLeave)
     b:SetScript("OnClick", nodeOnClick)
+
+    -- Let a press that lands on a node ALSO reach the canvas beneath, so a
+    -- drag-pan can start from anywhere (not just empty gaps). The node still
+    -- gets its own click; nodeOnClick suppresses it when the gesture was a pan.
+    if b.SetPropagateMouseClicks then b:SetPropagateMouseClicks(true) end
 
     return b
 end
@@ -203,6 +236,71 @@ local function releaseLines()
     end
 end
 
+-- ─── Junction dot factory ──────────────────────────────────────────────
+-- A small square marker dropped at the merge point of an all-to-all gate, so
+-- the join reads as "these converge here, then split" rather than a flat bar.
+local DOT_PX = 9
+local function acquireDot(parent)
+    local d = tremove(CV.dotPool)
+    if not d then
+        d = parent:CreateTexture(nil, "ARTWORK")
+        d:SetSize(DOT_PX, DOT_PX)
+    else
+        d:SetParent(parent)
+    end
+    d:Show()
+    CV.activeDots[#CV.activeDots + 1] = d
+    return d
+end
+
+local function releaseDots()
+    for i = #CV.activeDots, 1, -1 do
+        local d = CV.activeDots[i]
+        d:Hide()
+        d:ClearAllPoints()
+        CV.dotPool[#CV.dotPool + 1] = d
+        CV.activeDots[i] = nil
+    end
+end
+
+-- ─── Connectors (straight-line tree) ───────────────────────────────────
+-- Edges are STRAIGHT lines between node centres, like a hand-drawn tree. A
+-- fan-out radiates from one parent and a fan-in converges on one child, so a
+-- simple branch forms a clean diamond. A true all-to-all GATE (≥2 parents each
+-- feeding ≥2 children) has no single convergence node, so the render routes it
+-- through a junction DOT on the midpoint row: the parents converge on the dot
+-- and the dot fans out to the children — the same clean diamond shape, just with
+-- a visible waist. Lines sit on the BACKGROUND layer (the opaque cards cover the
+-- part that runs under them) and come from the pooled factory (no per-edge
+-- table allocation); releaseLines reclaims them.
+
+-- Connector colours: completed prereq edges recede (dim green = history); to-do
+-- edges sit a touch brighter so the remaining path stands out. On a fully
+-- complete chain everything is the calm dim green.
+local EDGE_DONE = { 0.22, 0.42, 0.25, 0.55 }   -- completed prereq edge, dimmed
+local EDGE_TODO = { 0.52, 0.52, 0.56, 0.70 }   -- not-yet-done prereq edge
+
+local _centerX = 0    -- graph horizontal centre (the gate-dot x); set per render
+
+local function segment(canvas, x1, y1, x2, y2, r, g, b, a)
+    local line = acquireLine(canvas)
+    line:SetStartPoint("TOPLEFT", canvas, x1, y1)
+    line:SetEndPoint(  "TOPLEFT", canvas, x2, y2)
+    line:SetColorTexture(r, g, b, a)
+end
+
+-- Pixel centre of a grid cell. Row may be fractional (a gate dot sits on the
+-- midpoint row between its parent and child tiers).
+local function cellCenterX(col) return col * COL_PITCH + CELL_W * 0.5 end
+local function cellCenterY(row) return -(row * ROW_PITCH + CELL_H * 0.5) end
+
+-- Is the prerequisite item at `idx` complete? (Reads the module scratch the
+-- first render pass filled in; no closure, no per-edge allocation.)
+local function prereqComplete(items, idx, Characters)
+    if items[idx].type == "chain" then return _chainComplete[idx] end
+    return Characters:IsQuestCompleted(_resolved[idx].id)
+end
+
 -- ─── Status resolution ─────────────────────────────────────────────────
 local function statusForQuestItem(item, Characters)
     if Characters:IsQuestCompleted(item.id) then return "complete" end
@@ -253,6 +351,32 @@ local function buildQuestTooltip(item, statusKey)
         end
     end
 
+    -- Narrative classification + content type, both Blizzard-localized and shown
+    -- only when present. GetQuestClassificationDetails returns text for Campaign/
+    -- Important/Legendary/Meta/Calling/Recurring/Questline (Normal => nil). We
+    -- skip Questline: every quest in a chain IS a questline member, so that label
+    -- would show on nearly every node and tell the player nothing. The content
+    -- type (Dungeon/Raid/Group/Delve/PvP) comes from the quest tag. Neither can
+    -- be inverted into a "this is a side quest" signal (per the API verification),
+    -- so they're shown as-is, never used to restructure the layout. Same async
+    -- caveat as everything else here: resolves once the quest's data is cached.
+    if item.id then
+        if QuestUtil and QuestUtil.GetQuestClassificationDetails then
+            local cls, ctext = QuestUtil.GetQuestClassificationDetails(item.id, true)
+            local isPlainStoryline = Enum and Enum.QuestClassification
+                                     and cls == Enum.QuestClassification.Questline
+            if ctext and ctext ~= "" and not isPlainStoryline then
+                GameTooltip:AddLine(ctext, 0.90, 0.78, 0.45)
+            end
+        end
+        if C_QuestLog and C_QuestLog.GetQuestTagInfo then
+            local tag = C_QuestLog.GetQuestTagInfo(item.id)
+            if tag and tag.tagName and tag.tagName ~= "" then
+                GameTooltip:AddLine(tag.tagName, 0.55, 0.75, 0.95)
+            end
+        end
+    end
+
     -- Cross-link from the Quest History recorder: when did the player
     -- finish this one? Fast lookup; the History subsystem maintains the
     -- map incrementally so this hover doesn't walk the SV.
@@ -274,8 +398,16 @@ local function buildQuestTooltip(item, statusKey)
     -- yet adds no lines, and a re-hover picks them up once the data streams in.
     local QR = ns:GetSubsystem("QuestRewards")
     if QR then
-        local hadObjectives = QR:RenderObjectives(GameTooltip, item.id)
-        if hadObjectives then GameTooltip:AddLine(" ") end
+        -- Objectives carry LIVE log progress, which only exists while the quest
+        -- is in your log. A completed (turned-in) quest is gone from the log, so
+        -- the API reports its objectives as 0/N — which reads as "unfinished"
+        -- sitting right under the green "Completed" header. Skip them for a done
+        -- quest (its reward block still shows); for an in-log/not-started/skipped
+        -- quest the counts are accurate, so keep them.
+        if statusKey ~= "complete" then
+            local hadObjectives = QR:RenderObjectives(GameTooltip, item.id)
+            if hadObjectives then GameTooltip:AddLine(" ") end
+        end
         QR:RenderRewards(GameTooltip, item.id)
     end
 
@@ -321,6 +453,10 @@ end
 -- Static node scripts (forward-declared near the top). Each reads the per-render
 -- data the render loop stamps onto the node, so no per-node closures allocate.
 function nodeOnEnter(self)
+    -- Don't pop tooltips while the player is dragging the canvas across nodes.
+    local canvas = self:GetParent()
+    local pane = canvas and canvas._pane
+    if pane and pane._panning then return end
     if self._navKind == "chain" then
         buildChainNavTooltip(self._ref)
     else
@@ -333,6 +469,30 @@ function nodeOnLeave()
 end
 
 function nodeOnClick(self)
+    -- A press that turned into a drag-pan reaches here as a click too (nodes
+    -- propagate the press to the canvas). Swallow it so panning across nodes
+    -- never fires a stray waypoint / chain-jump. Gate the whole check on
+    -- _panning — set by the press that propagated to the canvas and still set
+    -- during OnClick (cleared on the following OnMouseUp) — so a stale _panMoved
+    -- from a PRIOR gesture can never eat a legitimate click.
+    local canvas = self:GetParent()
+    local pane = canvas and canvas._pane
+    if pane and pane._panning then
+        if pane._panMoved then return end
+        -- Sub-frame flick: OnUpdate (which sets _panMoved) may not have run
+        -- between the press and this click on a heavy frame, so re-check live
+        -- cursor travel from the press point (Blizzard order is OnMouseDown ->
+        -- OnClick -> OnMouseUp, so _panStartX/Y are still current here).
+        if pane._panStartX then
+            local scale = canvas:GetEffectiveScale()
+            if scale and scale ~= 0 then
+                local cx, cy = GetCursorPosition()
+                local tx = cx / scale - pane._panStartX
+                local ty = cy / scale - pane._panStartY
+                if (tx * tx + ty * ty) > PAN_CLICK_THRESH_SQ then return end
+            end
+        end
+    end
     if self._navKind == "chain" then
         onNodeClickChain(self._ref)
     else
@@ -348,6 +508,118 @@ local function onContinueClick(self)
     if not self._nextID then return end
     local WP = ns:GetSubsystem("ChainGuideWaypoint")
     if WP and WP.GoTo then WP:GoTo(self._nextID, self._chain) end
+end
+
+-- ─── Drag-to-pan ───────────────────────────────────────────────────────
+-- The detail canvas lives in a ScrollFrame (vertical scrollbar only). For a
+-- graph chain wider/taller than the viewport we add 2D drag panning that
+-- drives SetHorizontalScroll/SetVerticalScroll directly — the widget supports
+-- both axes even though UIPanelScrollFrameTemplate only ships a vertical bar.
+-- Mechanics mirror Blizzard's MapCanvasScrollControllerMixin: accumulate the
+-- frame-to-frame cursor delta and re-stamp the last position each OnUpdate
+-- (GetCursorPosition is scale-independent, so divide by the canvas's effective
+-- scale). Handlers are file-scope statics wired ONCE on the canvas; per-pane
+-- state rides on canvas._pane fields so nothing allocates per render or drag,
+-- and OnUpdate is only attached while a drag is live (detached on release).
+-- (PAN_CLICK_THRESH / PAN_CLICK_THRESH_SQ / WHEEL_STEP are defined up top.)
+local function stopPan(canvas)
+    local pane = canvas._pane
+    if pane then pane._panning = false end
+    canvas:SetScript("OnUpdate", nil)
+    if SetCursor then SetCursor(nil) end
+end
+
+local function canvasOnUpdate(self)
+    local pane = self._pane
+    if not (pane and pane._panning) then return end
+    -- The button can be released off-frame, where OnMouseUp may never reach us;
+    -- the live button state is the authoritative stop signal (Blizzard does the
+    -- same in its pan controller).
+    if not (IsMouseButtonDown and IsMouseButtonDown("LeftButton")) then stopPan(self); return end
+
+    local scale = self:GetEffectiveScale()
+    if not scale or scale == 0 then return end
+    local cx, cy = GetCursorPosition()
+    cx, cy = cx / scale, cy / scale
+    local dx = cx - pane._panLastX
+    local dy = cy - pane._panLastY
+    pane._panLastX, pane._panLastY = cx, cy
+
+    -- Promote the press to a drag once the cursor travels far enough, so a node
+    -- click (little/no movement) still registers as a click (see nodeOnClick).
+    -- On the transition, hide any tooltip left over from the pre-drag hover so
+    -- it doesn't hang on screen while panning (new ones are suppressed below).
+    if not pane._panMoved then
+        local tx, ty = cx - pane._panStartX, cy - pane._panStartY
+        if (tx * tx + ty * ty) > PAN_CLICK_THRESH_SQ then
+            pane._panMoved = true
+            if GameTooltip then GameTooltip:Hide() end
+        end
+    end
+
+    local sc = pane._cvScroll
+    if not sc then return end
+    -- Grab-and-drag feel: the grabbed canvas point follows the cursor. Cursor
+    -- right (dx>0) reveals content to the LEFT → horizontal offset decreases;
+    -- cursor up (screen dy>0) reveals content BELOW → vertical offset increases
+    -- (scroll Y grows downward while screen Y grows upward — hence the +dy).
+    local hmax = sc:GetHorizontalScrollRange() or 0
+    local vmax = sc:GetVerticalScrollRange()   or 0
+    sc:SetHorizontalScroll(math.max(0, math.min(hmax, (sc:GetHorizontalScroll() or 0) - dx)))
+    sc:SetVerticalScroll(  math.max(0, math.min(vmax, (sc:GetVerticalScroll()   or 0) + dy)))
+end
+
+local function canvasOnMouseDown(self, button)
+    if button ~= "LeftButton" then return end
+    local pane = self._pane
+    if not pane then return end
+    -- Nothing to pan when the content fits the viewport (no scroll range on
+    -- either axis): bail so we don't show a grab cursor that can't move anything,
+    -- and so a plain click on a small chain passes straight through (no pan, no
+    -- click-swallow). Pan engages only on chains taller/wider than the pane.
+    local sc = pane._cvScroll
+    if not sc then return end
+    if (sc:GetHorizontalScrollRange() or 0) <= 0 and (sc:GetVerticalScrollRange() or 0) <= 0 then
+        return
+    end
+    local scale = self:GetEffectiveScale()
+    if not scale or scale == 0 then return end
+    local cx, cy = GetCursorPosition()
+    cx, cy = cx / scale, cy / scale
+    pane._panLastX,  pane._panLastY  = cx, cy
+    pane._panStartX, pane._panStartY = cx, cy
+    pane._panMoved = false
+    pane._panning  = true
+    self:SetScript("OnUpdate", canvasOnUpdate)
+    if SetCursor then SetCursor("UI_MOVE_CURSOR") end
+end
+
+local function canvasOnMouseUp(self)
+    if self._pane and self._pane._panning then stopPan(self) end
+end
+
+-- Safety net: if the window is hidden mid-drag (button still held), the canvas
+-- stops getting OnUpdate/OnMouseUp, so the grab cursor would stay stuck globally
+-- and _panning would latch. Release the pan on hide.
+local function canvasOnHide(self)
+    if self._pane and self._pane._panning then stopPan(self) end
+end
+
+-- Mouse wheel must be handled here: enabling mouse on the scroll child makes it
+-- the mouse-focus frame, so the parent ScrollFrame template's wheel handler no
+-- longer sees the event. Plain wheel scrolls vertically (as before); shift+wheel
+-- pans horizontally for wide graph chains.
+local function canvasOnMouseWheel(self, delta)
+    local pane = self._pane
+    local sc = pane and pane._cvScroll
+    if not sc then return end
+    if IsShiftKeyDown and IsShiftKeyDown() then
+        local hmax = sc:GetHorizontalScrollRange() or 0
+        sc:SetHorizontalScroll(math.max(0, math.min(hmax, (sc:GetHorizontalScroll() or 0) - delta * WHEEL_STEP)))
+    else
+        local vmax = sc:GetVerticalScrollRange() or 0
+        sc:SetVerticalScroll(math.max(0, math.min(vmax, (sc:GetVerticalScroll() or 0) - delta * WHEEL_STEP)))
+    end
 end
 
 -- ─── Layout ────────────────────────────────────────────────────────────
@@ -408,6 +680,7 @@ function CV:Render(pane, chain, highlightQuestID)
     self:_ensureUI(pane)
     releaseNodes()
     releaseLines()
+    releaseDots()
 
     -- Continue button shows only when a chain has a next actionable step; hide
     -- it up front so the no-chain and empty-chain paths below leave it hidden.
@@ -422,8 +695,18 @@ function CV:Render(pane, chain, highlightQuestID)
     -- position away while they read. Tracked here — before the early returns —
     -- so home/empty states still update the baseline (so navigating away and
     -- back to the same chain scrolls again).
+    -- A cold navigation often renders EMPTY first (questline data streams in a
+    -- few hundred ms later), then re-renders the SAME chain table with items.
+    -- That data-arrival render must still count as a navigation so the auto-
+    -- scroll / centering fires — otherwise the chain/highlight identity matches
+    -- and the NEXT node can land off-screen. _cvRenderedChain tracks the chain
+    -- whose NODES were last actually drawn (set only on the success path below),
+    -- so the first non-empty render of a chain always qualifies, while a passive
+    -- re-render of an ALREADY-drawn chain does not (preserving the Phase-1 intent
+    -- that QUEST_DATA_LOAD_RESULT re-renders never yank the player's scroll).
     local navChanged = (chain ~= pane._cvScrolledChain)
                        or (highlightQuestID ~= pane._cvScrolledHighlight)
+                       or (chain ~= pane._cvRenderedChain)
     pane._cvScrolledChain     = chain
     pane._cvScrolledHighlight = highlightQuestID
 
@@ -463,6 +746,9 @@ function CV:Render(pane, chain, highlightQuestID)
     pane._cvEmpty:Hide()
 
     local cols, rows, maxCol, maxRow = computeLayout(items)
+    -- The central trunk x: the horizontal centre of the laid-out grid, so a
+    -- centred layout funnels its connectors straight down the spine.
+    _centerX = (maxCol * 0.5) * COL_PITCH + CELL_W * 0.5
     local char = Database:CurrentCharacter()
 
     -- ── First pass: resolve variations and compute every item's status.
@@ -478,6 +764,28 @@ function CV:Render(pane, chain, highlightQuestID)
             _statuses[i] = "chainnav"
         else
             _statuses[i] = statusForQuestItem(resolved, Characters)
+        end
+    end
+
+    -- ── Same-cell collapse: an API-sourced questline can carry BOTH faction
+    -- versions of one step (e.g. the Horde and Alliance "Paved in Ash"), and an
+    -- overlay deliberately positions them on the SAME grid cell. Drawing both
+    -- stacks two cards — overlapping titles/IDs and a clashing done/skip icon.
+    -- Keep exactly one card per cell (the one the player has, by slotRank) and
+    -- mark the rest as losers; the node loop hides them and the connector loop
+    -- skips them, so their edges collapse onto the kept node sharing the cell.
+    wipe(_slotLoserOf)
+    wipe(_slotWinner)
+    for i = 1, #items do
+        local key = rows[i] * 4096 + cols[i]
+        local cur = _slotWinner[key]
+        if not cur then
+            _slotWinner[key] = i
+        elseif slotRank(_statuses[i]) > slotRank(_statuses[cur]) then
+            _slotLoserOf[cur] = i
+            _slotWinner[key] = i
+        else
+            _slotLoserOf[i] = cur
         end
     end
 
@@ -500,7 +808,7 @@ function CV:Render(pane, chain, highlightQuestID)
     end
     local skippedCount = 0
     for i = 1, #items do
-        if _statuses[i] == "pending" and not _resolved[i].breadcrumb then
+        if _statuses[i] == "pending" and not _resolved[i].breadcrumb and not _slotLoserOf[i] then
             local consumers = _revConn[i]
             if consumers then
                 for k = 1, #consumers do
@@ -543,22 +851,40 @@ function CV:Render(pane, chain, highlightQuestID)
     -- items[] index → node frame, used by the connector loop below to
     -- look up endpoints. Wiped instead of reallocated each render.
     wipe(_nodes)
+    wipe(_chainComplete)
     local nodes = _nodes
     local highlightRow            -- row of the Quest-ID search target, if any
     local nextRow                 -- row of the next-actionable-step node, if any
+    local highlightCol, nextCol   -- their columns, for horizontal centering on scroll
     for i = 1, #items do
         local resolved = _resolved[i]
         local node = acquireNode(pane._cvCanvas)
         node:SetPoint("TOPLEFT", pane._cvCanvas, "TOPLEFT",
-            cols[i] * (CELL_W + CELL_GAP_X),
-            -(rows[i] * (CELL_H + CELL_GAP_Y)))
+            cols[i] * COL_PITCH,
+            -(rows[i] * ROW_PITCH))
 
         local statusKey, title, subtitle
         if resolved.type == "chain" then
             local sub = Database.chains[resolved.id]
             title    = (sub and sub.name) or ("Chain #" .. tostring(resolved.id))
-            subtitle = "View chain >"
             statusKey = "chainnav"
+            -- Surface the linked chain's live progress on the node (e.g. the
+            -- Campaign overview map showing each chapter's "X/Y done"). A fully
+            -- completed sub-chain switches to the grey "complete" look so the
+            -- map reads at a glance. Progress is 0/0 until the sub-chain's items
+            -- are populated (the category list render already does that on the
+            -- way in); a passive re-render fills it once the data streams in.
+            if sub then
+                local sc, _, st = Characters:ChainProgress(sub)
+                if st > 0 then
+                    subtitle = (L["%d/%d done"]):format(sc, st)
+                    if sc >= st then statusKey = "complete"; _chainComplete[i] = true end
+                else
+                    subtitle = "View chain >"
+                end
+            else
+                subtitle = "View chain >"
+            end
         else
             local cached = ns.Util.QuestTitle(resolved.id)   -- nil if unresolved
             -- For uncached quests, ask Blizzard to load the data; when the
@@ -629,6 +955,7 @@ function CV:Render(pane, chain, highlightQuestID)
         if highlightQuestID and resolved.type ~= "chain" and resolved.id == highlightQuestID then
             node.searchGlow:Show()
             highlightRow = rows[i]
+            highlightCol = cols[i]
         end
 
         -- Next actionable step: paint the card's border gold so it reads as
@@ -639,28 +966,83 @@ function CV:Render(pane, chain, highlightQuestID)
         if nextID and resolved.type ~= "chain" and resolved.id == nextID then
             node.border:SetColorTexture(0.92, 0.72, 0.02, 1)
             nextRow = rows[i]
+            nextCol = cols[i]
         end
 
         nodes[i] = node
+
+        -- Same-cell duplicate (faction variant): the winning card already owns
+        -- this cell, so hide this one and drop it from the connector graph — its
+        -- edges resolve onto the kept node, which sits in the same cell.
+        if _slotLoserOf[i] then
+            node:Hide()
+            nodes[i] = nil
+        end
     end
 
-    -- Draw connectors (prereq → child). Color reflects the *prereq's* status:
-    -- a completed prereq paints its outgoing edge green, otherwise gray.
+    -- Connectors. First CLASSIFY each tier gap (keyed by child row): collect its
+    -- distinct parents, its children, the edge count, and whether every prereq is
+    -- complete. Then DRAW straight lines — direct parent→child for fans/linear
+    -- (clean diamonds), or parent→dot→child through a junction dot for a true
+    -- all-to-all gate. These small tables are built per on-demand render (chain
+    -- navigation, not per frame), so a few short-lived tables here are fine.
+    local canvas = pane._cvCanvas
+    local gapParSet, gapParList, gapKidList, gapEdgeN, gapDone = {}, {}, {}, {}, {}
     for i = 1, #items do
         local it = items[i]
         if it.connections then
+            local R = rows[i]
+            if not gapParSet[R] then
+                gapParSet[R] = {}; gapParList[R] = {}; gapKidList[R] = {}
+                gapEdgeN[R] = 0; gapDone[R] = true
+            end
+            local pset = gapParSet[R]
+            local counted = false
             for _, src in ipairs(it.connections) do
-                local from, to = nodes[src], nodes[i]
-                if from and to then
-                    local line = acquireLine(pane._cvCanvas)
-                    line:SetStartPoint("BOTTOM",  from, 0, 0)
-                    line:SetEndPoint(  "TOP",     to,   0, 0)
-                    local prereq = items[src]
-                    if prereq.type ~= "chain"
-                       and Characters:IsQuestCompleted((Database:GetVariation(prereq, char)).id) then
-                        line:SetColorTexture(0.30, 0.85, 0.30, 0.95)
-                    else
-                        line:SetColorTexture(0.55, 0.55, 0.55, 0.85)
+                if nodes[src] and nodes[i] then
+                    if not pset[src] then
+                        pset[src] = true
+                        local pl = gapParList[R]; pl[#pl + 1] = src
+                    end
+                    gapEdgeN[R] = gapEdgeN[R] + 1
+                    if not prereqComplete(items, src, Characters) then gapDone[R] = false end
+                    counted = true
+                end
+            end
+            if counted then local kl = gapKidList[R]; kl[#kl + 1] = i end
+        end
+    end
+
+    for R, parList in pairs(gapParList) do
+        local kidList = gapKidList[R]
+        local nP, nC = #parList, #kidList
+        if nP >= 2 and nC >= 2 and gapEdgeN[R] == nP * nC then
+            -- All-to-all gate → one junction dot on the midpoint row; parents
+            -- converge on it, it fans back out to the children.
+            local dotRow = (rows[parList[1]] + R) * 0.5
+            local dotX, dotY = _centerX, cellCenterY(dotRow)
+            for k = 1, nP do
+                local p  = parList[k]
+                local pc = prereqComplete(items, p, Characters) and EDGE_DONE or EDGE_TODO
+                segment(canvas, cellCenterX(cols[p]), cellCenterY(rows[p]), dotX, dotY, pc[1], pc[2], pc[3], pc[4])
+            end
+            local gc = gapDone[R] and EDGE_DONE or EDGE_TODO
+            for k = 1, nC do
+                local ch = kidList[k]
+                segment(canvas, dotX, dotY, cellCenterX(cols[ch]), cellCenterY(rows[ch]), gc[1], gc[2], gc[3], gc[4])
+            end
+            local dot = acquireDot(canvas)
+            dot:SetPoint("CENTER", canvas, "TOPLEFT", dotX, dotY)
+            dot:SetColorTexture(gc[1], gc[2], gc[3], 1)
+        else
+            -- Fan / linear → direct straight edges, parent centre → child centre.
+            for k = 1, nC do
+                local ch = kidList[k]
+                local cxp, cyp = cellCenterX(cols[ch]), cellCenterY(rows[ch])
+                for _, src in ipairs(items[ch].connections) do
+                    if nodes[src] and nodes[ch] then
+                        local pc = prereqComplete(items, src, Characters) and EDGE_DONE or EDGE_TODO
+                        segment(canvas, cellCenterX(cols[src]), cellCenterY(rows[src]), cxp, cyp, pc[1], pc[2], pc[3], pc[4])
                     end
                 end
             end
@@ -669,8 +1051,11 @@ function CV:Render(pane, chain, highlightQuestID)
 
     -- Size the canvas to fit the laid-out grid so the parent ScrollFrame can
     -- show scrollbars when the chain overflows the visible pane.
-    local canvasW = (maxCol + 1) * CELL_W + maxCol * CELL_GAP_X
-    local canvasH = (maxRow + 1) * CELL_H + maxRow * CELL_GAP_Y
+    -- Canvas spans the grid: last column's left edge + a full card width, last
+    -- row's top + a full card height. (Grid pitch is narrower than the card, so
+    -- sizing off the pitch alone would clip the rightmost/bottom cards.)
+    local canvasW = maxCol * COL_PITCH + CELL_W
+    local canvasH = maxRow * ROW_PITCH + CELL_H
     pane._cvCanvas:SetSize(math.max(canvasW, 1), math.max(canvasH, 1))
 
     -- Surface the Continue button now that we know the chain has a next step.
@@ -688,9 +1073,19 @@ function CV:Render(pane, chain, highlightQuestID)
     -- search highlight wins (the user explicitly asked for that quest). The
     -- deferred callback is a single per-pane closure built once in _ensureUI, so
     -- this allocates nothing per render (it reads pane._cvScrollY).
+    -- Nodes are placed: record that THIS chain actually drew, so the next
+    -- (passive) re-render of it won't re-trigger the auto-scroll, but a cold
+    -- render that returned empty earlier still counts as a navigation. Only set
+    -- on this success path — never in the no-chain / empty-items early returns.
+    pane._cvRenderedChain = chain
+
     local scrollRow = highlightRow or nextRow
+    -- Pair the column with whichever row won (a search highlight beats the next
+    -- step), so horizontal centering targets the same node we scroll vertically.
+    local scrollCol = highlightRow and highlightCol or nextCol
     if scrollRow and navChanged then
-        pane._cvScrollY = scrollRow * (CELL_H + CELL_GAP_Y)
+        pane._cvScrollY = scrollRow * ROW_PITCH
+        pane._cvScrollX = (scrollCol or 0) * COL_PITCH
         C_Timer.After(0, pane._cvDoScroll)
     end
 end
@@ -730,19 +1125,39 @@ function CV:_ensureUI(pane)
 
     -- Reusable deferred-scroll callback, built once per pane so Render never
     -- allocates a closure to bring the search target / next step into view. It
-    -- reads pane._cvScrollY, which Render sets just before C_Timer.After fires.
+    -- reads pane._cvScrollY / pane._cvScrollX, which Render sets just before
+    -- C_Timer.After fires. Centers the target horizontally so a wide graph
+    -- chain lands the next/searched node in view rather than off the left edge.
     pane._cvDoScroll = function()
         local sc = pane._cvScroll
         if not (sc and sc:IsShown()) then return end
+        -- Don't fight a pan the player started in the one-frame gap before this
+        -- deferred callback fires (it would yank the view out from under them).
+        if pane._panning then return end
         if sc.UpdateScrollChildRect then sc:UpdateScrollChildRect() end
         local maxv = sc:GetVerticalScrollRange() or 0
         sc:SetVerticalScroll(math.min(maxv, math.max(0, (pane._cvScrollY or 0) - 20)))
+        local maxh   = sc:GetHorizontalScrollRange() or 0
+        local viewW  = sc:GetWidth() or 0
+        local targetX = (pane._cvScrollX or 0) - math.max(0, (viewW - CELL_W) * 0.5)
+        sc:SetHorizontalScroll(math.min(maxh, math.max(0, targetX)))
     end
 
     local canvas = CreateFrame("Frame", nil, scroll)
     canvas:SetSize(1, 1)
     scroll:SetScrollChild(canvas)
     pane._cvCanvas = canvas
+
+    -- Drag-to-pan + wheel: enable mouse/wheel on the scroll child and wire the
+    -- file-scope static handlers. The back-ref lets those handlers reach this
+    -- pane's scroll frame + drag state without per-pane closures.
+    canvas._pane = pane
+    canvas:EnableMouse(true)
+    canvas:EnableMouseWheel(true)
+    canvas:SetScript("OnMouseDown",  canvasOnMouseDown)
+    canvas:SetScript("OnMouseUp",    canvasOnMouseUp)
+    canvas:SetScript("OnMouseWheel", canvasOnMouseWheel)
+    canvas:SetScript("OnHide",       canvasOnHide)
 
     -- Anchored to the pane (not the scroll child) so it stays visible even
     -- when the canvas is sized to 1x1 for chains with no items.

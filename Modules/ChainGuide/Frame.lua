@@ -20,12 +20,19 @@ local CG = ns:RegisterSubsystem("ChainGuide", {})
 local PANE_GAP        = 6
 local TITLE_BAR_H     = 22
 local NAV_BAR_H       = 28
-local CAT_PANE_W      = 250
-local CHAIN_PANE_W    = 300
+local RAIL_W          = 250          -- the single drill-down navigation rail
 local ROW_H           = 22
+local MIN_W           = 760          -- smallest the resizable window may get
+local MIN_H           = 460
+local DEFAULT_W       = 1160
+local DEFAULT_H       = 720
+-- Y of the panes' top edge (below title bar + nav bar + one gap). Shared by
+-- Build and the rail-collapse re-anchor so they can't drift.
+local PANES_TOP       = -(TITLE_BAR_H + NAV_BAR_H + PANE_GAP)
 
-CG.catRowPool   = {}; CG.catRowsActive   = {}
-CG.chainRowPool = {}; CG.chainRowsActive = {}
+-- The navigation rail shows EITHER categories OR a category's chains (drill-
+-- down), never both at once, so one pooled row set serves both lists.
+CG.railRowPool = {}; CG.railRowsActive = {}
 
 -- Static row scripts. Wired ONCE per pooled row in buildListRow and reused
 -- across every render — the per-row click/tooltip data rides on frame fields
@@ -194,10 +201,19 @@ function CG:Build()
         b:SetSize(70, 22)
         return b
     end
+    -- Collapse the nav rail so the graph fills the whole window. ASCII glyphs
+    -- ("<<"/">>") so they render in every locale font — Friz Quadrata tofus
+    -- many Unicode arrows (see the v1.8.1 arrow-glyph fix).
+    f.collapseBtn = navBtn("<<", function() self:SetRailCollapsed(not self._railCollapsed) end)
+    f.collapseBtn:SetSize(30, 22)
+    Options:AttachTooltip(f.collapseBtn, L["Hide the navigation panel"],
+        L["Collapse the category and chain list so the graph fills the whole window. Click again to bring it back."])
+
     f.backBtn = navBtn(L["Back"],    function() self:Back()    end)
     f.fwdBtn  = navBtn(L["Forward"], function() self:Forward() end)
     f.homeBtn = navBtn(L["Home"],    function() self:NavigateHome() end)
-    f.backBtn:SetPoint("LEFT", 8, 0)
+    f.collapseBtn:SetPoint("LEFT", 8, 0)
+    f.backBtn:SetPoint("LEFT", f.collapseBtn, "RIGHT", 6, 0)
     f.fwdBtn:SetPoint("LEFT", f.backBtn, "RIGHT", 4, 0)
     f.homeBtn:SetPoint("LEFT", f.fwdBtn, "RIGHT", 4, 0)
 
@@ -251,7 +267,10 @@ function CG:Build()
     goBtn:SetSize(40, 22)
     goBtn:SetPoint("LEFT", search, "RIGHT", 8, 0)
 
-    -- Three panes below the nav bar.
+    -- Two panes below the nav bar: a single navigation RAIL (categories OR the
+    -- selected category's chains — drill-down) and the graph detail pane. The
+    -- old layout spent a SECOND list column here; folding both lists into one
+    -- rail hands that width to the graph, which is what actually needs it.
     local function makePane()
         local p = CreateFrame("Frame", nil, f, "BackdropTemplate")
         local pbg = p:CreateTexture(nil, "BACKGROUND")
@@ -259,25 +278,20 @@ function CG:Build()
         pbg:SetColorTexture(0, 0, 0, 0.4)
         return p
     end
-    f.catPane    = makePane()
-    f.chainPane  = makePane()
+    f.railPane   = makePane()
     f.detailPane = makePane()
 
-    local panesTop = -(TITLE_BAR_H + NAV_BAR_H + PANE_GAP)
-    f.catPane:SetPoint("TOPLEFT",     PANE_GAP, panesTop)
-    f.catPane:SetPoint("BOTTOMLEFT",  PANE_GAP, PANE_GAP)
-    f.catPane:SetWidth(CAT_PANE_W)
+    f.railPane:SetPoint("TOPLEFT",    PANE_GAP, PANES_TOP)
+    f.railPane:SetPoint("BOTTOMLEFT", PANE_GAP, PANE_GAP)
+    f.railPane:SetWidth(RAIL_W)
 
-    f.chainPane:SetPoint("TOPLEFT",    f.catPane, "TOPRIGHT", PANE_GAP, 0)
-    f.chainPane:SetPoint("BOTTOMLEFT", f.catPane, "BOTTOMRIGHT", PANE_GAP, 0)
-    f.chainPane:SetWidth(CHAIN_PANE_W)
-
-    f.detailPane:SetPoint("TOPLEFT",     f.chainPane, "TOPRIGHT", PANE_GAP, 0)
+    -- detailPane is re-anchored by SetRailCollapsed (to railPane's right edge
+    -- when expanded, to the window's left edge when the rail is collapsed), so
+    -- only its BOTTOMRIGHT is pinned here.
     f.detailPane:SetPoint("BOTTOMRIGHT", -PANE_GAP, PANE_GAP)
 
-    -- Section headers (red, matching Options style — these are "in-window UI"
-    -- but the Chain Guide is a reference panel, not gameplay UI, so the brand
-    -- palette is appropriate here.)
+    -- Section headers (red, matching Options style — the Chain Guide is a
+    -- reference panel, so the brand palette is appropriate here.)
     local function header(parent, text)
         local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         h:SetPoint("TOPLEFT", 8, -6)
@@ -285,22 +299,75 @@ function CG:Build()
         h:SetText(text)
         return h
     end
-    f.catHeader   = header(f.catPane, "Categories")
 
-    -- Chain pane gets an inner scroll so long chain lists don't get clipped.
-    -- The scroll child grows to fit all rows; a UIPanelScrollFrame scrollbar
-    -- appears automatically when the content exceeds the visible height.
-    local chainScroll = CreateFrame("ScrollFrame", nil, f.chainPane, "UIPanelScrollFrameTemplate")
-    chainScroll:SetPoint("TOPLEFT",     0, 0)
-    chainScroll:SetPoint("BOTTOMRIGHT", -22, 0)
-    local chainContent = CreateFrame("Frame", nil, chainScroll)
-    chainContent:SetSize(CHAIN_PANE_W - 22, 1)
-    chainScroll:SetScrollChild(chainContent)
-    f.chainScroll  = chainScroll
-    f.chainContent = chainContent
-    f.chainHeader  = header(chainContent, "Chains")
+    -- The rail scrolls (a campaign can carry ~17 chapters). Breadcrumb, header
+    -- and rows all live in the scroll child so they share one scrollbar.
+    local railScroll = CreateFrame("ScrollFrame", nil, f.railPane, "UIPanelScrollFrameTemplate")
+    railScroll:SetPoint("TOPLEFT",     0, 0)
+    railScroll:SetPoint("BOTTOMRIGHT", -22, 0)
+    local railContent = CreateFrame("Frame", nil, railScroll)
+    railContent:SetSize(RAIL_W - 22, 1)
+    railScroll:SetScrollChild(railContent)
+    f.railScroll  = railScroll
+    f.railContent = railContent
+
+    -- "< Categories" breadcrumb: the explicit up-one-level affordance (the
+    -- toolbar Back does the same via history). Shown only while the rail is
+    -- listing a category's chains; hidden at the categories root.
+    local crumb = CreateFrame("Button", nil, railContent)
+    crumb:SetHeight(16)
+    crumb:SetPoint("TOPLEFT",  8, -6)
+    crumb:SetPoint("TOPRIGHT", -8, -6)
+    local crumbHL = crumb:CreateTexture(nil, "HIGHLIGHT")
+    crumbHL:SetAllPoints()
+    crumbHL:SetColorTexture(1, 1, 1, 0.08)
+    crumb.text = crumb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    crumb.text:SetPoint("LEFT", 2, 0)
+    crumb.text:SetText("< " .. L["Categories"])
+    crumb.text:SetTextColor(0.92, 0.72, 0.02)
+    crumb:SetScript("OnClick", function() self:NavigateHome() end)
+    crumb:Hide()
+    f.railCrumb = crumb
+
+    f.railHeader = header(railContent, L["Categories"])
+
+    -- Bottom-right resize grip — the window is resizable so the player can make
+    -- the graph as big as they like; the chosen size is saved to the profile.
+    f:SetResizable(true)
+    if f.SetResizeBounds then f:SetResizeBounds(MIN_W, MIN_H) end
+    local grip = CreateFrame("Button", nil, f)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", -2, 2)
+    -- Sits over the detail pane's bottom-right corner; lift it above the graph
+    -- canvas/scrollbar so the click always lands on the grip, not the graph.
+    grip:SetFrameLevel((f:GetFrameLevel() or 0) + 20)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrip-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrip-Highlight")
+    grip:SetScript("OnMouseDown", function() f:StartSizing("BOTTOMRIGHT") end)
+    grip:SetScript("OnMouseUp", function()
+        f:StopMovingOrSizing()
+        local DB  = ns:GetSubsystem("DB")
+        local cfg = DB and DB.db and DB.db.profile and DB.db.profile.chainGuide
+        if cfg then cfg.width, cfg.height = f:GetWidth(), f:GetHeight() end
+        -- Re-render so the graph's centering math picks up the new viewport.
+        self:RenderCurrent()
+    end)
+    f.resizeGrip = grip
 
     self.frame = f
+
+    -- Restore the saved window size + rail-collapse state before the first
+    -- render so the player's layout survives a relog. SetRailCollapsed sets the
+    -- detailPane's TOPLEFT anchor, so it must run before NavigateHome renders.
+    do
+        local DB  = ns:GetSubsystem("DB")
+        local cfg = DB and DB.db and DB.db.profile and DB.db.profile.chainGuide
+        local w = (cfg and cfg.width)  or DEFAULT_W
+        local h = (cfg and cfg.height) or DEFAULT_H
+        f:SetSize(math.max(w, MIN_W), math.max(h, MIN_H))
+        self:SetRailCollapsed(cfg and cfg.railCollapsed or false)
+    end
+
     self:NavigateHome()
 end
 
@@ -335,6 +402,35 @@ function CG:Open()
     self:Build()
     self:ApplySettings()
     if not self.frame:IsShown() then self.frame:Show() end
+end
+
+-- Collapse / expand the navigation rail. Collapsed = the graph fills the whole
+-- window; expanded = the rail sits to its left. Re-anchors the detailPane's
+-- TOPLEFT, flips the toolbar glyph, persists the choice, and re-renders the
+-- graph so its horizontal centering uses the new viewport width.
+function CG:SetRailCollapsed(collapsed)
+    local f = self.frame
+    if not f then return end
+    self._railCollapsed = collapsed and true or false
+
+    f.detailPane:ClearAllPoints()
+    if self._railCollapsed then
+        f.railPane:Hide()
+        f.detailPane:SetPoint("TOPLEFT",     f, "TOPLEFT",     PANE_GAP, PANES_TOP)
+        f.detailPane:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PANE_GAP, PANE_GAP)
+        if f.collapseBtn then f.collapseBtn.text:SetText(">>") end
+    else
+        f.railPane:Show()
+        f.detailPane:SetPoint("TOPLEFT",     f.railPane, "TOPRIGHT", PANE_GAP, 0)
+        f.detailPane:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PANE_GAP, PANE_GAP)
+        if f.collapseBtn then f.collapseBtn.text:SetText("<<") end
+    end
+
+    local DB  = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db and DB.db.profile and DB.db.profile.chainGuide
+    if cfg then cfg.railCollapsed = self._railCollapsed end
+
+    self:RenderDetail(self._activeChainID, self._activeHighlight)
 end
 
 function CG:NavigateHome()
@@ -564,15 +660,34 @@ function CG:RenderCurrent()
         activeChainID = state.id
     end
 
-    self:RenderCategories(activeCatID)
-    self:RenderChains(activeCatID, activeChainID)
+    -- Remembered so SetRailCollapsed / the resize grip can re-render the graph
+    -- for the current chain without re-reading the history stack.
+    self._activeChainID   = activeChainID
+    self._activeHighlight = state.highlight
+
+    -- Drill-down: the rail shows the categories at the root, otherwise the
+    -- selected category's chains. Exactly one list renders at a time.
+    if activeCatID then
+        self:RenderChains(activeCatID, activeChainID)
+    else
+        self:RenderCategories()
+    end
     self:RenderDetail(activeChainID, state.highlight)
 end
 
-function CG:RenderCategories(activeCatID)
-    releaseAllRows(self.catRowPool, self.catRowsActive)
+-- Root of the drill-down: list the categories in the rail. No breadcrumb here
+-- (this IS the top level); the header reads "Categories".
+function CG:RenderCategories()
+    releaseAllRows(self.railRowPool, self.railRowsActive)
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     local QLS      = ns:GetSubsystem("ChainGuideQuestLineSource")
+
+    local content = self.frame.railContent
+    self.frame.railCrumb:Hide()
+    local hdr = self.frame.railHeader
+    hdr:ClearAllPoints()
+    hdr:SetPoint("TOPLEFT", 8, -6)
+    hdr:SetText(L["Categories"])
 
     -- Discover every category's chains up front (memoized + cheap: zone
     -- cats have no map seeds so it's just the routing walk, campaign cats
@@ -586,7 +701,7 @@ function CG:RenderCategories(activeCatID)
     local hasChains = {}
     for _, c in pairs(Database.chains) do hasChains[c.category] = true end
 
-    local prev = self.frame.catHeader
+    local prev = hdr
     -- Categories are registered exclusively at file load (Data/QuestChains/
     -- _Index.lua), so the sorted list never changes at runtime. Build it
     -- once and reuse on every subsequent render to avoid the per-render
@@ -609,14 +724,15 @@ function CG:RenderCategories(activeCatID)
     end
     local cats = self._sortedCategories
 
+    local shown = 0
     for i = 1, #cats do
         local entry = cats[i]
         -- Skip categories with no chains (see hasChains note above).
         if hasChains[entry.id] then
-            local row = acquireRow(self.catRowPool, self.catRowsActive, self.frame.catPane)
+            local row = acquireRow(self.railRowPool, self.railRowsActive, content)
             row:ClearAllPoints()
-            row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == self.frame.catHeader and -4 or -1)
-            row:SetPoint("TOPRIGHT", self.frame.catPane, "TOPRIGHT", -8, 0)
+            row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == hdr and -4 or -1)
+            row:SetPoint("TOPRIGHT", content, "TOPRIGHT", -8, 0)
             -- Category rows have no suffix/complete-icon, so reclaim the
             -- right-side reservation buildListRow leaves for chain rows and
             -- give the (sometimes long) category name the full width.
@@ -626,22 +742,37 @@ function CG:RenderCategories(activeCatID)
             local catName = entry.def.name or ("Category " .. entry.id)
             row.title:SetText(catName)
             row.title:SetTextColor(1, 1, 1)
-            if entry.id == activeCatID then row.selectedTex:Show() end
             row.navKind, row.navID = "cat", entry.id
             setRowTooltip(row, catName)
             prev = row
+            shown = shown + 1
         end
     end
+
+    -- Size the scroll child so the scrollbar reflects content height.
+    local stride = ROW_H + 1
+    content:SetHeight(22 + 4 + math.max(shown, 1) * stride + 8)
 end
 
+-- Second level of the drill-down: list the chains in `activeCatID`. The
+-- "< Categories" breadcrumb is shown so the player can step back up, and the
+-- header reads the category name.
 function CG:RenderChains(activeCatID, activeChainID)
-    releaseAllRows(self.chainRowPool, self.chainRowsActive)
+    releaseAllRows(self.railRowPool, self.railRowsActive)
     local Database  = ns:GetSubsystem("ChainGuideDatabase")
     local Characters = ns:GetSubsystem("ChainGuideCharacters")
     local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
 
+    local content = self.frame.railContent
+    local crumb = self.frame.railCrumb
+    crumb:Show()
+    local hdr = self.frame.railHeader
+    hdr:ClearAllPoints()
+    hdr:SetPoint("TOPLEFT", crumb, "BOTTOMLEFT", 0, -6)
+
     if not activeCatID then
-        self.frame.chainHeader:SetText(L["Pick a category"])
+        hdr:SetText(L["Pick a category"])
+        content:SetHeight(60)
         return
     end
 
@@ -650,7 +781,7 @@ function CG:RenderChains(activeCatID, activeChainID)
     if QLS then QLS:EnsureZoneChains(activeCatID) end
 
     local catName = Database.categories[activeCatID] and Database.categories[activeCatID].name
-    self.frame.chainHeader:SetText(catName and (catName) or "Chains")
+    hdr:SetText(catName or L["Chains"])
 
     -- Collect chains in this category, sort by name.
     local chains = {}
@@ -677,13 +808,12 @@ function CG:RenderChains(activeCatID, activeChainID)
         end
     end
 
-    local content = self.frame.chainContent
-    local prev = self.frame.chainHeader
+    local prev = hdr
     for i = 1, #chains do
         local entry = chains[i]
-        local row = acquireRow(self.chainRowPool, self.chainRowsActive, content)
+        local row = acquireRow(self.railRowPool, self.railRowsActive, content)
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == self.frame.chainHeader and -4 or -1)
+        row:SetPoint("TOPLEFT",  prev, "BOTTOMLEFT",  0, prev == hdr and -4 or -1)
         row:SetPoint("TOPRIGHT", content, "TOPRIGHT", -8, 0)
         local chainName = entry.def.name or ("Chain " .. entry.id)
         row.title:SetText(chainName)
@@ -711,9 +841,9 @@ function CG:RenderChains(activeCatID, activeChainID)
     end
 
     -- Size the scroll child so the scrollbar reflects content height.
-    -- Header (~22) + leading gap (4) + per-row stride.
+    -- Breadcrumb band (~28) + header (~22) + leading gap (4) + per-row stride.
     local stride = ROW_H + 1
-    local totalH = 22 + 4 + math.max(#chains, 1) * stride + 8
+    local totalH = 28 + 22 + 4 + math.max(#chains, 1) * stride + 8
     content:SetHeight(totalH)
 end
 
