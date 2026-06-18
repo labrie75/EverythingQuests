@@ -40,6 +40,16 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     sizeSlider:SetPoint("TOPLEFT", fontDD, "BOTTOMLEFT", 0, -16)
     sizeSlider:SetWidth(280)
 
+    -- Independent TITLE size: an offset added to the base Font Size for quest /
+    -- achievement / etc. titles only (objective text keeps the base size). 0 =
+    -- titles match the base font; raise for bigger titles, lower for smaller.
+    local titleSizeGet, titleSizeSet = trackerSetting("titleSizeDelta")
+    local titleSizeSlider = Options:CreateSlider(content, L["Title Size Offset"], -6, 12, 1, titleSizeGet, titleSizeSet)
+    titleSizeSlider:SetPoint("TOPLEFT", sizeSlider, "BOTTOMLEFT", 0, -16)
+    titleSizeSlider:SetWidth(280)
+    Options:AttachTooltip(titleSizeSlider, L["Title Size Offset"],
+        L["Sizes quest and achievement titles separately from the objective text. This value is added to the Font Size above: 0 keeps titles the same size as the base font, positive makes them larger, negative smaller."])
+
     -- Outline flags passed directly to FontString:SetFont. WoW accepts a
     -- comma-joined combo (e.g. "MONOCHROME, OUTLINE") and ignores tokens
     -- it doesn't recognize, so an empty string == no outline.
@@ -54,12 +64,32 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local outlineGet, outlineSet = trackerSetting("fontOutline")
     local outlineDD = Options:CreateDropdown(content, L["Font Outline"],
         OUTLINE_OPTIONS, outlineGet, outlineSet)
-    outlineDD:SetPoint("TOPLEFT", sizeSlider, "BOTTOMLEFT", 0, -16)
+    outlineDD:SetPoint("TOPLEFT", titleSizeSlider, "BOTTOMLEFT", 0, -16)
     outlineDD:SetWidth(280)
+
+    -- Drop-shadow behind tracker text for legibility over bright/busy
+    -- backdrops. Toggle + colour, matching the Background row's layout.
+    local shadowGet, shadowSet = trackerSetting("textShadow")
+    local shadowCheck = Options:CreateCheckbox(content, L["Text Shadow"], shadowGet, shadowSet,
+        L["Draws a soft drop-shadow behind all tracker text so it stays readable over bright or busy backgrounds. Use Shadow Color to tint and set its strength (alpha)."])
+    shadowCheck:SetPoint("TOPLEFT", outlineDD, "BOTTOMLEFT", 0, -16)
+
+    local function shadowColorGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.textShadowColor or { r = 0, g = 0, b = 0, a = 1 }
+    end
+    local function shadowColorSet(c)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.textShadowColor = c end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    local shadowPicker = Options:CreateColorPicker(content, L["Shadow Color"], shadowColorGet, shadowColorSet)
+    shadowPicker:SetPoint("LEFT", shadowCheck, "RIGHT", 120, 0)
 
     local bgGet, bgSet = trackerSetting("showBackground")
     local bgCheck = Options:CreateCheckbox(content, L["Background"], bgGet, bgSet)
-    bgCheck:SetPoint("TOPLEFT", outlineDD, "BOTTOMLEFT", 0, -16)
+    bgCheck:SetPoint("TOPLEFT", shadowCheck, "BOTTOMLEFT", 0, -16)
 
     local function bgColorGet()
         local DB = ns:GetSubsystem("DB")

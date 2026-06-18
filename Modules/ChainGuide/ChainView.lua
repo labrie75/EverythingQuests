@@ -510,6 +510,23 @@ local function onContinueClick(self)
     if WP and WP.GoTo then WP:GoTo(self._nextID, self._chain) end
 end
 
+-- "Track" toggle (detail-pane header). Marks THIS chain as the one the player
+-- is following — its quests pin on the world map and (Phase 3B) the waypoint
+-- auto-advances as it's completed. CG:Set/ClearTrackedChainID re-renders (so
+-- this button restyles) and repaints the map pins. The chain id rides on a
+-- button field so the handler stays static (no per-render closure).
+local function onTrackClick(self)
+    local id = self._chainID
+    if not id then return end
+    local CG = ns:GetSubsystem("ChainGuide")
+    if not CG then return end
+    if CG:IsTrackingChain(id) then
+        CG:ClearTrackedChainID()
+    else
+        CG:SetTrackedChainID(id)
+    end
+end
+
 -- ─── Drag-to-pan ───────────────────────────────────────────────────────
 -- The detail canvas lives in a ScrollFrame (vertical scrollbar only). For a
 -- graph chain wider/taller than the viewport we add 2D drag panning that
@@ -716,8 +733,23 @@ function CV:Render(pane, chain, highlightQuestID)
         pane._cvMeta:SetTextColor(0.6, 0.6, 0.6)
         pane._cvEmpty:Hide()
         pane._cvCanvas:SetSize(1, 1)
+        pane._cvTrack:Hide()
         return
     end
+
+    -- Track button reflects whether THIS chain is the one being followed.
+    local CG = ns:GetSubsystem("ChainGuide")
+    pane._cvTrack._chainID = chain.id
+    local tracking = CG and chain.id and CG:IsTrackingChain(chain.id)
+    pane._cvTrack:SetText(tracking and L["Untrack"] or L["Track"])
+    if pane._cvTrack.text then
+        if tracking then
+            pane._cvTrack.text:SetTextColor(0.27, 0.85, 0.27)   -- green = following
+        else
+            pane._cvTrack.text:SetTextColor(0.92, 0.72, 0.02)   -- yellow = not following
+        end
+    end
+    pane._cvTrack:Show()
 
     local Database   = ns:GetSubsystem("ChainGuideDatabase")
     local Characters = ns:GetSubsystem("ChainGuideCharacters")
@@ -1105,9 +1137,19 @@ function CV:_ensureUI(pane)
     pane._cvContinue:SetPoint("TOPRIGHT", pane, "TOPRIGHT", -PAD, -PAD)
     pane._cvContinue:Hide()
 
+    -- "Track" toggle, left of Continue. Shown for any chain in view; its label
+    -- + colour reflect whether this chain is the one being followed (map pins +
+    -- auto-advancing waypoint). Static OnClick (onTrackClick) reads _chainID.
+    pane._cvTrack = Options:CreateYellowButton(pane, L["Track"], onTrackClick)
+    pane._cvTrack:SetSize(96, 24)
+    pane._cvTrack:SetPoint("TOPRIGHT", pane._cvContinue, "TOPLEFT", -6, 0)
+    pane._cvTrack:Hide()
+    Options:AttachTooltip(pane._cvTrack, L["Track this chain"],
+        L["Follow this chain — its quests pin on the world map (next step highlighted) and your waypoint auto-advances to the next step as you complete it. Works even with this window closed. Click again to stop."])
+
     pane._cvHeader = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     pane._cvHeader:SetPoint("TOPLEFT",  PAD, -PAD)
-    pane._cvHeader:SetPoint("TOPRIGHT", pane._cvContinue, "TOPLEFT", -8, 0)
+    pane._cvHeader:SetPoint("TOPRIGHT", pane._cvTrack, "TOPLEFT", -8, 0)
     pane._cvHeader:SetJustifyH("LEFT")
     pane._cvHeader:SetWordWrap(false)
     pane._cvHeader:SetTextColor(1.0, 0.82, 0.0)

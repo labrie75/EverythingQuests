@@ -9,7 +9,8 @@
 local _, ns = ...
 ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
 
-    -- Whispers in the Twilight  (questline 5719, Midnight Campaign)  [tail auto-appended: 94871, 94993, 95008 - verify]
+    -- Whispers in the Twilight  (questline 5719, Midnight Campaign)
+    -- (94871/94993/95008 are war-table/meta "Other" quests, excluded in QuestLineSource — chain ends at 86745)
     ns.CHAINGUIDE_OVERLAYS[5719] = {
         layout = {
             [86733] = { x = 1, y = 0  },
@@ -25,9 +26,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [86743] = { x = 2, y = 6  },
             [86744] = { x = 1, y = 7  },
             [86745] = { x = 1, y = 8  },
-            [94871] = { x = 1, y = 9  },
-            [94993] = { x = 1, y = 10 },
-            [95008] = { x = 1, y = 11 },
         },
         connections = {
             [86734] = { 86733 },
@@ -42,9 +40,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [86743] = { 86741 },
             [86744] = { 86742, 86743 },
             [86745] = { 86744 },
-            [94871] = { 86745 },
-            [94993] = { 94871 },
-            [95008] = { 94993 },
         },
     }
 
@@ -227,7 +222,8 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Call of the Goddess  (questline 5726, Midnight Campaign)  [tail auto-appended: 86874 - verify]
+    -- Call of the Goddess  (questline 5726, Midnight Campaign)
+    -- (86874 is a Harandar "Other" quest, excluded in QuestLineSource — chain ends at 86890)
     ns.CHAINGUIDE_OVERLAYS[5726] = {
         layout = {
             [86930] = { x = 1, y = 0  },
@@ -251,7 +247,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [86880] = { x = 1, y = 13 },
             [86881] = { x = 2, y = 13 },
             [86890] = { x = 1, y = 14 },
-            [86874] = { x = 1, y = 15 },
         },
         connections = {
             [86864] = { 86930 },
@@ -274,7 +269,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [86880] = { 86867 },
             [86881] = { 86867 },
             [86890] = { 86877, 86880, 86881 },
-            [86874] = { 86890 },
         },
     }
 
@@ -418,7 +412,8 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Dawn of Reckoning  (questline 5730, Midnight Campaign)  [tail auto-appended: 95276 - verify]
+    -- Dawn of Reckoning  (questline 5730, Midnight Campaign)
+    -- (95276 is a Voidstorm "Other" quest, excluded in QuestLineSource — chain ends at 86522)
     ns.CHAINGUIDE_OVERLAYS[5730] = {
         layout = {
             [86509] = { x = 1, y = 0  },
@@ -436,7 +431,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [86520] = { x = 1, y = 9  },
             [86521] = { x = 1, y = 10 },
             [86522] = { x = 1, y = 11 },
-            [95276] = { x = 1, y = 12 },
         },
         connections = {
             [86510] = { 86509 },
@@ -453,7 +447,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [86520] = { 86519 },
             [86521] = { 86520 },
             [86522] = { 86521 },
-            [95276] = { 86522 },
         },
     }
 

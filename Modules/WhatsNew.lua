@@ -12,43 +12,51 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.20.0: Chain Guide overhaul Phase 2 — every Midnight quest chain (all zones
--- and the campaign) now renders as a real branching graph, plus a redesigned,
--- resizable, drag-to-pan window with a collapsible side list and compact cards.
--- Phase 2 of 3 complete; Phase 3 (map integration) is next. Recaps the plan and
--- the cumulative "shipped so far / this update" status (see the release-comms
--- strategy). Bumping the version re-shows the popup once to everyone. Bump this
--- constant + rewrite POPUP_BODY for the next release and a fresh popup shows once
--- more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.20.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.20.0"
+-- 1.21.0: Chain Guide overhaul Phase 3 (map integration) — the overhaul is now
+-- COMPLETE (all three phases shipped). Track a chain to pin it on the world map
+-- with an auto-advancing waypoint. Plus the new patch 12.0.7 "Revelations" chains,
+-- a batch of tracker/achievement features suggested by tanglies, a wider world-
+-- boss group-finder button, and polish. Messaging shifts from "overhaul underway"
+-- to "overhaul finished — please report bugs." Bumping the version re-shows the
+-- popup once to everyone. Bump this constant + rewrite POPUP_BODY for the next
+-- release and a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.21.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.21.0"
 
 local POPUP_BODY = [[
-|cffEBB706The Chain Guide overhaul — Phase 2 is here|r
-This is a big one. We're rebuilding the Chain Guide in three phases:
-|cffffffff1.|r Make it actionable — tell you what to do next  |cff999999(done)|r
-|cffffffff2.|r A real branching graph you can drag and explore  |cff999999(this update)|r
-|cffffffff3.|r Map integration — quest-giver pins and auto-advancing waypoints  |cff999999(coming soon)|r
+|cffEBB706The Chain Guide overhaul is complete|r
+Over the last few updates we rebuilt the Chain Guide in three phases — and with this release, all three are done:
+|cffffffff1.|r Make it actionable — show your next step  |cff999999(done)|r
+|cffffffff2.|r A real branching graph you can drag and explore  |cff999999(done)|r
+|cffffffff3.|r Map integration — pins and auto-advancing waypoints  |cff999999(this update)|r
 
-|cffEBB706Every chain is now a real map|r
-Until now a quest chain was drawn as a flat top-to-bottom list. As of this update, |cffffffffevery quest chain in Midnight|r — all of Eversong Woods, Zul'Aman, Harandar, Voidstorm, Arator, and the full campaign — draws as a true branching graph. You can finally see which quests unlock which, where a chain splits into parallel paths, and where those paths rejoin.
+|cffEBB706Phase 3: the Chain Guide on your world map|r
+Open any chain and press |cffffffffTrack|r. From then on that chain's quests show as |cffffffffpins on your world map|r — your next step highlighted in gold — and your waypoint |cffffffffautomatically advances|r to the next step as you turn quests in. It keeps following the chain even with the guide window closed, and clears itself when you finish. Press |cffffffffUntrack|r to stop.
 
-|cffEBB706A redesigned window|r
-The Chain Guide window is now |cffffffffresizable|r — drag the bottom-right corner to make it as large as you like, and your size is remembered between sessions. |cffffffffDrag anywhere|r on the graph to pan around the bigger chains. The new |cffffffff<<|r button collapses the side list so the graph fills the whole window, and quest cards are more compact so you see more of a chain at a glance.
+|cffEBB706New: the patch 12.0.7 "Revelations" chains|r
+The Chain Guide now covers the new |cffffffffRevelations|r storyline — Legacy of the Amani and the lead-up to the March on Quel'Danas — under a new "Revelations (12.0.7)" category. This is brand-new content, so a few details will fill in as the patch settles.
 
-|cffEBB706What's shipped so far|r
-|cffffffffPhase 1|r (last update): your next step highlighted with a Continue button, ON QUEST tags, rich hover tooltips, and search by name or ID.
-|cffffffffPhase 2|r (this update): full branching graphs for every chain, plus the redesigned, resizable, drag-to-pan window.
-|cffffffffPhase 3|r (next): quest-giver pins on the world map and waypoints that advance as you complete each step.
+|cffEBB706Tracker & achievement features (thanks, tanglies!)|r
+A batch of great suggestions from |cfffffffftanglies|r:
+|cffffffff-|r Size quest/achievement |cfffffffftitles separately|r from the objective text (Appearance tab)
+|cffffffff-|r A |cfffffffftext-shadow|r option for legibility over bright backgrounds (Appearance tab)
+|cffffffff-|r Quick |cffffffffcogwheel + Chain Guide buttons|r at the top of the tracker (each can be turned off in the Tracker options)
+|cffffffff-|r A |cffffffffsimplify mode|r for tracked achievements — show only what's left
+|cffffffff-|r |cffffffffRight-click|r a tracked achievement to untrack it; |cffffffffleft-click|r to open it in the Achievement panel
 
-|cffEBB706A couple of fixes too|r
-Scenario and dungeon titles are now centered in their banner, and opening the options from the Chain Guide no longer leaves the two windows overlapping.
+|cffEBB706Group up for world bosses|r
+The group-finder button now appears on |cffffffffevery group-listable world boss|r in the tracker — one click opens the Premade Group Finder filtered to that fight.
 
-|cffEBB706Thanks for your patience|r
-These updates have come quickly while the overhaul is underway, and I really appreciate you sticking with it — Phase 3 will round it out. Translations of the new Chain Guide text will follow once all three phases are complete.
+|cffEBB706Polish & fixes|r
+|cffffffff-|r The Chain Guide's resize grip (bottom-right corner) is bigger and far easier to grab
+|cffffffff-|r Fixed the chain "next step" sometimes pointing at the opposite faction's version of a quest
+|cffffffff-|r Trimmed war-table / meta quests that aren't part of a story, so chains end at their real finish
 
-|cffEBB706Found a problem? Let me know|r
-If anything looks off, please tell me on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r — your reports are what make this better.
+|cffEBB706That's a wrap — thank you|r
+This was a big, fast-moving stretch of updates and I'm grateful you stuck with it. The Chain Guide overhaul is |cfffffffffinished|r, so things will settle down now. Translations of all the new text will follow.
+
+|cffEBB706Found a bug? Please tell me|r
+If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r — your reports are exactly what made this overhaul possible.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

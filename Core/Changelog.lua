@@ -11,6 +11,26 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.21.0", date = "2026-06-17",
+        sections = {
+            { head = "New Features", items = {
+                "Chain Guide overhaul, Phase 3 of 3 (map integration) — the overhaul is COMPLETE. Press Track on a chain and its quests pin on your world map (next step in gold) with a waypoint that auto-advances as you turn quests in, even with the guide closed.",
+                "New 'Revelations (12.0.7)' chains — Legacy of the Amani and the March on Quel'Danas raid lead-up.",
+                "Independent title size + a text-shadow option for the tracker (Appearance tab). (Suggested by tanglies.)",
+                "Quick cogwheel + Chain Guide buttons at the top of the tracker, each with its own on/off toggle. (Suggested by tanglies.)",
+                "Tracked achievements: a simplify mode (show only what's left), right-click to untrack, left-click to open the Achievement panel. (Suggested by tanglies.)",
+            } },
+            { head = "Improvements", items = {
+                "The group-finder button now appears on every group-listable world boss, not just some.",
+                "The Chain Guide resize grip (bottom-right) is bigger and easier to grab; the Track button reads Untrack while following a chain.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Fixed the chain 'next step' sometimes pointing at the opposite faction's version of a quest.",
+                "Trimmed war-table / meta quests that aren't part of a storyline, so chains end at their real final quest.",
+            } },
+        },
+    },
+    {
         version = "1.20.0", date = "2026-06-16",
         sections = {
             { head = "New Features", items = {

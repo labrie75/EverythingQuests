@@ -673,7 +673,7 @@ function ZP:UpdateFrame()
     local Media = ns:GetSubsystem("Media")
     if Media and Media.ApplyTrackerFont then
         local bf = st.font
-        Media:ApplyTrackerFont(f.title, 0, bf)
+        Media:ApplyTrackerTitleFont(f.title, bf)
         Media:ApplyTrackerFont(f.count, -2, bf)
         Media:ApplyTrackerFont(f.bar.label, -2, bf)
     end

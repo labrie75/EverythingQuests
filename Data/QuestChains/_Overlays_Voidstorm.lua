@@ -55,7 +55,8 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Shadow Puppets  (questline 5943, Voidstorm)  [tail auto-appended: 92641 - verify]
+    -- Shadow Puppets  (questline 5943, Voidstorm)
+    -- (92641 is a Voidstorm "Other" quest, excluded in QuestLineSource — chain ends at 91149)
     ns.CHAINGUIDE_OVERLAYS[5943] = {
         layout = {
             [91145] = { x = 1, y = 0  },
@@ -63,14 +64,12 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
             [91147] = { x = 2, y = 1  },
             [91148] = { x = 1, y = 2  },
             [91149] = { x = 1, y = 3  },
-            [92641] = { x = 1, y = 4  },
         },
         connections = {
             [91146] = { 91145 },
             [91147] = { 91145 },
             [91148] = { 91146, 91147 },
             [91149] = { 91148 },
-            [92641] = { 91149 },
         },
     }
 

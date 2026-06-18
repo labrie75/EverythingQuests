@@ -336,13 +336,17 @@ function CG:Build()
     f:SetResizable(true)
     if f.SetResizeBounds then f:SetResizeBounds(MIN_W, MIN_H) end
     local grip = CreateFrame("Button", nil, f)
-    grip:SetSize(16, 16)
-    grip:SetPoint("BOTTOMRIGHT", -2, 2)
+    grip:SetSize(20, 20)                                   -- larger, easy-to-find handle (was 16)
+    grip:SetPoint("BOTTOMRIGHT", -5, 5)                    -- a few px inside the chrome so the glyph reads clearly
     -- Sits over the detail pane's bottom-right corner; lift it above the graph
     -- canvas/scrollbar so the click always lands on the grip, not the graph.
     grip:SetFrameLevel((f:GetFrameLevel() or 0) + 20)
     grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrip-Up")
     grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrip-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrip-Down")
+    -- Generous grab zone: expand the hittable area up + left INTO the window so
+    -- the corner is forgiving to click even though the glyph itself is small.
+    grip:SetHitRectInsets(-14, 0, -14, 0)
     grip:SetScript("OnMouseDown", function() f:StartSizing("BOTTOMRIGHT") end)
     grip:SetScript("OnMouseUp", function()
         f:StopMovingOrSizing()
@@ -352,6 +356,12 @@ function CG:Build()
         -- Re-render so the graph's centering math picks up the new viewport.
         self:RenderCurrent()
     end)
+    grip:SetScript("OnEnter", function(self2)
+        GameTooltip:SetOwner(self2, "ANCHOR_LEFT")
+        GameTooltip:AddLine(L["Drag to resize"])
+        GameTooltip:Show()
+    end)
+    grip:SetScript("OnLeave", function() GameTooltip:Hide() end)
     f.resizeGrip = grip
 
     self.frame = f
@@ -673,6 +683,65 @@ function CG:RenderCurrent()
         self:RenderCategories()
     end
     self:RenderDetail(activeChainID, state.highlight)
+end
+
+-- ─── Tracked chain (Phase 3: map pins + auto-advancing waypoint) ────────
+-- The ONE chain the player has chosen to "follow": its quests are pinned on
+-- the world map and the waypoint auto-advances as they complete it. Held
+-- per-character (alts follow different chains) and persisted, so it survives a
+-- /reload and works with the guide window CLOSED. The map-pin provider
+-- (ChainGuideMapPins) and the Waypoint auto-advance both read this — it is the
+-- single source of truth, independent of _activeChainID (what's merely open in
+-- the window).
+function CG:GetTrackedChainID()
+    local DB = ns:GetSubsystem("DB")
+    return DB and DB.char and DB.char.trackedChainID
+end
+
+function CG:GetTrackedChain()
+    local id = self:GetTrackedChainID()
+    if not id then return nil end
+    local Database = ns:GetSubsystem("ChainGuideDatabase")
+    if not Database then return nil end
+    -- Trackable chains are dynamically sourced (_apiSourced / _campaignSourced)
+    -- and absent from Database.chains after a /reload until a category is
+    -- browsed. The map pins + auto-advance must work with this window CLOSED,
+    -- so if a chain is persisted but not yet discovered, run the same lazy
+    -- discovery pass the guide uses. EnsureZoneChains early-returns per already-
+    -- discovered category (and delegates campaign categories to CampaignSource),
+    -- so the first call does one full pass and every later call is cheap; once
+    -- the chain is registered this guard skips the loop entirely.
+    if not Database.chains[id] then
+        local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
+        if QLS and QLS.EnsureZoneChains and Database.categories then
+            for catID in pairs(Database.categories) do QLS:EnsureZoneChains(catID) end
+        end
+    end
+    return Database.chains[id] or nil, id
+end
+
+function CG:IsTrackingChain(chainID)
+    return chainID ~= nil and self:GetTrackedChainID() == chainID
+end
+
+function CG:SetTrackedChainID(chainID)
+    local DB = ns:GetSubsystem("DB")
+    if not (DB and DB.char) then return end
+    if DB.char.trackedChainID == chainID then return end
+    DB.char.trackedChainID = chainID
+    self:OnTrackedChainChanged()
+end
+
+function CG:ClearTrackedChainID()
+    self:SetTrackedChainID(nil)
+end
+
+-- Fan-out when the tracked chain changes: repaint the map pins and (if the
+-- window is open) re-render so the Track button reflects the new state.
+function CG:OnTrackedChainChanged()
+    local MP = ns:GetSubsystem("ChainGuideMapPins")
+    if MP and MP.Refresh then MP:Refresh() end
+    if self.frame and self.frame:IsShown() then self:RenderCurrent() end
 end
 
 -- Root of the drill-down: list the categories in the rail. No breadcrumb here

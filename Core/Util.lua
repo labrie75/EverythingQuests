@@ -171,6 +171,13 @@ function Util.QuestTitle(questID, withNumberFallback)
             local t = C_TaskQuest.GetQuestInfoByQuestID(questID)
             if t and t ~= "" then return t end
         end
+        -- Last resort: a curated name for quests the live API can't title yet
+        -- (e.g. unreleased patch content). Always after the API attempts above,
+        -- so a real (localized) title takes precedence the moment it loads.
+        if ns.CURATED_QUEST_NAMES then
+            local c = ns.CURATED_QUEST_NAMES[questID]
+            if c then return c end
+        end
     end
     if withNumberFallback then return "Quest #" .. tostring(questID) end
     return nil

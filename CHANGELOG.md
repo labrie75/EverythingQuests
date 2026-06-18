@@ -5,6 +5,30 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.0] - 2026-06-17
+
+**The Chain Guide overhaul is complete.** This release ships **Phase 3 — map integration**, the final phase of the three-part rebuild: track a chain and its quests appear as pins on your world map with a waypoint that advances itself as you go. It also adds the new patch 12.0.7 **"Revelations"** chains, a batch of tracker and achievement features suggested by **tanglies**, a wider world-boss group-finder button, and a round of polish. Huge thanks for sticking with the overhaul while it came together — it's finished now, so things will settle down. If anything looks off, please report it on Discord or in the CurseForge comments.
+
+### New Features
+
+- **Chain Guide overhaul, Phase 3 of 3 — map integration** — Open a chain and press **Track**, and that chain's quests appear as pins on your world map with your next step highlighted in gold. Your waypoint **auto-advances** to the next step as you turn quests in, it keeps following the chain even with the guide window closed, and it clears itself when the chain is finished. Press **Untrack** to stop. A "Show tracked chain on the world map" toggle lives in the Chain Guide options.
+- **New "Revelations (12.0.7)" chains** — The Chain Guide now covers the patch 12.0.7 storyline: *Legacy of the Amani* (a full branching chain) and the lead-up to the *March on Quel'Danas* raid (*An Island of Fangs*, *Ghosts of the Past*, *Original Sin*, *The Battle for Atal'Utek*). Brand-new content, so some details fill in as the patch settles.
+- **Independent title size** — A new Appearance slider sizes quest and achievement *titles* separately from the objective text. *(Suggested by tanglies.)*
+- **Tracker text shadow** — A new Appearance option adds a drop shadow behind tracker text for legibility over bright or busy backgrounds, with a color picker. *(Suggested by tanglies.)*
+- **Quick-access tracker buttons** — A cogwheel (opens Options) and a Chain Guide button at the top-right of the tracker, each with its own on/off toggle in the Tracker options. *(Suggested by tanglies.)*
+- **Achievement quality-of-life** — A "simplify" mode for tracked achievements (shows only remaining criteria), right-click a tracked achievement to untrack it, and left-click to open it in the Achievement panel. *(Suggested by tanglies.)*
+
+### Improvements
+
+- **Group up for world bosses** — The group-finder button now appears on *every* group-listable world boss in the tracker, not just some; one click opens the Premade Group Finder filtered to that fight.
+- **Easier Chain Guide resize** — The resize grip in the bottom-right corner is larger, clearer, and has a generous grab area, with a "Drag to resize" tooltip.
+- The Chain Guide's **Track** button reads **Untrack** while a chain is being followed.
+
+### Bug Fixes
+
+- Fixed the Chain Guide's "next step" sometimes pointing at the opposite faction's version of a quest, which could send you to a quest you couldn't pick up.
+- Trimmed war-table / campaign-meta quests that aren't part of a storyline out of the chains, so each chain ends at its real final quest (and progress counts no longer include quests you can't complete).
+
 ## [1.20.0] - 2026-06-16
 
 **Phase 2** of the Chain Guide overhaul is here, and it's a big one. Every quest chain in Midnight now draws as a real *branching graph* instead of a flat list, inside a redesigned window you can resize, drag to pan, and collapse. Phase 1 made the guide *actionable*; Phase 2 makes it a *map*. Phase 3 (map integration with quest-giver pins and auto-advancing waypoints) is next. As always while the overhaul is underway, expect more frequent updates — and if anything looks off, let me know on Discord or in the CurseForge comments.

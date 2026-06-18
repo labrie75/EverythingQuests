@@ -52,6 +52,7 @@
         "GameTooltip_Hide",
         "SOUNDKIT", "RAID_CLASS_COLORS", "FACTION_BAR_COLORS",
         "GetQuestDifficultyColor", "GetQuestTagInfo",
+        "OpenAchievementFrameToAchievement", "RemoveTrackedAchievement", "GetTrackedAchievements",
         "ChatFrame1", "DEFAULT_CHAT_FRAME",
         "tinsert", "tremove", "tContains", "tIndexOf", "wipe", "CopyTable", "Mixin", "ipairs_reverse",
         "table",

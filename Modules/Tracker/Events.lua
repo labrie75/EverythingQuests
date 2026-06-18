@@ -471,13 +471,18 @@ function V:Render(content, contentWidth, yStart, collapsed)
         row.title:ClearAllPoints()
         row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)
 
-        -- Elite world quests that are group-listable keep the group-finder eye
-        -- on the right. An LFG activity alone isn't enough since many ordinary
-        -- WQs expose one too.
-        local isElite = (tagInfo and tagInfo.isElite) and true or false
-        local hasLFG  = C_LFGList and C_LFGList.GetActivityIDForQuestID
-                        and C_LFGList.GetActivityIDForQuestID(qid) and true or false
-        if isElite and hasLFG then
+        -- Group-listable world quests (world bosses, dungeon / raid / group WQs)
+        -- keep the group-finder eye on the right. C_LFGList only returns an
+        -- activity ID for quests that genuinely have a premade-group activity, so
+        -- the activity itself is the right signal. Previously this ALSO required
+        -- tagInfo.isElite, which hid the eye on bosses Blizzard doesn't flag as
+        -- elite (Raid/Group-tagged bosses, or ones with isElite nil) — the "not
+        -- all world bosses show the icon" report. The eye's click opens + pre-
+        -- filters Blizzard's Premade Group Finder (LFGListUtil_FindQuestGroup);
+        -- it never auto-joins, so showing it more widely is purely additive.
+        local hasLFG = C_LFGList and C_LFGList.GetActivityIDForQuestID
+                       and C_LFGList.GetActivityIDForQuestID(qid) and true or false
+        if hasLFG then
             row.groupFinder:Show()
             row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
         else
@@ -493,7 +498,7 @@ function V:Render(content, contentWidth, yStart, collapsed)
         else
             row.title:SetTextColor(1.0, 0.82, 0.0)
         end
-        if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(row.title, 0) end
+        if Media and Media.ApplyTrackerTitleFont then Media:ApplyTrackerTitleFont(row.title) end
         y = y + HEADER_H + ROW_GAP
 
         -- Ask Blizzard to load this task quest's data exactly once per

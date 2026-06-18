@@ -32,6 +32,7 @@ ns.CAT = {
     VOIDSTORM        = 1104,
     ARATOR           = 1105,
     WAR_LIGHT_SHADOW = 1106,   -- max-level campaign (Blizzard campaign 284)
+    REVELATIONS      = 1107,   -- patch 12.0.7 "Revelations" post-campaign saga (Zul'Aman → Isle of Quel'Danas)
 }
 
 -- A category may pull questlines from multiple uiMapIDs (a zone + its city,
@@ -65,3 +66,12 @@ DBmod:RegisterCategory(ns.CAT.HARANDAR,         { expansion = ns.EXP_MIDNIGHT, n
 -- and never surfaces a zone-progress bar. Kept as a ChainGuide category only.
 DBmod:RegisterCategory(ns.CAT.ARATOR,           { expansion = ns.EXP_MIDNIGHT, name = "Arator",         mapIDs = {}, order = 60 })
 DBmod:RegisterCategory(ns.CAT.VOIDSTORM,        { expansion = ns.EXP_MIDNIGHT, name = "Voidstorm",      mapIDs = { 2405 }, order = 70 })
+-- Patch 12.0.7 "Revelations": post-campaign saga gated behind Voidstorm's Dawn
+-- of Reckoning (Legacy of the Amani in Zul'Aman → the March on Quel'Danas raid
+-- lead-up on the Isle of Quel'Danas). The 5 known questlines are routed
+-- explicitly in _QuestLineRouting.lua; the Isle of Quel'Danas uiMapID 2424
+-- (confirmed in-game via /eqs discover) lets the API auto-discover any further
+-- Isle questlines once that content activates. NOTE: don't add Zul'Aman's mapID
+-- here — 6050's zone is Zul'Aman but routing it explicitly avoids pulling all of
+-- Zul'Aman's questlines into this category.
+DBmod:RegisterCategory(ns.CAT.REVELATIONS,      { expansion = ns.EXP_MIDNIGHT, name = "Revelations (12.0.7)", mapIDs = { 2424 }, order = 80 })

@@ -43,6 +43,7 @@ DB.defaults = {
             maxHeight = 600,
             scale = 1.0,
             simplifyMode = false,
+            simplifyAchievements = false,    -- tracked achievements: show only incomplete criteria
             sortMode = "zone",        -- zone|status|type|level|distance|recent|manual
             manualOrder = {},         -- [questID] = ordinal int
             -- Match Blizzard's default tracker visibility: only show quests
@@ -68,8 +69,19 @@ DB.defaults = {
             -- comma-joined combos like "MONOCHROME, OUTLINE"; empty string
             -- disables the outline entirely.
             fontOutline = "OUTLINE",
+            -- Independent TITLE size (Appearance "Title Size Offset"): added to
+            -- fontSize for quest/achievement/etc. title lines only, so titles
+            -- can be sized apart from objective text. 0 = same as the base font.
+            titleSizeDelta = 0,
+            -- Drop-shadow behind tracker text for legibility over bright/busy
+            -- backdrops (Appearance "Text Shadow"). Off by default; colour is
+            -- user-set, black default. Cleared (alpha 0) when the toggle is off.
+            textShadow      = false,
+            textShadowColor = { r = 0, g = 0, b = 0, a = 1 },
             colorByDifficulty = true,
             showItemButtons = true,                                              -- clickable usable-item button beside quests that have one
+            showOptionsIcon    = true,                                           -- cogwheel launcher at the tracker's top-right (opens Options)
+            showChainGuideIcon = true,                                           -- book launcher at the tracker's top-right (opens the Chain Guide)
             questSoundEnabled = true,
             questCompleteSound = "EQ: Work Complete",
             -- Phase 2 additions
@@ -214,6 +226,11 @@ DB.defaults = {
             -- routing table are shown in the discovering category. Default
             -- false for a clean curated-feeling list.
             showUnroutedChains = false,
+            -- Phase 3: draw the TRACKED chain's quests as pins on the world
+            -- map (giver pin for not-yet-accepted quests, live turn-in for
+            -- in-log ones, the next step highlighted). Only shows once the
+            -- player tracks a chain (per-char DB.char.trackedChainID).
+            showMapPins = true,
         },
         appearance = {
             optionsAlpha = 0.95,
@@ -245,6 +262,7 @@ DB.defaults = {
         trackedWorldQuests = {},      -- [questID] = true (persistent WQ watches; restored on login)
         collapsedHeaders = {},        -- [headerKey] = true (reserved for multi-section future use)
         trackerCollapsed = false,     -- whole on-screen tracker collapsed to just the header
+        trackedChainID = nil,         -- Phase 3: the chain this character is "following" (map pins + auto-advancing waypoint). nil = none.
         minimap = { hide = false, minimapPos = 220 },
         lastOptionsTab = "general",
         -- LEGACY (v1.14.0): per-character discovered questlines. No longer read

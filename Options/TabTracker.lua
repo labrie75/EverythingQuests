@@ -83,6 +83,14 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Show only the first incomplete objective per quest."])
     simplify:SetPoint("TOPLEFT", watched, "BOTTOMLEFT", 0, -2)
 
+    local achSimpGet, achSimpSet = trackerSetting("simplifyAchievements")
+    local achSimplify = Options:CreateCheckbox(
+        content,
+        L["Simplify tracked achievements"],
+        achSimpGet, achSimpSet,
+        L["Show only incomplete criteria for tracked achievements."])
+    achSimplify:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -2)
+
     local sortGet, sortSet = trackerSetting("sortMode")
     -- Forward-declared so syncManualHint can re-anchor the Filters section. The
     -- manual-mode hint is width-capped to the left column, so it may wrap to two
@@ -112,7 +120,7 @@ Options:AddTab("tracker", L["Tracker"], function(content)
                    -- header+460). pad 14 (vs default 18) + the short "Recent" label keep
                    -- all 7 sort modes on ONE row even at the wider stock UI font, instead
                    -- of orphaning "Manual" onto a lonely second row.
-    sort:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -12)
+    sort:SetPoint("TOPLEFT", achSimplify, "BOTTOMLEFT", 0, -12)
 
     manualHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     manualHint:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -2)
@@ -211,12 +219,41 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Click to use the quest's item."])
     itemBtnCheck:SetPoint("TOPLEFT", qtotalCheck, "BOTTOMLEFT", 0, -2)
 
+    -- Quick-access launcher icons at the tracker's top-right — one toggle per
+    -- icon so either (or both) can be hidden. Custom setters call
+    -- Tracker:ApplyHeaderIcons (show/hide directly) rather than a full Refresh.
+    local function headerIconGet(key)
+        return function()
+            local DB = ns:GetSubsystem("DB")
+            return DB and DB.db.profile.tracker[key] ~= false
+        end
+    end
+    local function headerIconSet(key)
+        return function(value)
+            local DB = ns:GetSubsystem("DB")
+            if DB then DB.db.profile.tracker[key] = value end
+            local Tracker = ns:GetSubsystem("Tracker")
+            if Tracker and Tracker.ApplyHeaderIcons then Tracker:ApplyHeaderIcons() end
+        end
+    end
+    local optIconCheck = Options:CreateCheckbox(content,
+        L["Show Options icon on the tracker"],
+        headerIconGet("showOptionsIcon"), headerIconSet("showOptionsIcon"),
+        L["A small cogwheel at the top-right of the tracker that opens the options panel."])
+    optIconCheck:SetPoint("TOPLEFT", itemBtnCheck, "BOTTOMLEFT", 0, -2)
+
+    local cgIconCheck = Options:CreateCheckbox(content,
+        L["Show Chain Guide icon on the tracker"],
+        headerIconGet("showChainGuideIcon"), headerIconSet("showChainGuideIcon"),
+        L["A small book at the top-right of the tracker that opens the Chain Guide."])
+    cgIconCheck:SetPoint("TOPLEFT", optIconCheck, "BOTTOMLEFT", 0, -2)
+
     local hideBarGet, hideBarSet = trackerSetting("hideScrollBar")
     local hideBarCheck = Options:CreateCheckbox(content,
         L["Hide scroll bar"],
         hideBarGet, hideBarSet,
         L["Scroll with the mouse wheel instead."])
-    hideBarCheck:SetPoint("TOPLEFT", itemBtnCheck, "BOTTOMLEFT", 0, -2)
+    hideBarCheck:SetPoint("TOPLEFT", cgIconCheck, "BOTTOMLEFT", 0, -2)
 
     local popupGet, popupSet = trackerSetting("showQuestPopups")
     local popupCheck = Options:CreateCheckbox(content,

@@ -40,7 +40,11 @@ function Options:Build()
     -- ran off the right edge at 900. Labels are left-aligned, so the extra room
     -- just reads as normal ragged-right whitespace. Everything is anchored to
     -- the left, the top-right, or both sides, so only right-side room is added.
-    f:SetSize(1020, 650)
+    -- 740 tall (was 650): the Appearance tab's left column (Font … Outline …
+    -- Text Shadow … Tracker Skins) is the tallest and grew with the Title Size
+    -- Offset slider + Text Shadow row; the tab content isn't scrolled, so the
+    -- window itself carries the height. Still comfortably fits a 1080p screen.
+    f:SetSize(1020, 740)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -70,7 +74,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.20.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.21.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -834,6 +838,44 @@ local function eqSlashHandler(msg)
         return
     elseif msg == "dir" then
         Options:DumpDirections()
+        return
+    elseif msg == "questzone" then
+        -- /eqs questzone — diagnose how each quest's ZONE resolves, to fix the
+        -- "new zone quests not grouped by zone" report WITHOUT guessing an API.
+        -- Mirrors Core/Cache.lua's walk: q.zone currently = the running quest-log
+        -- HEADER title only (no geographic resolver). This prints, per quest, the
+        -- header it sits under plus what each candidate map API returns, so we can
+        -- pick a VERIFIED resolver for non-geographic / headerless Midnight quests.
+        if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo) then
+            print("|cffEBB706EQ QuestZone|r: quest log API unavailable.")
+            return
+        end
+        local function mapName(m)
+            if m and m > 0 and C_Map and C_Map.GetMapInfo then
+                local mi = C_Map.GetMapInfo(m)
+                return (mi and mi.name) or "?"
+            end
+            return "-"
+        end
+        local n = C_QuestLog.GetNumQuestLogEntries()
+        local header = "(none)"
+        print(("|cffEBB706EQ QuestZone|r %d entries — id title | hdr | C_TaskQuest.GetQuestZoneID | GetQuestUiMapID:"):format(n))
+        for i = 1, n do
+            local info = C_QuestLog.GetInfo(i)
+            if info then
+                if info.isHeader then
+                    header = info.title or "(unnamed)"
+                elseif not info.isHidden then
+                    local qid = info.questID
+                    local tz  = C_TaskQuest and C_TaskQuest.GetQuestZoneID and C_TaskQuest.GetQuestZoneID(qid)
+                    local ok, um = pcall(function() return GetQuestUiMapID and GetQuestUiMapID(qid) end)
+                    if not ok then um = "ERR" end
+                    print(("   %s %s | hdr=|cff66ccff%s|r | Task=%s(%s) | UiMap=%s(%s)"):format(
+                        tostring(qid), tostring(info.title), tostring(header),
+                        tostring(tz), mapName(tz), tostring(um), mapName(tonumber(um))))
+                end
+            end
+        end
         return
     elseif msg == "chaindump" then
         -- /eqs chaindump — print the currently-open Chain Guide chain's

@@ -94,6 +94,15 @@ ns.QUESTLINE_ROUTING = {
     -- Arator
     [5750] = { cat = ns.CAT.ARATOR, name = "The Path of Light" },
     [5751] = { cat = ns.CAT.ARATOR, name = "Regrets of the Past" },
+    -- Revelations (patch 12.0.7): post-campaign saga gated behind Voidstorm's
+    -- Dawn of Reckoning. 6050 "Legacy of the Amani" has an authored branching
+    -- overlay (_Overlays_Revelations.lua); 6229-6232 (the March on Quel'Danas
+    -- raid lead-up) have no reference topology yet → render as linear API spines.
+    [6050] = { cat = ns.CAT.REVELATIONS, name = "Legacy of the Amani" },
+    [6229] = { cat = ns.CAT.REVELATIONS, name = "An Island of Fangs" },
+    [6230] = { cat = ns.CAT.REVELATIONS, name = "Ghosts of the Past" },
+    [6231] = { cat = ns.CAT.REVELATIONS, name = "Original Sin" },
+    [6232] = { cat = ns.CAT.REVELATIONS, name = "The Battle for Atal'Utek" },
     -- Midnight Campaign: intentionally NOT routed here. The campaign spine
     -- is sourced live from Blizzard's campaign API in
     -- Modules/ChainGuide/CampaignSource.lua (C_CampaignInfo → 17 ordered

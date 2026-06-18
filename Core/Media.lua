@@ -158,6 +158,23 @@ function Media:GetFontFile(name)
     return STANDARD_TEXT_FONT
 end
 
+-- Drop-shadow behind tracker text (Appearance "Text Shadow"). When enabled,
+-- a coloured shadow at a fixed (2,-2) offset; when disabled, the shadow is
+-- explicitly cleared (alpha 0 + zero offset) so a font template's inherited
+-- shadow never lingers. The 2px offset is deliberate: the tracker font's
+-- default OUTLINE draws a ~1px dark border that fully hides a 1px shadow, so
+-- the shadow has to sit far enough out to read past the outline. Allocation-free.
+local function applyShadow(cfg, fontstring)
+    if cfg and cfg.textShadow then
+        local c = cfg.textShadowColor
+        fontstring:SetShadowColor(c and c.r or 0, c and c.g or 0, c and c.b or 0, c and c.a or 1)
+        fontstring:SetShadowOffset(2, -2)
+    else
+        fontstring:SetShadowColor(0, 0, 0, 0)
+        fontstring:SetShadowOffset(0, 0)
+    end
+end
+
 -- Apply the user's tracker font to a FontString. sizeDelta is added to the
 -- configured size (e.g., -2 for sub-text, -3 for category labels). fontOverride
 -- (optional) swaps just the typeface — size and outline still come from the
@@ -172,4 +189,27 @@ function Media:ApplyTrackerFont(fontstring, sizeDelta, fontOverride)
     local size = math.max(8, (cfg.fontSize or 12) + (sizeDelta or 0))
     local outline = cfg.fontOutline or ""
     if file then fontstring:SetFont(file, size, outline) end
+    applyShadow(cfg, fontstring)
+end
+
+-- Apply the tracker font at the user's independent TITLE size: the base font
+-- size plus the Appearance "Title Size Offset" (tracker.titleSizeDelta). Used
+-- for quest/achievement/profession/etc. title lines so titles can be sized
+-- apart from objective text. fontOverride swaps just the typeface (Zone Bar).
+function Media:ApplyTrackerTitleFont(fontstring, fontOverride)
+    if not fontstring then return end
+    local DB = ns:GetSubsystem("DB")
+    if not DB then return end
+    local cfg = DB.db.profile.tracker
+    self:ApplyTrackerFont(fontstring, cfg.titleSizeDelta or 0, fontOverride)
+end
+
+-- Apply only the text-shadow setting to a FontString whose font is set
+-- elsewhere — the quest-block path in Tracker/Blocks.lua sets its own font
+-- directly (per-pass, change-gated) rather than via ApplyTrackerFont.
+function Media:ApplyTextShadow(fontstring)
+    if not fontstring then return end
+    local DB = ns:GetSubsystem("DB")
+    if not DB then return end
+    applyShadow(DB.db.profile.tracker, fontstring)
 end

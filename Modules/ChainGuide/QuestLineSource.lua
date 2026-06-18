@@ -234,6 +234,24 @@ function QLS:EnsureZoneChains(catID)
     self._discovered[catID] = true
 end
 
+-- Quests that Blizzard's GetQuestLineQuests returns as members of a questline
+-- but which are NOT part of the curated storyline: war-table / campaign-meta /
+-- auto-granted progression quests. The reference addon files exactly these in
+-- per-zone "Other" buckets (separate from every story chain). Left in, they
+-- tail-onto a chain's spine and become a bogus "next step" with no quest to
+-- accept (e.g. 94871 "Eversong" is given by a Scouting Map war-table, and
+-- 94993/95008 "Adventuring in Midnight" have no giver at all). We drop them so
+-- each chain ends at its real finale. NOTE: only reference-confirmed extras go
+-- here — never a genuinely new quest the reference simply predates (e.g. 94957).
+local NON_CHAIN_QUESTS = {
+    -- Eversong "Other Both": Scouting Map / Adventuring-in-Midnight meta line
+    [93811] = true, [94871] = true, [94993] = true, [95008] = true,
+    -- Harandar "Other Both"
+    [86874] = true, [89035] = true, [93566] = true,
+    -- Voidstorm "Other Both"
+    [92641] = true, [95276] = true,
+}
+
 -- Build items[] from the questline's quest list. No-op if the chain already
 -- has authored items, no questlineID, or we've populated it before.
 function QLS:EnsureChainItems(chain)
@@ -247,35 +265,52 @@ function QLS:EnsureChainItems(chain)
 
     local quests = C_QuestLine.GetQuestLineQuests(chain.questlineID)
     if not quests or #quests == 0 then
-        -- Blizzard's questline data isn't loaded yet for this chain. The
-        -- player would otherwise have to click the chain a second (or
-        -- third) time before its quests showed up — schedule a one-shot
-        -- retry + re-render so the next pass picks up the loaded data
-        -- automatically. Guarded by _retryScheduled so a flood of renders
-        -- can't queue up duplicate timers.
-        if not self._retryScheduled[chain.id] then
-            self._retryScheduled[chain.id] = true
-            C_Timer.After(0.3, function()
-                self._retryScheduled[chain.id] = nil
-                self:EnsureChainItems(chain)
-                local CG = ns:GetSubsystem("ChainGuide")
-                if CG and CG.frame and CG.frame:IsShown() and CG.RenderCurrent then
-                    CG:RenderCurrent()
-                end
-            end)
+        -- No live questline data. If a curated quest list exists for this
+        -- questline (unreleased patch content the client can't serve yet), build
+        -- a PROVISIONAL linear chain from it so the chain isn't blank. It's built
+        -- below like any item list; a later session naturally swaps to the real
+        -- questline once Blizzard's client serves it.
+        local curated = ns.CHAINGUIDE_CURATED_ITEMS and ns.CHAINGUIDE_CURATED_ITEMS[chain.questlineID]
+        if curated and #curated > 0 then
+            quests = curated
+        else
+            -- Blizzard's questline data isn't loaded yet for this chain. The
+            -- player would otherwise have to click the chain a second (or
+            -- third) time before its quests showed up — schedule a one-shot
+            -- retry + re-render so the next pass picks up the loaded data
+            -- automatically. Guarded by _retryScheduled so a flood of renders
+            -- can't queue up duplicate timers.
+            if not self._retryScheduled[chain.id] then
+                self._retryScheduled[chain.id] = true
+                C_Timer.After(0.3, function()
+                    self._retryScheduled[chain.id] = nil
+                    self:EnsureChainItems(chain)
+                    local CG = ns:GetSubsystem("ChainGuide")
+                    if CG and CG.frame and CG.frame:IsShown() and CG.RenderCurrent then
+                        CG:RenderCurrent()
+                    end
+                end)
+            end
+            return
         end
-        return
     end
 
     local items = {}
+    local n = 0
     for i = 1, #quests do
-        items[i] = {
-            type        = "quest",
-            id          = quests[i],
-            x           = 0,
-            y           = i - 1,
-            connections = (i > 1) and { i - 1 } or nil,
-        }
+        local qid = quests[i]
+        if not NON_CHAIN_QUESTS[qid] then
+            -- Renumber as we go (n, not i) so the linear spine stays contiguous
+            -- after any excluded "Other" quests are skipped.
+            n = n + 1
+            items[n] = {
+                type        = "quest",
+                id          = qid,
+                x           = 0,
+                y           = n - 1,
+                connections = (n > 1) and { n - 1 } or nil,
+            }
+        end
     end
     chain.items = items
     chain._normalized = true

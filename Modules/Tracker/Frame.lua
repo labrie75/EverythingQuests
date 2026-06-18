@@ -393,11 +393,69 @@ function Tracker:BuildFrame()
 
     f.drag    = drag
     f.grip    = grip
+
+    -- ─── Quick-access header icons (cogwheel → Options, book → Chain Guide) ──
+    -- Small launcher icons at the tracker's top-right, sitting in the drag-strip
+    -- band. Parented to `f` — a NON-secure sibling of the secure scroll/content
+    -- chain that carries the usable-item buttons — and created ONCE here, never
+    -- touched per render. So they never enter the combat-protected subtree and
+    -- need no InCombatLockdown gating; their OnClick calls insecure UI toggles
+    -- only (Options:Toggle / ChainGuide:Toggle). [[reference-tracker-secure-taint]]
+    local ICON_SZ = 13
+    local function makeHeaderIcon(texture, tip, onClick)
+        local b = CreateFrame("Button", nil, f)
+        b:SetSize(ICON_SZ, ICON_SZ)
+        b:SetFrameLevel(f:GetFrameLevel() + 10)   -- above the drag strip → clicks hit the icon, not a drag
+        local t = b:CreateTexture(nil, "ARTWORK")
+        t:SetAllPoints()
+        t:SetTexture(texture)
+        t:SetTexCoord(0, 1, 0, 1)                 -- custom EQ icons are full-bleed, no stock border to trim
+        t:SetAlpha(0.85)                          -- clearly visible at rest; full-bright on hover
+        b:SetScript("OnEnter", function(self2)
+            t:SetAlpha(1)
+            GameTooltip:SetOwner(self2, "ANCHOR_BOTTOMLEFT")
+            GameTooltip:AddLine(tip)
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", function()
+            t:SetAlpha(0.85)
+            GameTooltip:Hide()
+        end)
+        b:SetScript("OnClick", onClick)
+        return b
+    end
+    local cogBtn = makeHeaderIcon("Interface\\AddOns\\EverythingQuests\\Media\\cogwheel.tga", L["Open the options panel"], function()
+        local O = ns:GetSubsystem("Options"); if O then O:Toggle() end
+    end)
+    cogBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -1)
+    cogBtn._dbKey = "showOptionsIcon"
+    local guideBtn = makeHeaderIcon("Interface\\AddOns\\EverythingQuests\\Media\\chain.tga", L["Open the Chain Guide"], function()
+        local CG = ns:GetSubsystem("ChainGuide"); if CG then CG:Toggle() end
+    end)
+    guideBtn:SetPoint("RIGHT", cogBtn, "LEFT", -3, 0)
+    guideBtn._dbKey = "showChainGuideIcon"
+    f.headerIcons = { cogBtn, guideBtn }
+
     self.frame = f
 
     self:ApplyLockState()   -- hide/disable the resize grip if locked at build time
 
     self:BuildSectionHeaders(content)
+    self:ApplyHeaderIcons()
+end
+
+-- Show/hide the quick-access header icons per the Tracker option. They are
+-- non-secure children of `f`, so toggling their visibility is combat-safe and
+-- never touches the protected scroll/content subtree. [[reference-tracker-secure-taint]]
+function Tracker:ApplyHeaderIcons()
+    local f = self.frame
+    if not (f and f.headerIcons) then return end
+    local DB = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db.profile.tracker
+    for i = 1, #f.headerIcons do
+        local b = f.headerIcons[i]
+        if cfg and b._dbKey and cfg[b._dbKey] == false then b:Hide() else b:Show() end
+    end
 end
 
 -- Tracker headers: flat text with a single hairline beneath, no boxed
@@ -1126,7 +1184,10 @@ function Tracker:Render()
                     end
                     headerFrame.text:SetTextColor(hr, hg, hb)
                 end
-                if headerFrame.collapse then headerFrame.collapse:SetTextColor(hr, hg, hb) end
+                if headerFrame.collapse then
+                    headerFrame.collapse:SetTextColor(hr, hg, hb)
+                    if Media and Media.ApplyTextShadow then Media:ApplyTextShadow(headerFrame.collapse) end
+                end
                 -- Zone Progress shows a LIVE header: the current zone's name on
                 -- the left and "<done>/<total>" on the right, instead of the
                 -- static "Zone" title and the plain section count set above.
@@ -1320,7 +1381,10 @@ function Tracker:_RenderPinnedEvents(eventsCap)
             end
             header.text:SetTextColor(hr, hg, hb)
         end
-        if header.collapse then header.collapse:SetTextColor(hr, hg, hb) end
+        if header.collapse then
+            header.collapse:SetTextColor(hr, hg, hb)
+            if Media and Media.ApplyTextShadow then Media:ApplyTextShadow(header.collapse) end
+        end
         -- World Quests has no meaningful per-category total, so it stays
         -- a plain count — but match the header color + description font
         -- so every section's count reads consistently.

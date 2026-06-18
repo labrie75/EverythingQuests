@@ -238,6 +238,28 @@ local function liveWaypoint(questID)
     return nil
 end
 
+-- ─── Resolve a chain quest's BEST map point for a pin (Phase 3) ─────────
+-- Picks the right coordinate semantics per quest state, mirroring GoTo's
+-- Case A vs B split: an IN-LOG quest pins its LIVE objective / turn-in
+-- (liveWaypoint) — the giver coord is the wrong spot mid-quest; a NOT-in-log
+-- quest pins its GIVER (Resolve). Returns mapID, x, y, isInLog or nil. Read-
+-- only (no super-track / waypoint / map writes), so it is taint-free and safe
+-- to call per-quest from the map-pin provider's refresh.
+function W:ResolveForPin(questID, chain)
+    if not questID then return nil end
+    local inLog = C_QuestLog and C_QuestLog.GetLogIndexForQuestID
+                  and C_QuestLog.GetLogIndexForQuestID(questID) ~= nil
+    if inLog then
+        local m, x, y = liveWaypoint(questID)
+        if m and x and y then return m, x, y, true end
+        -- No live point (data not loaded / off the player's maps): fall back to
+        -- the giver coord so the pin still shows somewhere sensible.
+    end
+    local m, x, y = self:Resolve(questID, chain)
+    if m and x and y then return m, x, y, inLog or false end
+    return nil
+end
+
 -- ─── Navigate to an in-log quest (Case A) ──────────────────────────────
 -- The quest is in your log. Blizzard already tracks its live objective — or
 -- its TURN-IN once complete — and draws that POI on your map, so we super-
@@ -303,6 +325,20 @@ end
 -- storyline every such giver also clusters right where you're standing, so the
 -- redirect turns "pin at my feet, nothing to accept" into "go do your real
 -- next step."
+-- Scratch for the same-cell collapse below (reused + wiped per call, so the
+-- step scan stays allocation-free). A faction-paired step is carried by our
+-- API chains as TWO separate items sharing ONE overlay cell (same x,y) — the
+-- key here is the SAME row*4096+col key ChainView's collapse uses.
+local _stepCellDone  = {}
+local _stepCellInLog = {}
+
+-- nil when the item isn't positioned by an overlay (linear chains → every item
+-- is its own cell, so the collapse below is a no-op and behaviour is unchanged).
+local function stepCellKey(raw)
+    if raw.x and raw.y then return raw.y * 4096 + raw.x end
+    return nil
+end
+
 local function nextActionableStep(chain)
     if not chain then return nil end
     local Database   = ns:GetSubsystem("ChainGuideDatabase")
@@ -316,12 +352,47 @@ local function nextActionableStep(chain)
     local items = chain.items
     if not items then return nil end
     local char = Database:CurrentCharacter()
+
+    -- Pre-pass: a faction-paired step (e.g. Paved in Ash — 86735 Horde / 86736
+    -- Alliance, both at overlay cell x1,y2) is two items in one cell, and the
+    -- off-faction one can NEVER be completed. A plain "first incomplete item"
+    -- scan would lock onto it forever and stall the chain (the reported "Paved
+    -- in Ash is next" bug). So collapse by cell: a cell is DONE if ANY member is
+    -- completed, and we remember a member that's in the player's log (their own
+    -- accepted quest) so we point at it rather than its off-faction twin.
+    wipe(_stepCellDone)
+    wipe(_stepCellInLog)
+    for i = 1, #items do
+        local raw = items[i]
+        if raw.type ~= "chain" and not raw.breadcrumb then
+            local key = stepCellKey(raw)
+            if key then
+                local item = Database:GetVariation(raw, char)
+                local qid  = item and item.id
+                if qid then
+                    if Characters:IsQuestCompleted(qid) then
+                        _stepCellDone[key] = true
+                    elseif C_QuestLog and C_QuestLog.GetLogIndexForQuestID
+                           and C_QuestLog.GetLogIndexForQuestID(qid) then
+                        _stepCellInLog[key] = item
+                    end
+                end
+            end
+        end
+    end
+
     for i = 1, #items do
         local raw = items[i]
         if raw.type ~= "chain" and not raw.breadcrumb then
             local item = Database:GetVariation(raw, char)
             if item and item.id and not Characters:IsQuestCompleted(item.id) then
-                return item
+                local key = stepCellKey(raw)
+                if not (key and _stepCellDone[key]) then
+                    -- Prefer this cell's in-log member (your faction's accepted
+                    -- quest) over an off-faction sibling that merely sorts first.
+                    if key and _stepCellInLog[key] then return _stepCellInLog[key] end
+                    return item
+                end
             end
         end
     end
@@ -334,6 +405,40 @@ end
 -- the badge and the button). Returns the resolved item ({id, ...}) or nil.
 function W:NextActionableStep(chain)
     return nextActionableStep(chain)
+end
+
+-- ─── Auto-advancing waypoint (Phase 3B) ────────────────────────────────
+-- Quietly point the waypoint at the chain's next actionable step — super-track
+-- it if it's in your log, feed TomTom its live/giver coord — WITHOUT opening or
+-- retargeting the map and WITHOUT printing. Called automatically when a tracked
+-- chain quest is turned in, so it must be silent and taint-light: it adds at
+-- most ONE super-track (the same write a "Continue" click makes; guarded against
+-- redundant SUPER_TRACKING_CHANGED churn) and never touches the map providers.
+-- Returns the step item, or nil when the chain has no remaining step (the
+-- caller treats that as "chain complete").
+function W:AdvanceWaypoint(chain)
+    local step = nextActionableStep(chain)
+    if not (step and step.id) then return nil end
+    local id = step.id
+    local inLog = C_QuestLog and C_QuestLog.GetLogIndexForQuestID
+                  and C_QuestLog.GetLogIndexForQuestID(id)
+    if inLog then
+        if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+            local cur = C_SuperTrack.GetSuperTrackedQuestID and C_SuperTrack.GetSuperTrackedQuestID()
+            if cur ~= id then C_SuperTrack.SetSuperTrackedQuestID(id) end   -- skip redundant write
+        end
+        -- TomTom only (SetWaypoint's no-TomTom branch prints — unwanted here).
+        if TomTom and TomTom.AddWaypoint then
+            local wm, wx, wy = liveWaypoint(id)
+            if wm and wx and wy then self:SetWaypoint(wm, wx, wy, ns.Util.QuestTitle(id, true)) end
+        end
+    elseif TomTom and TomTom.AddWaypoint then
+        -- Next step isn't in your log yet: TomTom users get an arrow to the
+        -- giver; everyone else sees the gold map pin (Phase 3A) mark it.
+        local m, x, y = self:Resolve(id, chain)
+        if m and x and y then self:SetWaypoint(m, x, y, ns.Util.QuestTitle(id, true)) end
+    end
+    return step
 end
 
 -- ─── Public: go to a quest ─────────────────────────────────────────────
@@ -398,6 +503,25 @@ local function harvest(questID)
     end
 end
 
+-- Membership test for auto-advance: is questID one of the chain's quest items
+-- (or any of their faction/race variations)? A cheap id scan — no per-character
+-- resolution needed, since the turned-in id is already this character's.
+local function questBelongsToChain(chain, questID)
+    if not (chain and chain.items and questID) then return false end
+    for i = 1, #chain.items do
+        local raw = chain.items[i]
+        if raw and raw.type ~= "chain" then
+            if raw.id == questID then return true end
+            if raw.variations then
+                for j = 1, #raw.variations do
+                    if raw.variations[j].id == questID then return true end
+                end
+            end
+        end
+    end
+    return false
+end
+
 function W:OnEnable()
     local Events = ns:GetSubsystem("Events")
     if not Events then return end
@@ -409,5 +533,32 @@ function W:OnEnable()
     Events:On("QUEST_ACCEPTED", function(_, a, b)
         -- Retail fires (questID); older builds (questLogIndex, questID).
         harvest(b or a)
+    end)
+
+    -- Phase 3B: auto-advance the TRACKED chain's waypoint on each turn-in, so
+    -- the player follows the chain hands-free.
+    Events:On("QUEST_TURNED_IN", function(_, questID)
+        local CG = ns:GetSubsystem("ChainGuide")
+        local chain = CG and CG.GetTrackedChain and CG:GetTrackedChain()
+        if not chain then return end
+        -- Ensure the ordered item list exists before testing membership.
+        local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
+        if QLS and QLS.EnsureChainItems then QLS:EnsureChainItems(chain) end
+        local Database = ns:GetSubsystem("ChainGuideDatabase")
+        if Database then Database:NormalizeChain(chain) end
+        if not questBelongsToChain(chain, questID) then return end
+        -- IsQuestFlaggedCompleted can lag one frame behind QUEST_TURNED_IN, so
+        -- defer the next-step recompute a frame for fresh data. The deferred
+        -- work only super-tracks / feeds TomTom (no map retarget, no user
+        -- waypoint), so it carries no new taint despite the timer closure.
+        C_Timer.After(0, function()
+            local step = self:AdvanceWaypoint(chain)
+            if not step and chain.items and #chain.items > 0 then
+                -- No remaining step + the chain is populated → it's finished.
+                -- Stop following it and say so, once.
+                if CG.ClearTrackedChainID then CG:ClearTrackedChainID() end
+                print(("|cffEBB706EQ|r: |cffffffff%s|r complete — no longer following it."):format(chain.name or "This chain"))
+            end
+        end)
     end)
 end

@@ -64,15 +64,26 @@ function Blocks:BeginRenderPass()
     -- RenderQuest doesn't call time() per block.
     self._nowTs = time()
 
-    local file, size, outline
+    local file, size, outline, titleDelta, shadow, shR, shG, shB, shA
     if t then
         local Media = ns:GetSubsystem("Media")
-        file    = Media and Media.GetFontFile and Media:GetFontFile(t.font)
-        size    = t.fontSize or 12
-        outline = t.fontOutline or ""
+        file       = Media and Media.GetFontFile and Media:GetFontFile(t.font)
+        size       = t.fontSize or 12
+        outline    = t.fontOutline or ""
+        titleDelta = t.titleSizeDelta or 0
+        shadow     = t.textShadow and true or false
+        local sc   = t.textShadowColor
+        shR, shG, shB, shA = sc and sc.r or 0, sc and sc.g or 0, sc and sc.b or 0, sc and sc.a or 1
     end
-    if file ~= self._fontFile or size ~= self._fontSize or outline ~= self._fontOutline then
+    -- Title offset + shadow feed the SAME change-gated SetFont/shadow pass as
+    -- the font, so changing any of them bumps _fontGen and restyles all blocks.
+    if file ~= self._fontFile or size ~= self._fontSize or outline ~= self._fontOutline
+       or titleDelta ~= self._titleSizeDelta or shadow ~= self._textShadow
+       or shR ~= self._shR or shG ~= self._shG or shB ~= self._shB or shA ~= self._shA then
         self._fontFile, self._fontSize, self._fontOutline = file, size, outline
+        self._titleSizeDelta = titleDelta
+        self._textShadow = shadow
+        self._shR, self._shG, self._shB, self._shA = shR, shG, shB, shA
         self._fontGen = self._fontGen + 1
         dirty = true
     end
@@ -621,9 +632,15 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     if fontFile and block._fontGen ~= self._fontGen then
         local fontSize = self._fontSize
         local outline  = self._fontOutline
-        block.title:SetFont(fontFile, fontSize, outline)
+        block.title:SetFont(fontFile, math.max(8, fontSize + (self._titleSizeDelta or 0)), outline)
         block.subText:SetFont(fontFile, math.max(8, fontSize - 2), outline)
         block.category:SetFont(fontFile, math.max(8, fontSize - 3), outline)
+        local Media = ns:GetSubsystem("Media")
+        if Media and Media.ApplyTextShadow then
+            Media:ApplyTextShadow(block.title)
+            Media:ApplyTextShadow(block.subText)
+            Media:ApplyTextShadow(block.category)
+        end
         block._fontGen = self._fontGen
     end
 

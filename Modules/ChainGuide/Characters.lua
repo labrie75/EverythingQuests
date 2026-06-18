@@ -125,6 +125,15 @@ end
 -- Walks the normalized items[] array, resolves variations per character, and
 -- excludes nested "chain" items + breadcrumbs from the totals so the displayed
 -- "X/Y" reflects quest progress only, not navigation nodes.
+--
+-- Same-cell collapse: a faction-paired step is carried as TWO items sharing one
+-- overlay cell (e.g. Paved in Ash — 86735 Horde / 86736 Alliance, both at x1,y2).
+-- The off-faction half can never complete, so counting both would inflate the
+-- denominator AND keep the chain from ever reading 100%. We count each cell once
+-- (status = the best of its members), matching ChainView's display collapse and
+-- nextActionableStep. Reused scratch keeps the walk allocation-free.
+local _cpStatus = {}   -- [cellKey] = 0 pending | 1 active | 2 complete (max seen)
+local _cpKeys   = {}   -- distinct cell keys, for the tally pass
 function C:ChainProgress(chain)
     if not chain then return 0, 0, 0 end
     local DB = ns:GetSubsystem("ChainGuideDatabase")
@@ -133,17 +142,38 @@ function C:ChainProgress(chain)
     if not items or #items == 0 then return 0, 0, 0 end
     local char = DB:CurrentCharacter()
     local complete, active, total = 0, 0, 0
+    wipe(_cpStatus)
+    local nKeys = 0
     for i = 1, #items do
         local raw = items[i]
         if raw.type ~= "chain" and not raw.breadcrumb then
             local item = DB:GetVariation(raw, char)
-            total = total + 1
-            if self:IsQuestCompleted(item.id) then
-                complete = complete + 1
-            elseif self:IsQuestActive(item.id) then
-                active = active + 1
+            local s = self:IsQuestCompleted(item.id) and 2
+                      or (self:IsQuestActive(item.id) and 1 or 0)
+            local key = (raw.x and raw.y) and (raw.y * 4096 + raw.x) or nil
+            if key then
+                -- Defer counting to the tally pass; keep the best member status.
+                local prev = _cpStatus[key]
+                if prev == nil then
+                    nKeys = nKeys + 1
+                    _cpKeys[nKeys] = key
+                    _cpStatus[key] = s
+                elseif s > prev then
+                    _cpStatus[key] = s
+                end
+            else
+                -- Unpositioned item (linear chain): its own unit, count inline.
+                total = total + 1
+                if s == 2 then complete = complete + 1
+                elseif s == 1 then active = active + 1 end
             end
         end
+    end
+    for k = 1, nKeys do
+        total = total + 1
+        local s = _cpStatus[_cpKeys[k]]
+        if s == 2 then complete = complete + 1
+        elseif s == 1 then active = active + 1 end
     end
     return complete, active, total
 end

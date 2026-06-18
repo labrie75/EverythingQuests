@@ -200,7 +200,7 @@ function P:Render(content, contentWidth, yStart, collapsed)
         row.recipeID   = entry.recipeID
         row.isRecraft  = entry.isRecraft
         row.recipeName = name
-        if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(row.title, 0) end
+        if Media and Media.ApplyTrackerTitleFont then Media:ApplyTrackerTitleFont(row.title) end
 
         y = y + HEADER_H + ROW_GAP
 

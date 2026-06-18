@@ -79,6 +79,8 @@ L["Show only watched quests"] = true
 L["Matches Blizzard's default tracker."] = true
 L["Simplify Mode"] = true
 L["Show only the first incomplete objective per quest."] = true
+L["Simplify tracked achievements"] = true
+L["Show only incomplete criteria for tracked achievements."] = true
 L["Sort Order"] = true
 L["|cffaaaaaaDrag and drop the quests in the tracker to reorder them however you like.|r"] = true
 L["Filters"] = true
@@ -96,6 +98,10 @@ L["Show tracked / total on the Quests & Campaign headers"] = true
 L["For example, 3/9."] = true
 L["Show usable quest item buttons"] = true
 L["Click to use the quest's item."] = true
+L["Show Options icon on the tracker"] = true
+L["A small cogwheel at the top-right of the tracker that opens the options panel."] = true
+L["Show Chain Guide icon on the tracker"] = true
+L["A small book at the top-right of the tracker that opens the Chain Guide."] = true
 L["Hide scroll bar"] = true
 L["Scroll with the mouse wheel instead."] = true
 L["Show Quest Discovered popups"] = true
@@ -173,6 +179,8 @@ L["Open Chain Guide"] = true
 L["Open Chain Guide on login"] = true
 L["Show unrouted questlines"] = true
 L["API discoveries not in our routing table."] = true
+L["Show tracked chain on the world map"] = true
+L["Pin the quests of the chain you're following on the world map, with your next step highlighted. Track a chain from the Track button in the Chain Guide."] = true
 L["Window scale"] = true
 L["Character cache"] = true
 L["Per-character chain progress is cached account-wide so alts can browse what your other characters have completed. Clearing the cache removes that cross-character data; live completions stay (Blizzard tracks those)."] = true
@@ -191,6 +199,8 @@ L["|cffEBB706EQ|r: pruned |cffffffff%d|r stale character record(s) and |cfffffff
 L["Appearance"] = true
 L["Font"] = true
 L["Font Size"] = true
+L["Title Size Offset"] = true
+L["Sizes quest and achievement titles separately from the objective text. This value is added to the Font Size above: 0 keeps titles the same size as the base font, positive makes them larger, negative smaller."] = true
 L["None"] = true
 L["Outline"] = true
 L["Thick"] = true
@@ -198,6 +208,9 @@ L["Mono"] = true
 L["Mono Outline"] = true
 L["Mono Thick"] = true
 L["Font Outline"] = true
+L["Text Shadow"] = true
+L["Draws a soft drop-shadow behind all tracker text so it stays readable over bright or busy backgrounds. Use Shadow Color to tint and set its strength (alpha)."] = true
+L["Shadow Color"] = true
 L["Background"] = true
 L["Background Color"] = true
 L["Border"] = true
@@ -294,6 +307,8 @@ L["Shift-click to link in chat"] = true
 L["Level %d–%d"] = true
 L["Click to open this chain"] = true
 L["Pick a chain on the left to view its quests."] = true
+L["Untrack"] = true
+L["Track"] = true
 L["%d/%d done"] = true
 L["%d active"] = true
 L["|cffff9933%d skipped|r"] = true
@@ -302,6 +317,8 @@ L["ON QUEST"] = true
 L["NEXT"] = true
 L["(optional)"] = true
 L["Continue"] = true
+L["Track this chain"] = true
+L["Follow this chain — its quests pin on the world map (next step highlighted) and your waypoint auto-advances to the next step as you complete it. Works even with this window closed. Click again to stop."] = true
 L["(no quests defined for this chain yet)"] = true
 
 -- ─── Modules/ChainGuide/Frame.lua ───
@@ -314,6 +331,7 @@ L["Find quest"] = true
 L["Type a quest name or its ID to jump to the chain that contains it."] = true
 L["Go"] = true
 L["Categories"] = true
+L["Drag to resize"] = true
 L["|cffEBB706EQ Chain Guide:|r found quest |cffffffff%d|r%s — jumping to its chain."] = true
 L["|cffEBB706EQ Chain Guide:|r quest |cffffffff%d|r%s isn't in any chain I know about."] = true
 L["|cffEBB706EQ Chain Guide:|r found |cffffffff%s|r — jumping to its chain."] = true
@@ -321,6 +339,11 @@ L["|cffEBB706EQ Chain Guide:|r no chain quest matches |cffffffff%s|r."] = true
 L["Pick a category"] = true
 L["Chains"] = true
 L["%d / %d quests done"] = true
+
+-- ─── Modules/ChainGuide/MapPin.lua ───
+L["Your next step"] = true
+L["On this quest"] = true
+L["Comes later in the chain"] = true
 
 -- ─── Modules/ChainGuide/QuestMapButton.lua ───
 L["Chain"] = true
@@ -414,6 +437,9 @@ L["   |cffaaaaaa(%.1f / hour)|r"] = true
 L["%d   |cffaaaaaa(%d to %d)|r"] = true
 L["Press Ctrl+A to select all, then Ctrl+C to copy."] = true
 
+-- ─── Modules/Tracker/Achievements.lua ───
+L["Left-click to open, right-click to untrack."] = true
+
 -- ─── Modules/Tracker/AutoComplete.lua ───
 L["Click to complete quest"] = true
 
@@ -431,6 +457,8 @@ L["Tracker locked"] = true
 L["Move and resize are off. Uncheck \"Lock tracker\" in /eqs > General."] = true
 L["Drag to move the tracker"] = true
 L["/eqs for options"] = true
+L["Open the options panel"] = true
+L["Open the Chain Guide"] = true
 L["Profession"] = true
 L["Endeavors"] = true
 L["Achievements"] = true
@@ -452,7 +480,6 @@ L["(This message shows once and won't appear again.)"] = true
 
 -- ─── Options/TabAbout.lua ───
 L["Open or close the options window"] = true
-L["Open the Chain Guide"] = true
 L["Open the Quest History window"] = true
 L["Recap your current play session in chat"] = true
 L["List the current zone's quest chains in chat"] = true

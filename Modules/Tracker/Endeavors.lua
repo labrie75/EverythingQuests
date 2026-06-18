@@ -92,7 +92,7 @@ function E:Render(content, contentWidth, yStart, collapsed)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
             row.title:SetText(info.activityName or ("Activity #" .. tostring(ids[i])))
-            if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(row.title, 0) end
+            if Media and Media.ApplyTrackerTitleFont then Media:ApplyTrackerTitleFont(row.title) end
             y = y + HEADER_H + ROW_GAP
 
             local reqs = info.requirementsList

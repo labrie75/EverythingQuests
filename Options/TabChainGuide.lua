@@ -64,10 +64,28 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
         L["API discoveries not in our routing table."])
     unrouted:SetPoint("TOPLEFT", login, "BOTTOMLEFT", 0, -2)
 
+    -- Phase 3: draw the TRACKED chain's quests as pins on the world map.
+    -- Custom setter repaints the pins immediately instead of CG:ApplySettings.
+    local function mapPinsGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.chainGuide.showMapPins ~= false
+    end
+    local function mapPinsSet(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.chainGuide.showMapPins = value end
+        local MP = ns:GetSubsystem("ChainGuideMapPins")
+        if MP and MP.Refresh then MP:Refresh() end
+    end
+    local mapPins = Options:CreateCheckbox(content,
+        L["Show tracked chain on the world map"],
+        mapPinsGet, mapPinsSet,
+        L["Pin the quests of the chain you're following on the world map, with your next step highlighted. Track a chain from the Track button in the Chain Guide."])
+    mapPins:SetPoint("TOPLEFT", unrouted, "BOTTOMLEFT", 0, -2)
+
     local scaleGet, scaleSet = chainSetting("scale")
     local scale = Options:CreateSlider(content, L["Window scale"],
         0.6, 1.5, 0.05, scaleGet, scaleSet)
-    scale:SetPoint("TOPLEFT", unrouted, "BOTTOMLEFT", 0, -10)
+    scale:SetPoint("TOPLEFT", mapPins, "BOTTOMLEFT", 0, -10)
     scale:SetWidth(280)
 
     -- ─── RIGHT COLUMN: cache + stats ────────────────────────────────────

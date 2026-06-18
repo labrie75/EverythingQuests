@@ -8,6 +8,7 @@
 -- the Frame.lua section dispatch treats it identically.
 
 local _, ns = ...
+local L = ns.L
 
 local A = ns:RegisterSubsystem("TrackerAchievements", {})
 
@@ -28,7 +29,47 @@ A.activeLines   = {}
 -- Achievement tracking moved to the unified content-tracking system; the
 -- legacy GetTrackedAchievements() still exists as a fallback for older
 -- clients. Resolve the enum once.
-local ACH_TYPE = (Enum and Enum.ContentTrackingType and Enum.ContentTrackingType.Achievement)
+local ACH_TYPE    = (Enum and Enum.ContentTrackingType and Enum.ContentTrackingType.Achievement)
+local STOP_MANUAL = (Enum and Enum.ContentTrackingStopType and Enum.ContentTrackingStopType.Manual) or 2
+
+-- Achievement header rows are clickable: LEFT opens Blizzard's achievement
+-- window to this achievement (OpenAchievementFrameToAchievement is Blizzard's
+-- own objective-tracker handler — it loads Blizzard_AchievementUI on demand,
+-- shows the frame, and scrolls to the id), RIGHT untracks it via the modern
+-- content-tracking API (StopTracking is AllowedWhenUntainted, so combat-safe).
+-- The tracker's achievement section is NON-secure, so these clicks add no taint
+-- to the secure quest-item-button chain. [[reference-tracker-secure-taint]]
+-- Static file-scope handlers (wired once in buildHeader); the row carries its
+-- id/name in _achID/_achName, cleared on pool release.
+local function headerOnMouseUp(self, button)
+    local id = self._achID
+    if not id then return end
+    if button == "RightButton" then
+        if C_ContentTracking and C_ContentTracking.StopTracking and ACH_TYPE then
+            C_ContentTracking.StopTracking(ACH_TYPE, id, STOP_MANUAL)
+        elseif RemoveTrackedAchievement then
+            RemoveTrackedAchievement(id)   -- legacy fallback (older clients)
+        end
+        -- CONTENT_TRACKING_UPDATE / TRACKED_ACHIEVEMENT_LIST_CHANGED fires and
+        -- refreshes this section; no manual Refresh needed.
+    elseif button == "LeftButton" then
+        if OpenAchievementFrameToAchievement then
+            OpenAchievementFrameToAchievement(id)
+        end
+    end
+end
+
+local function headerOnEnter(self)
+    if not self._achID then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    if self._achName then GameTooltip:AddLine(self._achName, 1, 0.82, 0) end
+    GameTooltip:AddLine(L["Left-click to open, right-click to untrack."], 0.6, 0.6, 0.6)
+    GameTooltip:Show()
+end
+
+local function headerOnLeave()
+    GameTooltip:Hide()
+end
 
 local function buildHeader(parent)
     local r = CreateFrame("Frame", nil, parent)
@@ -39,6 +80,10 @@ local function buildHeader(parent)
     r.title:SetJustifyH("LEFT")
     r.title:SetWordWrap(false)
     r.title:SetTextColor(1.0, 0.82, 0.0)
+    r:EnableMouse(true)
+    r:SetScript("OnMouseUp", headerOnMouseUp)
+    r:SetScript("OnEnter",   headerOnEnter)
+    r:SetScript("OnLeave",   headerOnLeave)
     return r
 end
 
@@ -66,6 +111,8 @@ local function releaseAll()
         local r = A.activeHeaders[i]
         r:Hide()
         r:ClearAllPoints()
+        r._achID = nil
+        r._achName = nil
         A.headerPool[#A.headerPool + 1] = r
         A.activeHeaders[i] = nil
     end
@@ -120,6 +167,7 @@ function A:Render(content, contentWidth, yStart, collapsed)
     local DB = ns:GetSubsystem("DB")
     local t  = DB and DB.db and DB.db.profile and DB.db.profile.tracker
     local ov = t and t.titleColorOverride
+    local simplify = t and t.simplifyAchievements   -- #4: show only incomplete criteria
     local doneHex = "44ff44"
     if t and t.overrideCompleteGreen ~= false and ov and ov.r then
         doneHex = ("%02x%02x%02x"):format(
@@ -144,13 +192,15 @@ function A:Render(content, contentWidth, yStart, collapsed)
             local label = name
             if icon then label = "|T" .. icon .. ":0|t " .. name end
             row.title:SetText(label)
+            row._achID   = id
+            row._achName = name
             -- Pooled rows always reset color, so set both branches explicitly.
             if ov and ov.r then
                 row.title:SetTextColor(ov.r, ov.g, ov.b)
             else
                 row.title:SetTextColor(1.0, 0.82, 0.0)
             end
-            if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(row.title, 0) end
+            if Media and Media.ApplyTrackerTitleFont then Media:ApplyTrackerTitleFont(row.title) end
             y = y + HEADER_H + ROW_GAP
 
             local num = (GetAchievementNumCriteria and GetAchievementNumCriteria(id)) or 0
@@ -159,7 +209,7 @@ function A:Render(content, contentWidth, yStart, collapsed)
                 if shownCrit >= MAX_CRITERIA then break end
                 local critString, _, critDone, quantity, reqQuantity =
                     GetAchievementCriteriaInfo(id, c)
-                if critString and critString ~= "" then
+                if critString and critString ~= "" and not (simplify and critDone) then
                     local line
                     if critDone then
                         line = "|TInterface\\RaidFrame\\ReadyCheck-Ready:0|t |cff" .. doneHex

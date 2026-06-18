@@ -209,6 +209,9 @@ function S:Build()
     banner.Stage:SetSize(172, 18)
     banner.Stage:SetJustifyH("CENTER")
     banner.Stage:SetTextColor(1, 0.914, 0.682)
+    -- The stage banner mimics Blizzard's native scenario header chrome, so it
+    -- keeps its own fixed black shadow independent of the Appearance "Text
+    -- Shadow" toggle (which governs the tracker's quest/objective text only).
     banner.Stage:SetShadowOffset(1, -1)
     banner.Stage:SetShadowColor(0, 0, 0, 1)
 
@@ -375,6 +378,10 @@ function S:Refresh()
     end
 
     releaseAllCriteria()
+    -- Resolved once for the loop (no per-row lookup): criteria lines route
+    -- through the shared text-shadow helper so they honour the Appearance
+    -- "Text Shadow" toggle like every other tracker objective line.
+    local Media = ns:GetSubsystem("Media")
     local prev, prevAnchor = banner, "BOTTOM"
     local barWidth = math.floor(container:GetWidth() * BAR_W_RATIO)
     local rowWidth = container:GetWidth() - 16
@@ -446,6 +453,11 @@ function S:Refresh()
                     row.text:SetTextColor(0.85, 0.85, 0.85)
                 end
                 row:SetHeight(math.max(row.text:GetStringHeight(), 14))
+            end
+
+            if Media and Media.ApplyTextShadow then
+                Media:ApplyTextShadow(row.text)
+                Media:ApplyTextShadow(row.bar.label)
             end
 
             prev = row
