@@ -11,6 +11,25 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.22.0", date = "2026-06-18",
+        sections = {
+            { head = "New Features", items = {
+                "Shadow Size slider (Appearance) — set how far the tracker's text shadow is cast.",
+                "A separate Scenario shadow group (Appearance) — the delve / scenario banner gets its own text-shadow toggle, color, and size, apart from the main tracker text.",
+                "The world map's world-quest list now scrolls in a compact panel instead of filling the screen in zones with many world quests.",
+            } },
+            { head = "Improvements", items = {
+                "Appearance tab cleanup — the color boxes line up, a new 'Tracker' header sits over the background/border options, and the scroll-bar options moved beside the Zone Bar group.",
+                "The Options and Chain Guide windows no longer overlap — opening one closes the other.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Fixed your regular quests sometimes not loading on login (only world quests showing) until a /reload; the tracker now fills in as soon as your quest data arrives.",
+                "Fixed an error when untracking a profession recipe from the tracker.",
+                "Progress-bar achievements (like '61/100') now show their count in the tracker, not just their title.",
+            } },
+        },
+    },
+    {
         version = "1.21.1", date = "2026-06-17",
         sections = {
             { head = "Bug Fixes", items = {
@@ -132,47 +151,6 @@ ns.Changelog = {
             } },
             { head = "Improvements", items = {
                 "French translation complete — the whole interface displays in French on a French client. (Zox)",
-            } },
-        },
-    },
-    {
-        version = "1.14.0", date = "2026-06-06",
-        sections = {
-            { head = "New Features", items = {
-                "French translation (frFR) and localization support — untranslated text falls back to English. (Zox)",
-                "Zone progress bar — an optional bar showing approximate questline progress for your current zone.",
-            } },
-        },
-    },
-    {
-        version = "1.13.1", date = "2026-06-05",
-        sections = {
-            { head = "Bug Fixes", items = {
-                "Fewer \"secret value\" Lua errors from the world map — EQ now draws its map pin tooltips on its own private tooltip.",
-            } },
-        },
-    },
-    {
-        version = "1.13.0", date = "2026-06-03",
-        sections = {
-            { head = "New Features", items = {
-                "Tracked achievements now appear in their own tracker section. (LightsBeacon)",
-                "WoW's built-in fonts added to the Appearance font picker. (Zox)",
-                "Auto-list current-zone world quests, and click a world quest map pin to track it. (Zox)",
-            } },
-            { head = "Improvements", items = {
-                "World Quest icons in the tracker, plus an optional Blizzard-style split quest click. (Zox)",
-            } },
-        },
-    },
-    {
-        version = "1.12.0", date = "2026-06-03",
-        sections = {
-            { head = "New Features", items = {
-                "Sort your Quest History by Date, Name, or Type with a direction toggle.",
-            } },
-            { head = "Bug Fixes", items = {
-                "Manual tracker order no longer loses hidden quests; color pickers keep transparency on Cancel.",
             } },
         },
     },

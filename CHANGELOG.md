@@ -5,6 +5,27 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] - 2026-06-18
+
+A round of fixes plus Appearance and World-Quest improvements after the Chain Guide overhaul. Your regular quests no longer occasionally fail to load on login, untracking a profession recipe no longer errors, progress-bar achievements show their count, and the Options and Chain Guide windows can't overlap. The text shadow gains a size slider and a separate scenario-banner shadow, and the world map's world-quest list now scrolls instead of filling the screen. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Shadow Size slider** — A new Appearance slider sets how far the tracker's text shadow is cast — a larger, more pronounced shadow at higher values. Works alongside the existing Text Shadow toggle and color.
+- **Separate scenario-banner shadow** — A new "Scenario" group in the Appearance tab gives the delve / scenario banner its own text-shadow toggle, color, and size, independent of the main tracker text. A tooltip notes that it's separate.
+- **Scrollable world-quest list on the map** — In zones with many world quests (older expansions especially), the world map's quest list now scrolls inside a compact panel (about ten rows tall) instead of growing down the screen. Every quest is still listed (just scroll) and pinned on the map; the reward-type and per-faction filters in the World Quests options trim it further.
+
+### Improvements
+
+- **Appearance tab cleanup** — The color swatches line up in clean columns, a new "Tracker" header sits over the background and border options, and the scroll-bar ("Tracker Skins") options moved beside the Zone Bar group.
+- **No more overlapping windows** — Opening the Options or the Chain Guide now closes the other; the two are similar-sized windows that previously could stack and overlap each other's text.
+
+### Bug Fixes
+
+- **Quests sometimes didn't load on login** — On a slow cold login the tracker could come up showing only world quests, with your regular quests missing until a `/reload`. The quest cache now rebuilds itself the moment the quest log finishes loading, so the tracker fills in on its own.
+- **Profession untrack error** — Right-clicking "Untrack Recipe" on a tracked profession recipe could throw a `SetRecipeTracked` error; fixed.
+- **Progress-bar achievements showed no count** — Tracked achievements that use a progress bar (for example "61/100") displayed only their title; they now show the X/Y count like other achievements.
+
 ## [1.21.1] - 2026-06-17
 
 **Hotfix.** A change in v1.21.0 ("Group up for world bosses") accidentally put the group-finder eye on **every** world quest. This release corrects it so the eye appears only on the world bosses and group quests you'd actually want a group for — matching Blizzard's own tracker. Thanks to everyone who reported it.

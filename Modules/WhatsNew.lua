@@ -12,51 +12,42 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.21.1: Hotfix on top of the 1.21.0 overhaul-complete popup. The 1.21.0
--- "Group up for world bosses" change accidentally put the group-finder eye on
--- EVERY world quest; this release corrects it so the eye appears only on world
--- bosses / group quests (matching Blizzard's own tracker). Same body as 1.21.0
--- with that one entry swapped for the fix, so anyone who missed 1.21.0 still
--- sees the overhaul recap. Bumping the version re-shows the popup once to
--- everyone. Bump this constant + rewrite POPUP_BODY for the next release and a
--- fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.21.1"
-local POPUP_TITLE           = "What's New in Everything Quests v1.21.1"
+-- 1.22.0: A bug-fix + polish release after the Chain Guide overhaul (1.19-1.21).
+-- Fixes cold-login quests not loading until /reload, a profession-untrack error,
+-- progress-bar achievements not showing their count, and the Options/Chain-Guide
+-- window overlap; adds a Shadow Size slider + a separate Scenario banner shadow,
+-- and makes the world-map world-quest list scroll instead of filling the screen.
+-- The popup points anyone who skipped a version at the About tab's changelog.
+-- Bumping the version re-shows the popup once to everyone. Bump this constant +
+-- rewrite POPUP_BODY for the next release and a fresh popup shows once more.
+-- Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.22.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.22.0"
 
 local POPUP_BODY = [[
-|cffEBB706The Chain Guide overhaul is complete|r
-Over the last few updates we rebuilt the Chain Guide in three phases — and with this release, all three are done:
-|cffffffff1.|r Make it actionable — show your next step  |cff999999(done)|r
-|cffffffff2.|r A real branching graph you can drag and explore  |cff999999(done)|r
-|cffffffff3.|r Map integration — pins and auto-advancing waypoints  |cff999999(this update)|r
+|cffEBB706Missed the last update?|r
+If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706Phase 3: the Chain Guide on your world map|r
-Open any chain and press |cffffffffTrack|r. From then on that chain's quests show as |cffffffffpins on your world map|r — your next step highlighted in gold — and your waypoint |cffffffffautomatically advances|r to the next step as you turn quests in. It keeps following the chain even with the guide window closed, and clears itself when you finish. Press |cffffffffUntrack|r to stop.
+|cffEBB706Fixes|r
+|cffffffff-|r Fixed your regular quests sometimes |cffffffffnot loading on login|r until you reloaded (only world quests would show). The tracker now fills in as soon as your quest data arrives.
+|cffffffff-|r Fixed an error when |cffffffffuntracking a profession recipe|r from the tracker.
+|cffffffff-|r Tracked achievements with a |cffffffffprogress bar|r (like "61/100") now show their count — before, only simple "X of Y" achievements did.
+|cffffffff-|r The |cffffffffOptions and Chain Guide windows no longer overlap|r — opening one now closes the other.
 
-|cffEBB706New: the patch 12.0.7 "Revelations" chains|r
-The Chain Guide now covers the new |cffffffffRevelations|r storyline — Legacy of the Amani and the lead-up to the March on Quel'Danas — under a new "Revelations (12.0.7)" category. This is brand-new content, so a few details will fill in as the patch settles.
+|cffEBB706New: more text-shadow control|r
+The Appearance tab adds a |cffffffffShadow Size|r slider — how far the shadow is cast — plus a separate |cffffffffScenario|r shadow group, so the delve / scenario banner can be styled on its own, apart from the main tracker text.
 
-|cffEBB706Tracker & achievement features (thanks, tanglies!)|r
-A batch of great suggestions from |cfffffffftanglies|r:
-|cffffffff-|r Size quest/achievement |cfffffffftitles separately|r from the objective text (Appearance tab)
-|cffffffff-|r A |cfffffffftext-shadow|r option for legibility over bright backgrounds (Appearance tab)
-|cffffffff-|r Quick |cffffffffcogwheel + Chain Guide buttons|r at the top of the tracker (each can be turned off in the Tracker options)
-|cffffffff-|r A |cffffffffsimplify mode|r for tracked achievements — show only what's left
-|cffffffff-|r |cffffffffRight-click|r a tracked achievement to untrack it; |cffffffffleft-click|r to open it in the Achievement panel
+|cffEBB706New: a tidier world-quest list|r
+In zones with lots of world quests (older expansions especially), the world map's quest list now |cffffffffscrolls|r inside a compact panel instead of stretching down the screen. Nothing's lost — just scroll, or use the reward / faction filters in the World Quests options to trim it.
 
-|cffEBB706Fix: group-finder eye on every world quest|r
-The last update accidentally put the group-finder eye on |cffffffffevery|r world quest. It now shows only on |cffffffffworld bosses and group quests|r — the ones you'd actually want a group for — the same way Blizzard's own tracker does. Thanks to everyone who reported it.
+|cffEBB706Polish|r
+The Appearance tab reads cleaner — the colour boxes line up, and the background, border, and scroll-bar options now sit under clear section headers.
 
-|cffEBB706Polish & fixes|r
-|cffffffff-|r The Chain Guide's resize grip (bottom-right corner) is bigger and far easier to grab
-|cffffffff-|r Fixed the chain "next step" sometimes pointing at the opposite faction's version of a quest
-|cffffffff-|r Trimmed war-table / meta quests that aren't part of a story, so chains end at their real finish
-
-|cffEBB706That's a wrap — thank you|r
-This was a big, fast-moving stretch of updates and I'm grateful you stuck with it. The Chain Guide overhaul is |cfffffffffinished|r, so things will settle down now. Translations of all the new text will follow.
+|cffEBB706Translations|r
+Russian and French updates for all the recent new text are on the way — thank you, |cffffffffMalevi4|r and |cffffffffZox|r.
 
 |cffEBB706Found a bug? Please tell me|r
-If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r — your reports are exactly what made this overhaul possible.
+If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

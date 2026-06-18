@@ -64,7 +64,7 @@ function Blocks:BeginRenderPass()
     -- RenderQuest doesn't call time() per block.
     self._nowTs = time()
 
-    local file, size, outline, titleDelta, shadow, shR, shG, shB, shA
+    local file, size, outline, titleDelta, shadow, shR, shG, shB, shA, shStr
     if t then
         local Media = ns:GetSubsystem("Media")
         file       = Media and Media.GetFontFile and Media:GetFontFile(t.font)
@@ -74,16 +74,23 @@ function Blocks:BeginRenderPass()
         shadow     = t.textShadow and true or false
         local sc   = t.textShadowColor
         shR, shG, shB, shA = sc and sc.r or 0, sc and sc.g or 0, sc and sc.b or 0, sc and sc.a or 1
+        shStr      = t.textShadowStrength or 2
     end
-    -- Title offset + shadow feed the SAME change-gated SetFont/shadow pass as
-    -- the font, so changing any of them bumps _fontGen and restyles all blocks.
+    -- Title offset + shadow feed the SAME change-gated SetFont/shadow pass as the
+    -- font, so changing any of them bumps _fontGen and restyles all blocks. The
+    -- shadow SIZE (textShadowStrength) must be in this gate too: pooled blocks
+    -- only re-run ApplyTextShadow when _fontGen bumps, so without it dragging the
+    -- Shadow Size slider would leave the Quests section stuck at its old offset
+    -- while freshly-rendered sections (World Quests, etc.) update.
     if file ~= self._fontFile or size ~= self._fontSize or outline ~= self._fontOutline
        or titleDelta ~= self._titleSizeDelta or shadow ~= self._textShadow
-       or shR ~= self._shR or shG ~= self._shG or shB ~= self._shB or shA ~= self._shA then
+       or shR ~= self._shR or shG ~= self._shG or shB ~= self._shB or shA ~= self._shA
+       or shStr ~= self._shStr then
         self._fontFile, self._fontSize, self._fontOutline = file, size, outline
         self._titleSizeDelta = titleDelta
         self._textShadow = shadow
         self._shR, self._shG, self._shB, self._shA = shR, shG, shB, shA
+        self._shStr = shStr
         self._fontGen = self._fontGen + 1
         dirty = true
     end

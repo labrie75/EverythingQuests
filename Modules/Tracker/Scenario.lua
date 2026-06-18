@@ -209,11 +209,11 @@ function S:Build()
     banner.Stage:SetSize(172, 18)
     banner.Stage:SetJustifyH("CENTER")
     banner.Stage:SetTextColor(1, 0.914, 0.682)
-    -- The stage banner mimics Blizzard's native scenario header chrome, so it
-    -- keeps its own fixed black shadow independent of the Appearance "Text
-    -- Shadow" toggle (which governs the tracker's quest/objective text only).
-    banner.Stage:SetShadowOffset(1, -1)
-    banner.Stage:SetShadowColor(0, 0, 0, 1)
+    -- The Stage + Name banner lines mimic Blizzard's native scenario header
+    -- chrome and carry their OWN drop-shadow, SEPARATE from the main tracker
+    -- text shadow (Appearance "Scenario" group). Applied per-render in S:Refresh
+    -- via Media:ApplyScenarioShadow so the user's toggle/colour/size take effect
+    -- live; the defaults (ON, 1px, black) preserve the formerly hardcoded shadow.
 
     banner.Name = banner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     banner.Name:SetSize(172, 28)
@@ -278,6 +278,21 @@ function S:ApplyHeaderLabels(scenarioType, textureKit, scenarioName)
         subHeader.text:SetPoint("LEFT", subHeader, "LEFT", 8, 0)
         self.subHeaderH = SUBHEADER_H
         subHeader:SetHeight(SUBHEADER_H)
+    end
+end
+
+-- Re-apply the scenario banner's drop-shadow from current settings (Appearance
+-- "Scenario" group) to the Stage + name lines. Separate from the main tracker
+-- text shadow. Called from the render path and from the options setter so a
+-- toggle/colour/size change previews live on an active banner (no-op when the
+-- banner hasn't been built yet / no scenario is up).
+function S:ApplyBannerShadow()
+    local banner = self.banner
+    if not banner then return end
+    local M = ns:GetSubsystem("Media")
+    if M and M.ApplyScenarioShadow then
+        M:ApplyScenarioShadow(banner.Stage)
+        M:ApplyScenarioShadow(banner.Name)
     end
 end
 
@@ -375,6 +390,10 @@ function S:Refresh()
         banner.Stage:Show()
         banner.Name:SetText(stageName or "")
         banner.Name:Show()
+        -- The banner lines carry their own shadow (Appearance "Scenario"),
+        -- separate from the main tracker text shadow. Re-applied each render so
+        -- toggling / restyling it previews live on an active scenario.
+        self:ApplyBannerShadow()
     end
 
     releaseAllCriteria()

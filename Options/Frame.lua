@@ -40,11 +40,12 @@ function Options:Build()
     -- ran off the right edge at 900. Labels are left-aligned, so the extra room
     -- just reads as normal ragged-right whitespace. Everything is anchored to
     -- the left, the top-right, or both sides, so only right-side room is added.
-    -- 740 tall (was 650): the Appearance tab's left column (Font … Outline …
-    -- Text Shadow … Tracker Skins) is the tallest and grew with the Title Size
-    -- Offset slider + Text Shadow row; the tab content isn't scrolled, so the
-    -- window itself carries the height. Still comfortably fits a 1080p screen.
-    f:SetSize(1020, 740)
+    -- 810 tall (was 800, 740, 650): the Appearance tab is the tallest and isn't
+    -- scrolled, so the window itself carries the height. The binding column is
+    -- now the RIGHT one (Colors & Dimensions + Zone Bar Appearance + the
+    -- relocated Tracker Skins group). Still fits a 1080p screen (centred → ~135px
+    -- of vertical margin).
+    f:SetSize(1020, 810)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -74,7 +75,7 @@ function Options:Build()
     -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.21.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.22.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     -- Discord link, top-left — mirrors the version label on the right and
@@ -196,7 +197,11 @@ end
 
 function Options:Toggle()
     self:Build()
-    if self.frame:IsShown() then self.frame:Hide() else self.frame:Show() end
+    -- Route the show path through Options:Show (not a bare frame:Show) so it
+    -- also closes the Chain Guide — the two are same-strata DIALOG windows of
+    -- similar size and overlap if both are visible. The cog-icon launcher calls
+    -- Toggle, so without this opening Options over an open guide left both up.
+    if self.frame:IsShown() then self.frame:Hide() else self:Show() end
 end
 
 function Options:Show()

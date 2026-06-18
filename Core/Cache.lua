@@ -43,6 +43,21 @@ local firstSeen = {}
 -- time() and count as new for the tracker's "Recently Added" highlight.
 local baselined = false
 
+-- Session "primed" guard for the cold-login empty-cache race. The cache is
+-- built lazily on the first Cache:All()/Cache:Get(), which on login happens in
+-- the tracker's first render ~0.25s after PLAYER_LOGIN. On a COLD start the
+-- server may not have sent quest data yet, so C_QuestLog.GetNumQuestLogEntries()
+-- returns 0 and fullRebuild() produces an EMPTY cache. The cheap
+-- QUEST_LOG_UPDATE refresh (refreshDynamicFields) only updates quests already
+-- in the cache, so it can never ADD the quests that load a moment later — the
+-- regular Quests/Campaign sections would then stay empty until a structural
+-- quest event or a /reload, while the World Quests section (which rebuilds from
+-- scratch every pass) renders normally. Until the cache has captured a
+-- populated log this session, QUEST_LOG_UPDATE stays on the FULL-rebuild path
+-- so the empty build self-heals the instant quest data arrives; once primed it
+-- downgrades to the cheap path — the GC-churn win the two-tier cache exists for.
+local primed = false
+
 -- isCampaign source. On a COLD client start C_QuestLog.GetInfo's
 -- campaignID isn't populated yet at the first cache build, so a campaign
 -- quest would wrongly land in the regular Quests section until a
@@ -153,7 +168,17 @@ local function fullRebuild()
     for qid in pairs(firstSeen) do
         if not Cache.quests[qid] then firstSeen[qid] = nil end
     end
-    baselined = true   -- later rebuilds stamp newly-appeared quests with a real time()
+    -- Commit the baseline + "primed" gate only once we've actually captured a
+    -- populated quest log. An empty cold-login build must NOT prime: leaving
+    -- `primed` false keeps QUEST_LOG_UPDATE on the full-rebuild path (see
+    -- OnInitialize) so the real quests enter the cache the moment they load.
+    -- Gating `baselined` the same way also stamps those late-loading login
+    -- quests with firstSeen=0 (present at login) rather than mis-flagging them
+    -- as "recently added".
+    if next(Cache.quests) ~= nil then
+        primed    = true
+        baselined = true   -- later rebuilds stamp newly-appeared quests with a real time()
+    end
     Cache.dirtyAll        = false
     Cache.dirtyObjectives = false
 end
@@ -226,7 +251,19 @@ function Cache:OnInitialize()
     -- High-frequency events only mark the cheaper refresh path. dirtyAll
     -- takes priority — if both flags end up set in the same window, we
     -- still do the full rebuild and skip the dynamic refresh on top.
-    local function dirtyDynamic() Cache.dirtyObjectives = true end
+    --
+    -- Exception: until the cache has captured a populated quest log this
+    -- session (see `primed`), QUEST_LOG_UPDATE means "quest data is arriving"
+    -- and must force a FULL rebuild — the cheap refresh only touches existing
+    -- entries, so a cold-login empty build would otherwise stay empty until a
+    -- structural quest event or a /reload.
+    local function dirtyDynamic()
+        if not primed then
+            Cache.dirtyAll = true
+        else
+            Cache.dirtyObjectives = true
+        end
+    end
     Events:On("QUEST_LOG_UPDATE",         dirtyDynamic)
     Events:On("QUEST_WATCH_LIST_CHANGED", dirtyDynamic)
 end

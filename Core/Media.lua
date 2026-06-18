@@ -158,21 +158,31 @@ function Media:GetFontFile(name)
     return STANDARD_TEXT_FONT
 end
 
--- Drop-shadow behind tracker text (Appearance "Text Shadow"). When enabled,
--- a coloured shadow at a fixed (2,-2) offset; when disabled, the shadow is
+-- Drop-shadow behind tracker text (Appearance "Text Shadow"). When enabled, a
+-- coloured shadow cast at a user-tunable offset (Appearance "Shadow Size",
+-- tracker.textShadowStrength, applied as (d, -d)); when disabled, the shadow is
 -- explicitly cleared (alpha 0 + zero offset) so a font template's inherited
--- shadow never lingers. The 2px offset is deliberate: the tracker font's
--- default OUTLINE draws a ~1px dark border that fully hides a 1px shadow, so
--- the shadow has to sit far enough out to read past the outline. Allocation-free.
-local function applyShadow(cfg, fontstring)
-    if cfg and cfg.textShadow then
-        local c = cfg.textShadowColor
-        fontstring:SetShadowColor(c and c.r or 0, c and c.g or 0, c and c.b or 0, c and c.a or 1)
-        fontstring:SetShadowOffset(2, -2)
+-- shadow never lingers. The offset defaults to 2: the tracker font's default
+-- OUTLINE draws a ~1px dark border that fully hides a 1px shadow, so the shadow
+-- has to sit far enough out to read past the outline — a larger value reads as
+-- a bigger / more pronounced shadow. Allocation-free.
+-- Shared low-level apply: enabled/color/strength come from whichever cfg block
+-- the caller owns (main tracker text, or the separate scenario banner). Cleared
+-- explicitly when disabled so an inherited template shadow can't linger.
+local function setShadow(fontstring, enabled, color, strength)
+    if enabled then
+        fontstring:SetShadowColor(color and color.r or 0, color and color.g or 0, color and color.b or 0, color and color.a or 1)
+        local d = strength or 2
+        fontstring:SetShadowOffset(d, -d)
     else
         fontstring:SetShadowColor(0, 0, 0, 0)
         fontstring:SetShadowOffset(0, 0)
     end
+end
+
+local function applyShadow(cfg, fontstring)
+    setShadow(fontstring, cfg and cfg.textShadow, cfg and cfg.textShadowColor,
+              cfg and cfg.textShadowStrength)
 end
 
 -- Apply the user's tracker font to a FontString. sizeDelta is added to the
@@ -212,4 +222,18 @@ function Media:ApplyTextShadow(fontstring)
     local DB = ns:GetSubsystem("DB")
     if not DB then return end
     applyShadow(DB.db.profile.tracker, fontstring)
+end
+
+-- Apply the SEPARATE scenario-banner shadow (Appearance "Scenario" group) to a
+-- FontString. Used for the scenario / delve banner's Stage + name lines, which
+-- are distinct chrome from the main tracker text, so they carry their own
+-- toggle/colour/size. Defaults (ON, 1px, black) preserve the banner's formerly
+-- hardcoded (1,-1) shadow. The scenario objective rows still use ApplyTextShadow.
+function Media:ApplyScenarioShadow(fontstring)
+    if not fontstring then return end
+    local DB = ns:GetSubsystem("DB")
+    if not DB then return end
+    local cfg = DB.db.profile.tracker
+    setShadow(fontstring, cfg and cfg.scenarioTextShadow, cfg and cfg.scenarioTextShadowColor,
+              (cfg and cfg.scenarioTextShadowStrength) or 1)
 end

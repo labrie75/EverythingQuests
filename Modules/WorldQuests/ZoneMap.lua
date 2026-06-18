@@ -12,6 +12,7 @@
 --   • Sorts by time-remaining ascending so urgent WQs surface first.
 
 local _, ns = ...
+local L = ns.L
 
 local Z = ns:RegisterSubsystem("WQZoneMap", {})
 
@@ -22,6 +23,12 @@ local ROW_H        = 32
 local ROW_GAP      = 2
 local ICON_SIZE    = 26
 local PIN_TEMPLATE = "EQWorldQuestPinTemplate"
+-- Cap the on-map list so a zone with many WQs (Legion zones carry ~25) scrolls
+-- inside a bounded panel instead of growing screen-tall. The scroll bar (and
+-- scrolling) only engage PAST this many rows — fewer than this sizes to fit
+-- with no bar at all.
+local MAX_VISIBLE_ROWS = 10
+local BAR_W            = 18   -- right inset reserved for the scroll bar
 
 Z.rowPool   = {}
 Z.activeRows = {}
@@ -168,6 +175,29 @@ function Z:Build()
     f.header:SetPoint("TOP", 0, -PAD)
     f.header:SetTextColor(1.0, 0.82, 0)
 
+    -- Rows live in a scroll child so a zone with many WQs caps at
+    -- MAX_VISIBLE_ROWS instead of growing a screen-tall panel.
+    -- UIPanelScrollFrameTemplate shows its bar ONLY when the content overflows
+    -- (scroll range > 0), so a short list has no bar and the panel sizes to fit
+    -- exactly. The right inset reserves room for the bar so it never covers the
+    -- row text; mouse-wheel is wired by hand (the template doesn't do it).
+    local scroll = CreateFrame("ScrollFrame", "EQZoneQuestListScroll", f, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT",  f, "TOPLEFT",   PAD,           -(HEADER_H + PAD))
+    scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(PAD + BAR_W), -(HEADER_H + PAD))
+    local list = CreateFrame("Frame", nil, scroll)
+    list:SetSize(PANEL_W - 2 * PAD - BAR_W, 1)
+    scroll:SetScrollChild(list)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(sf, delta)
+        local range = sf:GetVerticalScrollRange() or 0
+        if range <= 0 then return end
+        local new = (sf:GetVerticalScroll() or 0) - delta * (ROW_H + ROW_GAP)
+        if new < 0 then new = 0 elseif new > range then new = range end
+        sf:SetVerticalScroll(new)
+    end)
+    f.scroll = scroll
+    f.list   = list
+
     self.frame = f
 end
 
@@ -240,15 +270,16 @@ function Z:Refresh()
 
     releaseAll()
     self.frame:Show()
-    self.frame.header:SetFormattedText("%s — %d quest%s", mapInfo.name, #pins, #pins == 1 and "" or "s")
+    self.frame.header:SetText(L["%s — %d quests"]:format(mapInfo.name, #pins))
 
-    local y = HEADER_H + PAD
+    local list = self.frame.list
+    local y = 0
     for i = 1, #pins do
         local pin = pins[i]
-        local row = acquireRow(self.frame)
+        local row = acquireRow(list)
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT",  self.frame, "TOPLEFT",  PAD, -y)
-        row:SetPoint("TOPRIGHT", self.frame, "TOPRIGHT", -PAD, -y)
+        row:SetPoint("TOPLEFT",  list, "TOPLEFT",  0, -y)
+        row:SetPoint("TOPRIGHT", list, "TOPRIGHT", 0, -y)
         row.questID = pin.questID
 
         local Rewards = ns:GetSubsystem("WQRewards")
@@ -266,5 +297,14 @@ function Z:Refresh()
         y = y + ROW_H + ROW_GAP
     end
 
-    self.frame:SetHeight(y + PAD)
+    -- Content = all rows; the scroll frame caps at MAX_VISIBLE_ROWS so the panel
+    -- never grows past that. The template hides its bar when the content fits
+    -- (range 0) and shows it once it overflows: few WQs → no bar + exact-fit
+    -- panel, many WQs → capped + scrollable. Reset scroll to top each refresh so
+    -- a zone change doesn't leave it stranded mid-list.
+    list:SetHeight(math.max(1, y))
+    local scrollH = math.min(y, MAX_VISIBLE_ROWS * (ROW_H + ROW_GAP))
+    self.frame.scroll:SetHeight(math.max(1, scrollH))
+    self.frame.scroll:SetVerticalScroll(0)
+    self.frame:SetHeight(HEADER_H + PAD + scrollH + PAD)
 end

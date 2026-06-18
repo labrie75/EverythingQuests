@@ -21,6 +21,13 @@ local LINE_INDENT  = 14
 -- exploration or dungeon meta) can't flood the whole tracker.
 local MAX_CRITERIA = 12
 
+-- Bit in GetAchievementCriteriaInfo's `flags` (return #7) marking a PROGRESS-BAR
+-- criterion (Blizzard's EVALUATION_TREE_FLAG_PROGRESS_BAR). These criteria
+-- ("61/100"-style meters — the delve puzzle achievement, Brann/Buddy System
+-- tiers, etc.) carry their progress in quantity/reqQuantity but have an EMPTY
+-- criteriaString, so they need detecting separately from named-counter criteria.
+local PROGRESS_BAR_FLAG = 0x1
+
 A.headerPool    = {}
 A.linePool      = {}
 A.activeHeaders = {}
@@ -207,29 +214,48 @@ function A:Render(content, contentWidth, yStart, collapsed)
             local shownCrit = 0
             for c = 1, num do
                 if shownCrit >= MAX_CRITERIA then break end
-                local critString, _, critDone, quantity, reqQuantity =
+                local critString, _, critDone, quantity, reqQuantity, _, critFlags =
                     GetAchievementCriteriaInfo(id, c)
-                if critString and critString ~= "" and not (simplify and critDone) then
+                -- A PROGRESS-BAR criterion (the "61/100"-style meter behind the
+                -- delve puzzle achievement, Brann/Buddy System tiers, etc.) has an
+                -- EMPTY criteriaString but real quantity/reqQuantity, so the old
+                -- "critString ~= ''" gate dropped it — only simple named-counter
+                -- achievements ("Complete 500 delves") ever showed an X/Y. Detect
+                -- it via the engine flag and render its X/Y too.
+                local hasText      = critString and critString ~= ""
+                local isProgressBar = critFlags and bit.band(critFlags, PROGRESS_BAR_FLAG) ~= 0
+                local hasMeter      = reqQuantity and reqQuantity > 1
+                if (hasText or isProgressBar) and not (simplify and critDone) then
                     local line
                     if critDone then
-                        line = "|TInterface\\RaidFrame\\ReadyCheck-Ready:0|t |cff" .. doneHex
-                               .. critString .. "|r"
-                    elseif reqQuantity and reqQuantity > 1 then
-                        -- Measured criterion: colorize the "X/Y" prefix the
-                        -- same way the Quests/World Quests sections do.
-                        line = "- " .. colorizeProgress(quantity .. "/" .. reqQuantity
-                               .. " " .. critString)
-                    else
+                        -- Completed: checkmark + the criterion name, or the
+                        -- "X/Y" for a (now full) progress bar with no name.
+                        local critLabel = (hasText and critString)
+                                       or (hasMeter and (quantity .. "/" .. reqQuantity))
+                        if critLabel then
+                            line = "|TInterface\\RaidFrame\\ReadyCheck-Ready:0|t |cff"
+                                   .. doneHex .. critLabel .. "|r"
+                        end
+                    elseif hasMeter then
+                        -- Measured / progress-bar criterion: colorize the "X/Y"
+                        -- prefix like the Quests/World Quests sections. Append the
+                        -- criterion name when it has one (progress bars don't, so
+                        -- they read as a clean "X/Y").
+                        local suffix = hasText and (" " .. critString) or ""
+                        line = "- " .. colorizeProgress(quantity .. "/" .. reqQuantity .. suffix)
+                    elseif hasText then
                         line = "|cff999999- " .. critString .. "|r"
                     end
-                    local lr = acquireLine(content)
-                    lr:SetWidth(contentWidth)
-                    lr:ClearAllPoints()
-                    lr:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
-                    lr.text:SetText(line)
-                    if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(lr.text, -2) end
-                    shownCrit = shownCrit + 1
-                    y = y + LINE_H + ROW_GAP
+                    if line then
+                        local lr = acquireLine(content)
+                        lr:SetWidth(contentWidth)
+                        lr:ClearAllPoints()
+                        lr:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+                        lr.text:SetText(line)
+                        if Media and Media.ApplyTrackerFont then Media:ApplyTrackerFont(lr.text, -2) end
+                        shownCrit = shownCrit + 1
+                        y = y + LINE_H + ROW_GAP
+                    end
                 end
             end
         end

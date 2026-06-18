@@ -402,16 +402,33 @@ function CG:OnEnable()
 end
 
 -- ─── Navigation ────────────────────────────────────────────────────────
+-- Options is a same-strata (DIALOG) panel of similar size; only one of the two
+-- should be visible or their text overlaps. Options:Show already hides this
+-- guide when it opens; mirror it here so opening the guide (toolbar book icon,
+-- keybind, or nav) hides Options too — the close is now bidirectional.
+local function hideOptions()
+    local O = ns:GetSubsystem("Options")
+    if O and O.frame and O.frame:IsShown() then O.frame:Hide() end
+end
+
 function CG:Toggle()
     self:Build()
     self:ApplySettings()
-    if self.frame:IsShown() then self.frame:Hide() else self.frame:Show() end
+    if self.frame:IsShown() then
+        self.frame:Hide()
+    else
+        hideOptions()
+        self.frame:Show()
+    end
 end
 
 function CG:Open()
     self:Build()
     self:ApplySettings()
-    if not self.frame:IsShown() then self.frame:Show() end
+    if not self.frame:IsShown() then
+        hideOptions()
+        self.frame:Show()
+    end
 end
 
 -- Collapse / expand the navigation rail. Collapsed = the graph fills the whole

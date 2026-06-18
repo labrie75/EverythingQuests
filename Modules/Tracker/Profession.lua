@@ -49,7 +49,11 @@ local function buildHeader(parent)
                 end)
                 root:CreateButton("Untrack Recipe", function()
                     if C_TradeSkillUI.SetRecipeTracked then
-                        C_TradeSkillUI.SetRecipeTracked(recipeID, false, isRecraft)
+                        -- arg #3 (isRecraft) is a REQUIRED boolean — the API
+                        -- raises "bad argument #3" on nil, which is exactly
+                        -- what isRecraft is for a normal (non-recraft) tracked
+                        -- recipe. Coerce to a real boolean.
+                        C_TradeSkillUI.SetRecipeTracked(recipeID, false, isRecraft and true or false)
                     end
                 end)
             end)
@@ -122,7 +126,11 @@ local function getTrackedRecipes()
                 end
                 if rid and not seen[rid] then
                     seen[rid] = true
-                    results[#results + 1] = { recipeID = rid, isRecraft = isRecraft }
+                    -- Normalize isRecraft to a real boolean here: GetRecipesTracked
+                    -- leaves it nil for normal recipes, and the C_TradeSkillUI APIs
+                    -- that consume it (SetRecipeTracked / GetRecipeSchematic) reject
+                    -- nil for that argument.
+                    results[#results + 1] = { recipeID = rid, isRecraft = isRecraft and true or false }
                 end
             end
         end

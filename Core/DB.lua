@@ -78,6 +78,21 @@ DB.defaults = {
             -- user-set, black default. Cleared (alpha 0) when the toggle is off.
             textShadow      = false,
             textShadowColor = { r = 0, g = 0, b = 0, a = 1 },
+            -- How far the drop-shadow is cast (Appearance "Shadow Size"): the
+            -- px offset applied as (d, -d). Higher = a larger/more pronounced
+            -- shadow. 2 is the value the offset was hardcoded to before it
+            -- became tunable, so existing users see no change.
+            textShadowStrength = 2,
+            -- SEPARATE drop-shadow for the scenario / delve BANNER text (the
+            -- Stage + name lines that mimic Blizzard's native scenario header).
+            -- Independent of the main tracker text shadow above — the banner is
+            -- distinct chrome, so it gets its own Appearance "Scenario" controls.
+            -- Defaults preserve the banner's previously hardcoded (1,-1) black
+            -- shadow: ON, 1px, black. (Scenario objective rows still follow the
+            -- main tracker text shadow.)
+            scenarioTextShadow      = true,
+            scenarioTextShadowColor = { r = 0, g = 0, b = 0, a = 1 },
+            scenarioTextShadowStrength = 1,
             colorByDifficulty = true,
             showItemButtons = true,                                              -- clickable usable-item button beside quests that have one
             showOptionsIcon    = true,                                           -- cogwheel launcher at the tracker's top-right (opens Options)

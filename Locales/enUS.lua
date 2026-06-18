@@ -209,8 +209,13 @@ L["Mono Outline"] = true
 L["Mono Thick"] = true
 L["Font Outline"] = true
 L["Text Shadow"] = true
-L["Draws a soft drop-shadow behind all tracker text so it stays readable over bright or busy backgrounds. Use Shadow Color to tint and set its strength (alpha)."] = true
+L["Draws a soft drop-shadow behind all tracker text so it stays readable over bright or busy backgrounds. Use Shadow Color to tint it and Shadow Size to set how far it's cast."] = true
 L["Shadow Color"] = true
+L["Shadow Size"] = true
+L["How far the text drop-shadow is cast behind the letters. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while Text Shadow is on."] = true
+L["Scenario"] = true
+L["Draws a drop-shadow behind the scenario / delve banner text (the Stage and name lines). This is SEPARATE from the Text Shadow above, which affects only the quest and objective text — the banner is styled on its own."] = true
+L["How far the scenario banner's drop-shadow is cast. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while the Scenario Text Shadow above is on."] = true
 L["Background"] = true
 L["Background Color"] = true
 L["Border"] = true
@@ -477,6 +482,9 @@ L["Reset position"] = true
 L["Open Options"] = true
 L["Got it"] = true
 L["(This message shows once and won't appear again.)"] = true
+
+-- ─── Modules/WorldQuests/ZoneMap.lua ───
+L["%s — %d quests"] = true
 
 -- ─── Options/TabAbout.lua ───
 L["Open or close the options window"] = true
