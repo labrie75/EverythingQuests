@@ -12,16 +12,16 @@ local L = ns.L
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
 -- ─── Edit these two values together when drafting a new release popup ─
--- 1.21.0: Chain Guide overhaul Phase 3 (map integration) — the overhaul is now
--- COMPLETE (all three phases shipped). Track a chain to pin it on the world map
--- with an auto-advancing waypoint. Plus the new patch 12.0.7 "Revelations" chains,
--- a batch of tracker/achievement features suggested by tanglies, a wider world-
--- boss group-finder button, and polish. Messaging shifts from "overhaul underway"
--- to "overhaul finished — please report bugs." Bumping the version re-shows the
--- popup once to everyone. Bump this constant + rewrite POPUP_BODY for the next
--- release and a fresh popup shows once more. Reopen anytime with /eqs whatsnew.
-local FEATURE_POPUP_VERSION = "1.21.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.21.0"
+-- 1.21.1: Hotfix on top of the 1.21.0 overhaul-complete popup. The 1.21.0
+-- "Group up for world bosses" change accidentally put the group-finder eye on
+-- EVERY world quest; this release corrects it so the eye appears only on world
+-- bosses / group quests (matching Blizzard's own tracker). Same body as 1.21.0
+-- with that one entry swapped for the fix, so anyone who missed 1.21.0 still
+-- sees the overhaul recap. Bumping the version re-shows the popup once to
+-- everyone. Bump this constant + rewrite POPUP_BODY for the next release and a
+-- fresh popup shows once more. Reopen anytime with /eqs whatsnew.
+local FEATURE_POPUP_VERSION = "1.21.1"
+local POPUP_TITLE           = "What's New in Everything Quests v1.21.1"
 
 local POPUP_BODY = [[
 |cffEBB706The Chain Guide overhaul is complete|r
@@ -44,8 +44,8 @@ A batch of great suggestions from |cfffffffftanglies|r:
 |cffffffff-|r A |cffffffffsimplify mode|r for tracked achievements — show only what's left
 |cffffffff-|r |cffffffffRight-click|r a tracked achievement to untrack it; |cffffffffleft-click|r to open it in the Achievement panel
 
-|cffEBB706Group up for world bosses|r
-The group-finder button now appears on |cffffffffevery group-listable world boss|r in the tracker — one click opens the Premade Group Finder filtered to that fight.
+|cffEBB706Fix: group-finder eye on every world quest|r
+The last update accidentally put the group-finder eye on |cffffffffevery|r world quest. It now shows only on |cffffffffworld bosses and group quests|r — the ones you'd actually want a group for — the same way Blizzard's own tracker does. Thanks to everyone who reported it.
 
 |cffEBB706Polish & fixes|r
 |cffffffff-|r The Chain Guide's resize grip (bottom-right corner) is bigger and far easier to grab

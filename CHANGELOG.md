@@ -5,6 +5,14 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.1] - 2026-06-17
+
+**Hotfix.** A change in v1.21.0 ("Group up for world bosses") accidentally put the group-finder eye on **every** world quest. This release corrects it so the eye appears only on the world bosses and group quests you'd actually want a group for — matching Blizzard's own tracker. Thanks to everyone who reported it.
+
+### Bug Fixes
+
+- **Group-finder eye no longer shows on every world quest** — v1.21.0 gated the eye on `C_LFGList.GetActivityIDForQuestID`, which returns an activity for ordinary world quests too, so the eye appeared on all of them. The tracker now uses the same signal Blizzard's own objective tracker uses — `C_LFGList.CanCreateQuestGroup` (via the cached `QuestUtil.CanCreateQuestGroup` wrapper) — so the eye shows only on world bosses / elite / dungeon / raid world quests. This also restores the eye on world bosses that the earlier `isElite`-only check used to miss.
+
 ## [1.21.0] - 2026-06-17
 
 **The Chain Guide overhaul is complete.** This release ships **Phase 3 — map integration**, the final phase of the three-part rebuild: track a chain and its quests appear as pins on your world map with a waypoint that advances itself as you go. It also adds the new patch 12.0.7 **"Revelations"** chains, a batch of tracker and achievement features suggested by **tanglies**, a wider world-boss group-finder button, and a round of polish. Huge thanks for sticking with the overhaul while it came together — it's finished now, so things will settle down. If anything looks off, please report it on Discord or in the CurseForge comments.

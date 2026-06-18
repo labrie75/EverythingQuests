@@ -11,6 +11,14 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.21.1", date = "2026-06-17",
+        sections = {
+            { head = "Bug Fixes", items = {
+                "Fixed the group-finder eye appearing on every world quest (a v1.21.0 regression); it now shows only on world bosses and group quests, matching Blizzard's own tracker.",
+            } },
+        },
+    },
+    {
         version = "1.21.0", date = "2026-06-17",
         sections = {
             { head = "New Features", items = {

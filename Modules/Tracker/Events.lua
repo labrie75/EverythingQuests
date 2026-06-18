@@ -64,10 +64,11 @@ local function buildHeader(parent)
     r.title:SetWordWrap(false)
     r.title:SetTextColor(1.0, 0.82, 0.0)
 
-    -- Hidden by default. V:Render shows this only for ELITE world quests
-    -- (Rare Elite / World Boss style) that are also group-listable — not
-    -- every WQ with an LFG activity, since Blizzard exposes premade groups
-    -- for many ordinary world quests too.
+    -- Hidden by default. V:Render shows this only for group-listable world
+    -- quests (world boss / elite / dungeon / raid), matching Blizzard's own
+    -- objective-tracker eye via C_LFGList.CanCreateQuestGroup — not every WQ
+    -- with an LFG activity, since Blizzard exposes premade groups for many
+    -- ordinary world quests too.
     r.groupFinder = CreateFrame("Button", nil, r)
     r.groupFinder:SetSize(16, 16)
     r.groupFinder:SetPoint("RIGHT", r, "RIGHT", -4, 0)
@@ -471,18 +472,27 @@ function V:Render(content, contentWidth, yStart, collapsed)
         row.title:ClearAllPoints()
         row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)
 
-        -- Group-listable world quests (world bosses, dungeon / raid / group WQs)
-        -- keep the group-finder eye on the right. C_LFGList only returns an
-        -- activity ID for quests that genuinely have a premade-group activity, so
-        -- the activity itself is the right signal. Previously this ALSO required
-        -- tagInfo.isElite, which hid the eye on bosses Blizzard doesn't flag as
-        -- elite (Raid/Group-tagged bosses, or ones with isElite nil) — the "not
-        -- all world bosses show the icon" report. The eye's click opens + pre-
-        -- filters Blizzard's Premade Group Finder (LFGListUtil_FindQuestGroup);
-        -- it never auto-joins, so showing it more widely is purely additive.
-        local hasLFG = C_LFGList and C_LFGList.GetActivityIDForQuestID
-                       and C_LFGList.GetActivityIDForQuestID(qid) and true or false
-        if hasLFG then
+        -- Group-listable world quests (world bosses, elite, dungeon / raid WQs)
+        -- keep the group-finder eye on the right. The authoritative signal is
+        -- C_LFGList.CanCreateQuestGroup(qid): it is the EXACT condition Blizzard's
+        -- own objective tracker uses to show its green "find a group" eye (the
+        -- QuestUtil.CanCreateQuestGroup wrapper caches that engine call per quest).
+        -- v1.21.0 mistakenly gated on C_LFGList.GetActivityIDForQuestID, which
+        -- returns an activity ID for ORDINARY world quests too, so the eye showed
+        -- up on every WQ. CanCreateQuestGroup returns false for those and true for
+        -- the bosses/elites/group WQs Blizzard itself offers premade groups for —
+        -- so it both fixes the "eye on everything" regression and catches the world
+        -- bosses the old isElite-only gate missed (e.g. WorldBoss-typed quests with
+        -- isElite nil). The eye's click opens Blizzard's Premade Group Finder via
+        -- LFGListUtil_FindQuestGroup. Prefer the cached QuestUtil wrapper, fall back
+        -- to the raw API, and if neither exists hide the eye (never show on all).
+        local canGroup
+        if QuestUtil and QuestUtil.CanCreateQuestGroup then
+            canGroup = QuestUtil.CanCreateQuestGroup(qid)
+        elseif C_LFGList and C_LFGList.CanCreateQuestGroup then
+            canGroup = C_LFGList.CanCreateQuestGroup(qid)
+        end
+        if canGroup then
             row.groupFinder:Show()
             row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
         else
