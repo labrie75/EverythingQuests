@@ -5,6 +5,19 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.1] - 2026-06-18
+
+Localization update — the Russian and French translations are now fully up to date with the latest features. Thanks to Malevi4 (Russian) and Zox (French) for the continued translation work.
+
+### Translations
+
+- **Russian (ruRU)** — Updated by Malevi4; all current strings are translated.
+- **French (frFR)** — Updated by Zox (batch 5); all current strings are translated.
+
+### Other
+
+- Some code cleanup.
+
 ## [1.22.0] - 2026-06-18
 
 A round of fixes plus Appearance and World-Quest improvements after the Chain Guide overhaul. Your regular quests no longer occasionally fail to load on login, untracking a profession recipe no longer errors, progress-bar achievements show their count, and the Options and Chain Guide windows can't overlap. The text shadow gains a size slider and a separate scenario-banner shadow, and the world map's world-quest list now scrolls instead of filling the screen. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

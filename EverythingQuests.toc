@@ -2,7 +2,7 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.22.0
+## Version: 1.22.1
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache, EverythingQuestsHistory, EverythingQuestsHistoryBackups
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
@@ -10,7 +10,7 @@
 ## X-Curse-Project-ID: 1544648
 ## X-Wago-ID:
 
-# ─── Libraries ─────────────────────────────────────────────────────────
+# Libraries
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 Libs\AceDB-3.0\AceDB-3.0.xml
@@ -21,10 +21,10 @@ Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Libs\LibMapPinHandler\LibMapPinHandler.lua
 
-# ─── Core (defines RegisterSubsystem; must load before any module) ─────
+# Core (defines RegisterSubsystem; must load before any module)
 Core\Init.lua
 
-# ─── Locales (define ns.L before any consumer; enUS first to create the table) ─
+# Locales (define ns.L before any consumer; enUS first to create the table)
 Locales\enUS.lua
 Locales\frFR.lua
 Locales\ruRU.lua
@@ -40,7 +40,7 @@ Core\TooltipScan.lua
 Core\QuestRewards.lua
 Core\Changelog.lua
 
-# ─── Modules (subsystems must exist before Data/* registers into them) ─
+# Modules (subsystems must exist before Data/* registers into them)
 Modules\Minimap\Minimap.lua
 
 Modules\Tracker\Frame.lua
@@ -98,7 +98,7 @@ Modules\History\Recorder.lua
 Modules\History\Frame.lua
 Modules\History\Session.lua
 
-# ─── Data (registers chain definitions into ChainGuideDatabase) ────────
+# Data (registers chain definitions into ChainGuideDatabase)
 Data\RewardIcons.lua
 Data\QuestChains\_Index.lua
 Data\QuestChains\_QuestLineRouting.lua
@@ -116,7 +116,7 @@ Data\QuestChains\Harandar.lua
 Data\QuestChains\Voidstorm.lua
 Data\QuestChains\Arator.lua
 
-# ─── Options (Frame.lua must load before Tab*.lua) ─────────────────────
+# Options (Frame.lua must load before Tab*.lua)
 Options\Frame.lua
 Options\TabGeneral.lua
 Options\TabTracker.lua
@@ -126,5 +126,5 @@ Options\TabAppearance.lua
 Options\TabHistory.lua
 Options\TabAbout.lua
 
-# ─── User-facing one-shot notifications ────────────────────────────────
+# User-facing one-shot notifications
 Modules\WhatsNew.lua

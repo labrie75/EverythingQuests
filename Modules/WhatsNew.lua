@@ -1,26 +1,8 @@
--- Modules/WhatsNew.lua
--- One-time "What's New" popup shown to every player on first login after a
--- major release. The popup is account-wide (single dismiss covers every
--- character) and version-gated against FEATURE_POPUP_VERSION — bump that
--- constant + rewrite POPUP_BODY for the next big release and a fresh
--- popup will show one more time. Patch releases that keep the same
--- FEATURE_POPUP_VERSION stay silent.
-
 local _, ns = ...
 local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
--- ─── Edit these two values together when drafting a new release popup ─
--- 1.22.0: A bug-fix + polish release after the Chain Guide overhaul (1.19-1.21).
--- Fixes cold-login quests not loading until /reload, a profession-untrack error,
--- progress-bar achievements not showing their count, and the Options/Chain-Guide
--- window overlap; adds a Shadow Size slider + a separate Scenario banner shadow,
--- and makes the world-map world-quest list scroll instead of filling the screen.
--- The popup points anyone who skipped a version at the About tab's changelog.
--- Bumping the version re-shows the popup once to everyone. Bump this constant +
--- rewrite POPUP_BODY for the next release and a fresh popup shows once more.
--- Reopen anytime with /eqs whatsnew.
 local FEATURE_POPUP_VERSION = "1.22.0"
 local POPUP_TITLE           = "What's New in Everything Quests v1.22.0"
 
@@ -51,10 +33,9 @@ If anything looks off, let me know on |cffffffffDiscord|r (button below) or in t
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]
--- ──────────────────────────────────────────────────────────────────────
 
-local YELLOW     = ns.Util.color.buttonYellow   -- #EBB706
-local HEADER_RED = ns.Util.color.brandRed        -- #6D0501 (was drifted to {0.42,0.02,0.02})
+local YELLOW     = ns.Util.color.buttonYellow
+local HEADER_RED = ns.Util.color.brandRed
 local MUTED      = ns.Util.color.muted
 
 local function alreadySeen()
@@ -98,7 +79,6 @@ function WN:Build()
     f.title:SetText(POPUP_TITLE)
     f.title:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
 
-    -- Body in a ScrollFrame so a future longer release note still fits.
     local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT",     14, -44)
     scroll:SetPoint("BOTTOMRIGHT", -34, 50)
@@ -116,9 +96,6 @@ function WN:Build()
     f.body:SetText(POPUP_BODY)
     body:SetHeight(f.body:GetStringHeight() + 12)
 
-    -- Buttons: "Open Quest History" + "Got it". Either button dismisses the
-    -- popup AND marks it seen, so the user can't accidentally leave the
-    -- "seen" state unset by closing through one of the two affordances.
     local function dismiss()
         markSeen()
         f:Hide()
@@ -152,10 +129,6 @@ function WN:Build()
     f.gotBtn.text:SetTextColor(1, 1, 1)
     f.gotBtn:SetScript("OnClick", dismiss)
 
-    -- "Join our Discord!" between the two buttons — same look as the Options
-    -- title-bar link (logo chip + yellow text). Does NOT dismiss/mark-seen,
-    -- so the user can copy the invite and keep reading. Opens the same
-    -- copyable invite popup (ns:ShowDiscord).
     f.discordBtn = CreateFrame("Button", nil, f, "BackdropTemplate")
     f.discordBtn:SetHeight(28)
     f.discordBtn:SetPoint("BOTTOM", 0, 12)
@@ -173,14 +146,10 @@ function WN:Build()
     f.discordBtn:SetWidth(10 + 16 + 6 + f.discordBtn.text:GetStringWidth() + 12)
     f.discordBtn:SetScript("OnClick", function() ns:ShowDiscord() end)
 
-    -- Standard X close in the corner. Same dismiss path (marks seen too)
-    -- so the user can't bypass the one-shot flag by clicking the X.
     f.close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     f.close:SetPoint("TOPRIGHT", -4, -4)
     f.close:SetScript("OnClick", dismiss)
 
-    -- Subtle hint that this popup is one-shot, so the user isn't worried
-    -- it'll start nagging on every login.
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     f.hint:SetPoint("BOTTOM", 0, 44)
     f.hint:SetText(L["(This message shows once and won't appear again.)"])
@@ -197,10 +166,8 @@ end
 
 function WN:OnEnable()
     if alreadySeen() then return end
-    -- Small delay so the popup doesn't appear in the middle of WoW's
-    -- noisy login sequence (addon-loaded toasts, etc.).
     C_Timer.After(2, function()
-        if alreadySeen() then return end                                     -- defensive against race with another login event
+        if alreadySeen() then return end
         self:Show()
     end)
 end

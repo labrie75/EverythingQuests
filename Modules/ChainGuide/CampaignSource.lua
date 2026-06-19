@@ -1,46 +1,14 @@
--- Modules/ChainGuide/CampaignSource.lua
--- Sources the "Midnight Campaign" category live from Blizzard's campaign API
--- (C_CampaignInfo) instead of a hand-maintained questline list.
---
--- Why this exists: the rest of the Chain Guide is questline-based, but
--- Blizzard's campaign is a cross-zone construct that does NOT line up with
--- any single questline category — a campaign quest's questline is filed
--- under its zone (e.g. "Whispers in the Twilight" → Eversong Woods), so a
--- questline-routed "Campaign" category can never reflect the real campaign.
---
--- C_CampaignInfo.GetChapterIDs returns the campaign's chapters in story
--- order. Verified in-game on Midnight (12.0): campaign 270 "Midnight" has
--- 17 chapters, and each chapter ID doubles as a questline ID — every
--- chapter's C_QuestLine.GetQuestLineQuests(chapterID) returned its quest
--- list. So we register each chapter as a chain with questlineID = chapterID
--- and the existing pipeline (QuestLineSource:EnsureChainItems →
--- C_QuestLine.GetQuestLineQuests, Characters:ChainProgress) populates and
--- scores it with no special-casing.
---
--- Chains carry `_campaignOrder` (1..N) so Frame.lua renders the chapter
--- spine in story order instead of alphabetically.
 
 local _, ns = ...
 local L = ns.L
 
 local CS = ns:RegisterSubsystem("ChainGuideCampaignSource", {})
 
--- Disjoint from QuestLineSource's 5000000 offset (and from hand-authored
--- low IDs) so a questline that is BOTH a campaign chapter and zone content
--- (e.g. 5719 "Whispers in the Twilight" → Eversong Woods zone chain AND
--- Campaign chapter 2) gets two independent chain entries keyed by distinct
--- chainIDs instead of one silently clobbering the other in Database.chains.
 local CAMPAIGN_CHAIN_OFFSET = 6000000
-
--- Overview-map chain IDs live in their own disjoint range (7,000,000+) so a
--- "Campaign Map" chain can never collide with a chapter chain (6,000,000 +
--- chapterID) — chapter/questline IDs are well under 1,000,000.
 local CAMPAIGN_MAP_OFFSET = 7000000
 
-CS._discovered = {}        -- [categoryID] = true (one successful pass)
+CS._discovered = {}
 
--- Drop everything we sourced so a global rediscover (QuestLineSource:Reset)
--- also refreshes the campaign spine.
 function CS:Reset()
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     if Database then
@@ -52,12 +20,6 @@ function CS:Reset()
     self._chapterSet = nil
 end
 
--- True if `qlID` is a chapter of ANY registered campaign category. Used by
--- QuestLineSource to keep a campaign-chapter questline out of its zone
--- category — it lives solely under its campaign (the authoritative,
--- story-ordered spine), instead of being listed twice. Set is built once
--- (lazily, memoized) from every category def that carries a campaignID,
--- so it's correct regardless of which category the user opens first.
 function CS:IsChapterQuestline(qlID)
     if self._chapterSet == nil then
         local set = false
@@ -80,12 +42,6 @@ function CS:IsChapterQuestline(qlID)
     return (self._chapterSet and self._chapterSet[qlID]) or false
 end
 
--- Resolve the campaign ID for a category. Primary: the static `campaignID`
--- on the category def (Data/QuestChains/_Index.lua) — a stable WoW-global
--- ID, the same convention as the hardcoded questline IDs already littering
--- the data files. Fallback: the player's active campaign, found by scanning
--- the quest log for the first quest C_CampaignInfo flags as a campaign
--- quest (keeps working if Blizzard ever renumbers the campaign).
 local function resolveCampaignID(cat)
     if cat and cat.campaignID then return cat.campaignID end
     if not (C_CampaignInfo and C_CampaignInfo.GetCampaignID
@@ -105,9 +61,6 @@ local function resolveCampaignID(cat)
     return nil
 end
 
--- Register every chapter of the category's campaign as a chain, in the
--- order C_CampaignInfo returns them. No-op after the first successful pass
--- for a category (guarded by _discovered, like QuestLineSource).
 function CS:EnsureCampaignChains(catID)
     if self._discovered[catID] then return end
     if not (C_CampaignInfo and C_CampaignInfo.GetChapterIDs) then return end
@@ -141,9 +94,6 @@ function CS:EnsureCampaignChains(catID)
                 _campaignOrder   = i,
             })
         end
-        -- One overview node per chapter, in story order. type=="chain" makes it
-        -- a navigation node that opens the chapter's quest chain when clicked
-        -- (ChainView renders it with the chapter's name + live progress).
         mapItems[i] = {
             type        = "chain",
             id          = chainID,
@@ -153,11 +103,6 @@ function CS:EnsureCampaignChains(catID)
         }
     end
 
-    -- Campaign overview "map": a single chain whose nodes ARE the chapters,
-    -- laid out as a pannable story spine you can drill into. Sorts first in the
-    -- category (_campaignOrder 0). The chapter spine is verifiable story order
-    -- from C_CampaignInfo.GetChapterIDs — no guessing about branch structure;
-    -- any genuinely-parallel chapters can be re-laid via the overlay format.
     local mapChainID = CAMPAIGN_MAP_OFFSET + campaignID
     if not Database.chains[mapChainID] then
         Database:RegisterChain(mapChainID, {

@@ -1,11 +1,3 @@
--- Options/Frame.lua
--- Custom options window matching the "Everything…" addon-suite style:
---   - Black background ~75% opacity
---   - Red (#6D0501) active tab fill, white tab text
---   - Yellow (#EBB706) buttons / stat values
---   - Red section headers
--- Tabs are registered by Options/Tab*.lua files via Options:AddTab(id, label, builder).
-
 local _, ns = ...
 local L = ns.L
 
@@ -13,11 +5,11 @@ local Options = ns:RegisterSubsystem("Options", {})
 Options.tabs = {}
 Options.tabOrder = {}
 
-local TAB_BG_ACTIVE   = ns.Util.color.tabActive    -- #6D0501
+local TAB_BG_ACTIVE   = ns.Util.color.tabActive
 local TAB_BG_INACTIVE = ns.Util.color.tabInactive
 local FRAME_BG        = ns.Util.color.optionsBg
-local HEADER_RED      = ns.Util.color.headerRed    -- #6D0501
-local YELLOW          = ns.Util.color.buttonYellow -- #EBB706
+local HEADER_RED      = ns.Util.color.headerRed
+local YELLOW          = ns.Util.color.buttonYellow
 local TAB_HEIGHT      = 28
 local TAB_PADDING_X   = 18
 
@@ -35,16 +27,6 @@ end
 function Options:Build()
     if self.frame then return end
     local f = CreateFrame("Frame", "EQOptionsFrame", UIParent, "BackdropTemplate")
-    -- 1020 wide (was 900): the right "Options" column starts at header+460 and
-    -- several checkbox hint strings ("…/ completed quests)", "…after accepting)")
-    -- ran off the right edge at 900. Labels are left-aligned, so the extra room
-    -- just reads as normal ragged-right whitespace. Everything is anchored to
-    -- the left, the top-right, or both sides, so only right-side room is added.
-    -- 810 tall (was 800, 740, 650): the Appearance tab is the tallest and isn't
-    -- scrolled, so the window itself carries the height. The binding column is
-    -- now the RIGHT one (Colors & Dimensions + Zone Bar Appearance + the
-    -- relocated Tracker Skins group). Still fits a 1080p screen (centred → ~135px
-    -- of vertical margin).
     f:SetSize(1020, 810)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
@@ -55,40 +37,29 @@ function Options:Build()
     f:SetScript("OnDragStop",  f.StopMovingOrSizing)
     f:Hide()
 
-    -- Flat near-black fill + thin 1px red (#6D0501) border, matching the
-    -- Everything-suite frame style (see EverythingDelves UI/MainFrame.lua).
     f:SetBackdrop({
         bgFile   = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
     f:SetBackdropColor(unpack(FRAME_BG))
-    f:SetBackdropBorderColor(0.635, 0.000, 0.039, 1.0)   -- #a2000a
+    f:SetBackdropBorderColor(0.635, 0.000, 0.039, 1.0)
 
-    -- Title
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("TOP", 0, -14)
     f.title:SetText("Everything Quests")
     f.title:SetTextColor(unpack(HEADER_RED))
-    f.title:SetFont(f.title:GetFont(), 25, "OUTLINE")   -- match sibling addon titles
+    f.title:SetFont(f.title:GetFont(), 25, "OUTLINE")
 
-    -- Version label
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.22.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.22.1"))
     f.version:SetTextColor(unpack(YELLOW))
 
-    -- Discord link, top-left — mirrors the version label on the right and
-    -- flanks the centered title so it reads as a deliberate call-out. A small
-    -- Discord-blurple chip (#5865F2) sits before the text as a brand accent.
-    -- Click pops a copyable invite (ns:ShowDiscord) — WoW can't open a browser.
     f.discord = CreateFrame("Button", nil, f)
     f.discord.icon = f.discord:CreateTexture(nil, "OVERLAY")
     f.discord.icon:SetSize(16, 16)
     f.discord.icon:SetPoint("LEFT", 0, 0)
-    -- Official Discord symbol (white, 64x64 TGA with alpha) at
-    -- Media\Textures\discord.tga. If the file is ever missing, WoW draws a
-    -- placeholder square — replace the asset, don't recolor the logo.
     f.discord.icon:SetTexture("Interface\\AddOns\\EverythingQuests\\Media\\Textures\\discord.tga")
     f.discord.text = f.discord:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.discord.text:SetPoint("LEFT", f.discord.icon, "RIGHT", 5, 0)
@@ -109,7 +80,6 @@ function Options:Build()
         GameTooltip:Hide()
     end)
 
-    -- Close button (X) — yellow text in a small dark square (matches screenshot)
     local close = CreateFrame("Button", nil, f)
     close:SetSize(20, 20)
     close:SetPoint("TOPRIGHT", -8, -10)
@@ -122,7 +92,6 @@ function Options:Build()
     closeText:SetTextColor(1, 1, 1, 1)
     close:SetScript("OnClick", function() f:Hide() end)
 
-    -- Tab strip
     f.tabStrip = CreateFrame("Frame", nil, f)
     f.tabStrip:SetPoint("TOPLEFT", 12, -44)
     f.tabStrip:SetPoint("TOPRIGHT", -12, -44)
@@ -140,7 +109,6 @@ end
 function Options:RebuildTabs()
     local f = self.frame
     if not f then return end
-    -- Hide existing
     for _, b in pairs(f.tabButtons) do b:Hide() end
 
     local x = 0
@@ -165,8 +133,6 @@ function Options:RebuildTabs()
         styleTabButton(btn, false)
         btn:Show()
     end
-    -- Restore last-active tab, falling back to the first tab if the saved
-    -- one no longer exists (e.g. a tab was removed in an update).
     local DB = ns:GetSubsystem("DB")
     local saved = DB and DB.char.lastOptionsTab
     local active = (saved and self.tabs[saved]) and saved or self.tabOrder[1]
@@ -179,7 +145,6 @@ function Options:SelectTab(id)
     for tabId, btn in pairs(f.tabButtons) do
         styleTabButton(btn, tabId == id)
     end
-    -- Clear content
     if self.activeContent then self.activeContent:Hide() end
     local tab = self.tabs[id]
     if tab and tab.builder then
@@ -197,10 +162,6 @@ end
 
 function Options:Toggle()
     self:Build()
-    -- Route the show path through Options:Show (not a bare frame:Show) so it
-    -- also closes the Chain Guide — the two are same-strata DIALOG windows of
-    -- similar size and overlap if both are visible. The cog-icon launcher calls
-    -- Toggle, so without this opening Options over an open guide left both up.
     if self.frame:IsShown() then self.frame:Hide() else self:Show() end
 end
 
@@ -208,20 +169,10 @@ function Options:Show()
     self:Build()
     self.frame:Show()
     self.frame:Raise()
-    -- The Chain Guide is a same-strata (DIALOG) window of similar size; if it is
-    -- open it overlaps this panel and its rail text bleeds over the options (the
-    -- guide's own "Options" button routes through here too). Only one of the two
-    -- should be visible, so close the guide when the options open.
     local CG = ns:GetSubsystem("ChainGuide")
     if CG and CG.frame and CG.frame:IsShown() then CG.frame:Hide() end
 end
 
--- Register a small proxy panel in Blizzard's Options > AddOns list. Our real
--- options live in the standalone EQOptionsFrame window, so this entry just
--- carries the name/version and a button that opens it (the modern Settings
--- canvas can't host our fixed-size, draggable window cleanly). Without this
--- the addon simply doesn't appear in that list. Settings.* exists on all
--- supported clients; the guard keeps us safe if Blizzard ever renames it.
 function Options:RegisterBlizzardCategory()
     if self._blizzCategory then return end
     if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then
@@ -251,8 +202,6 @@ function Options:RegisterBlizzardCategory()
     btn:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -18)
     btn:SetText(L["Open Everything Quests Options"])
     btn:SetScript("OnClick", function()
-        -- Get out of the Settings window first so our DIALOG-strata window
-        -- isn't stacked behind it.
         if SettingsPanel and SettingsPanel.IsShown and SettingsPanel:IsShown() then
             HideUIPanel(SettingsPanel)
         end
@@ -268,7 +217,6 @@ function Options:OnEnable()
     self:RegisterBlizzardCategory()
 end
 
--- Helper exposed to TabXxx files for consistent header style.
 function Options:CreateSectionHeader(parent, text)
     local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     fs:SetTextColor(unpack(HEADER_RED))
@@ -276,7 +224,6 @@ function Options:CreateSectionHeader(parent, text)
     return fs
 end
 
--- Helper for yellow-text buttons matching the screenshot.
 function Options:CreateYellowButton(parent, label, onClick)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
     b:SetSize(160, 28)
@@ -292,27 +239,15 @@ function Options:CreateYellowButton(parent, label, onClick)
     return b
 end
 
--- Strip WoW colour/escape sequences so a label carrying inline |cff..|r markup
--- can be reused verbatim as a plain tooltip title.
 local function stripEscapes(s)
     if not s then return "" end
     return (s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
--- Attach a hover tooltip (bold title + wrapped grey body) to a control. This is
--- how the old standalone grey "explanation" FontStrings were de-cluttered off
--- the panel and onto the option itself. We HOOK (not overwrite) OnEnter/OnLeave
--- so any existing scripts survive, and EnableMouse on container widgets
--- (sliders/dropdowns/colour pickers) that otherwise have no hit area.
---   • Checkboxes: the hit rect is stretched across the label so the whole row
---     is a hover (and click) target, not just the 22px box.
---   • Section headers are FontStrings (no mouse) — we overlay an invisible
---     mouse frame matching their text bounds and hover that instead.
 function Options:AttachTooltip(frame, title, body)
     if not frame or (not title and not body) then return end
     title = (title and title ~= "") and stripEscapes(title) or nil
 
-    -- Headers (and any bare FontString) can't take mouse scripts; wrap them.
     if frame.GetObjectType and frame:GetObjectType() == "FontString" then
         local overlay = CreateFrame("Frame", nil, frame:GetParent())
         overlay:SetAllPoints(frame)
@@ -330,8 +265,7 @@ function Options:AttachTooltip(frame, title, body)
         if t.EnableMouse then t:EnableMouse(true) end
         t:HookScript("OnEnter", function(s)
             GameTooltip:SetOwner(s, "ANCHOR_RIGHT")
-            -- GameTooltip:SetText(text, r, g, b, alpha, wrap) — the 5th arg is
-            -- ALPHA (a number), so pass 1 here, not the wrap flag (which is 6th).
+            -- GameTooltip:SetText arg 5 is alpha, not wrap (wrap is 6th); pass 1 here or the title goes invisible.
             if title then GameTooltip:SetText(title, YELLOW[1], YELLOW[2], YELLOW[3], 1, true) end
             if body and body ~= "" then GameTooltip:AddLine(body, 0.82, 0.82, 0.82, true) end
             GameTooltip:Show()
@@ -340,13 +274,6 @@ function Options:AttachTooltip(frame, title, body)
     end
 end
 
--- White-text checkbox using Blizzard's UICheckButtonTemplate. The template
--- already provides the box artwork; we layer our own label so it matches the
--- rest of the options panel (white text, GameFontNormal). `getter`/`setter`
--- callbacks read/write the underlying setting; setter is called immediately
--- on click, so any side-effect (Tracker:Refresh, etc.) lives there. An optional
--- `tooltip` body string moves the old grey explanation onto a hover tooltip
--- (the label itself becomes the tooltip title).
 function Options:CreateCheckbox(parent, label, getter, setter, tooltip)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetSize(22, 22)
@@ -365,14 +292,6 @@ function Options:CreateCheckbox(parent, label, getter, setter, tooltip)
     return cb
 end
 
--- Horizontal radio group: a row of buttons where the active option is filled
--- with EQ red (#6D0501) + white text, and inactive options are dark with
--- yellow (#EBB706) text. Picks up the suite brand language without needing
--- Blizzard's heavier UIDropDownMenu plumbing.
---
--- options: array of { value=string|number, label=string }
--- Setter is called on each click; visual state updates locally so callers
--- don't have to re-render the group.
 function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWidth, pad)
     local container = CreateFrame("Frame", nil, parent)
 
@@ -389,23 +308,16 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
         for _, b in ipairs(buttons) do
             local isActive = (b.value == active)
             if isActive then
-                b.bg:SetColorTexture(0.635, 0.0, 0.039, 1)       -- EQ red #a2000a
+                b.bg:SetColorTexture(0.635, 0.0, 0.039, 1)
                 b.txt:SetTextColor(1, 1, 1, 1)
             else
                 b.bg:SetColorTexture(0.10, 0.10, 0.10, 0.9)
-                b.txt:SetTextColor(0.92, 0.72, 0.02, 1)          -- yellow
+                b.txt:SetTextColor(0.92, 0.72, 0.02, 1)
             end
         end
     end
 
-    -- Lay buttons left-to-right. When maxWidth is given, wrap to a new row
-    -- once the next button would overflow it — keeps a long option list (e.g.
-    -- the tracker's 7 sort modes) from spilling into the adjacent column.
     local BTN_H, ROW_GAP, BTN_GAP = 24, 4, 4
-    -- Horizontal text padding per button. Default 18; callers with a tight,
-    -- many-option row (the tracker's 7 sort modes) can pass a smaller value so
-    -- the row fits one line at wider stock fonts instead of orphaning the last
-    -- button onto a second row.
     local PAD = pad or 18
     local rowAnchor  = labelFS or container
     local rowOffsetY = labelFS and -4 or 0
@@ -420,7 +332,7 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
         txt:SetText(opt.label)
         local w = math.max(40, txt:GetStringWidth() + PAD)
         btn:SetWidth(w)
-        if maxWidth and x > 0 and (x + w) > maxWidth then   -- wrap to next row
+        if maxWidth and x > 0 and (x + w) > maxWidth then
             x, y = 0, y + BTN_H + ROW_GAP
         end
         btn:SetPoint("TOPLEFT", rowAnchor, labelFS and "BOTTOMLEFT" or "TOPLEFT", x, rowOffsetY - y)
@@ -435,24 +347,10 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
     end
 
     paint(getter and getter())
-    -- Keep the original single-row height (50); add one row's worth per wrap so
-    -- anything anchored to the container's BOTTOMLEFT clears the last row.
     container:SetSize(maxWidth or maxX, 50 + y)
     return container
 end
 
--- Dropdown: a button labeled with the current selection that opens a menu
--- of choices via MenuUtil.CreateContextMenu. options is an array of
--- { value=any, label=string }; getter returns the current value, setter is
--- called when the user picks a new value.
--- `options` may be either a static table { {value, label, ...}, ... } or a
--- function returning one. The function form is re-evaluated each time the
--- menu opens so callers like the profile picker can show newly created
--- entries without rebuilding the whole dropdown widget.
---
--- An optional `onItemRender(button, opt)` callback runs after each menu
--- entry is created — used by the font dropdown to render each font's name
--- in its own typeface so the user can preview before picking.
 function Options:CreateDropdown(parent, label, options, getter, setter, onTest, onItemRender)
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(220, 44)
@@ -530,14 +428,6 @@ function Options:CreateDropdown(parent, label, options, getter, setter, onTest, 
     return container
 end
 
--- Font-picking dropdown with per-entry preview. Each menu row renders its
--- label in the font that row would select, so the user sees what they're
--- choosing before they commit.
---
--- Built as a fully custom popup (not MenuUtil) because MenuUtil's entry
--- widget shape varies between WoW builds and reliably re-applying a
--- per-row font through it has been brittle. Owning the rows directly is
--- ~80 lines and just works.
 function Options:CreateFontDropdown(parent, label, options, getter, setter)
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(220, 44)
@@ -565,8 +455,6 @@ function Options:CreateFontDropdown(parent, label, options, getter, setter)
     btn.arrow:SetText("v")
     btn.arrow:SetTextColor(unpack(YELLOW))
 
-    -- Popup: scrollable list of font rows, parented to UIParent so it can
-    -- float above the Options window without clipping inside the tab.
     local ROW_H, MAX_VISIBLE = 22, 10
     local popup = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     popup:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -644,8 +532,6 @@ function Options:CreateFontDropdown(parent, label, options, getter, setter)
         rebuildRows()
     end)
 
-    -- Click-outside closes the popup. Hooked via a global on UIParent so
-    -- we don't have to track which other frames the user might click.
     popup:SetScript("OnShow", function(self)
         self._closer = self._closer or CreateFrame("Button", nil, UIParent)
         self._closer:SetAllPoints(UIParent)
@@ -664,8 +550,6 @@ function Options:CreateFontDropdown(parent, label, options, getter, setter)
     return container
 end
 
--- Slider: integer or float slider with a value label. min/max/step define the
--- range; getter/setter read and write the value.
 function Options:CreateSlider(parent, label, min, max, step, getter, setter)
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(220, 44)
@@ -679,9 +563,6 @@ function Options:CreateSlider(parent, label, min, max, step, getter, setter)
     valueFS:SetPoint("TOPRIGHT")
     valueFS:SetTextColor(unpack(YELLOW))
 
-    -- Pick a printf format that matches the step's precision. Without this
-    -- the slider would render 0.95 as "0.94999998807907" because of binary
-    -- float artifacts.
     local function chooseFormat(s)
         if not s or s >= 1 then return "%d" end
         local decimals = math.max(1, math.ceil(-math.log10(s)))
@@ -715,8 +596,6 @@ function Options:CreateSlider(parent, label, min, max, step, getter, setter)
     return container
 end
 
--- Color picker: a label + swatch button. Click opens Blizzard's ColorPickerFrame.
--- getter/setter exchange { r, g, b, a } tables (a optional, defaults to 1).
 function Options:CreateColorPicker(parent, label, getter, setter)
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(220, 22)
@@ -731,11 +610,11 @@ function Options:CreateColorPicker(parent, label, getter, setter)
     btn:SetPoint("LEFT", labelFS, "RIGHT", 8, 0)
     local border = btn:CreateTexture(nil, "BACKGROUND")
     border:SetAllPoints()
-    border:SetColorTexture(0.92, 0.72, 0.02, 1)         -- yellow #EBB706
+    border:SetColorTexture(0.92, 0.72, 0.02, 1)
     local underlay = btn:CreateTexture(nil, "BORDER")
     underlay:SetPoint("TOPLEFT", 2, -2)
     underlay:SetPoint("BOTTOMRIGHT", -2, 2)
-    underlay:SetColorTexture(0, 0, 0, 1)                 -- opaque black so transparent picks read black, not yellow
+    underlay:SetColorTexture(0, 0, 0, 1)
     local swatch = btn:CreateTexture(nil, "ARTWORK")
     swatch:SetPoint("TOPLEFT", 2, -2)
     swatch:SetPoint("BOTTOMRIGHT", -2, 2)
@@ -748,13 +627,9 @@ function Options:CreateColorPicker(parent, label, getter, setter)
 
     btn:SetScript("OnClick", function()
         local c = getter and getter() or { r = 1, g = 1, b = 1, a = 1 }
-        -- Immutable snapshot of the color as it was when the picker opened.
-        -- Cancel restores from THIS, not from the `prev` arg Blizzard hands
-        -- cancelFunc: the 10.2.5 ColorPickerFrame overhaul changed the shape
-        -- of that argument (and whether it even carries alpha), so reading
-        -- prev.a was unreliable and Cancel dropped the alpha back to opaque.
-        -- A self-captured snapshot is version-proof and always has all four
-        -- channels.
+        -- Snapshot on open: cancelFunc's `prev` arg changed shape in the 10.2.5
+        -- ColorPickerFrame overhaul (alpha unreliable), so we restore from this
+        -- captured copy instead.
         local orig = { r = c.r or 0, g = c.g or 0, b = c.b or 0, a = c.a or 1 }
         local function applyColor(restore)
             local r, g, b, a
@@ -762,10 +637,7 @@ function Options:CreateColorPicker(parent, label, getter, setter)
                 r, g, b, a = restore.r, restore.g, restore.b, restore.a
             elseif ColorPickerFrame and ColorPickerFrame.GetColorRGB then
                 r, g, b = ColorPickerFrame:GetColorRGB()
-                -- Modern ColorPickerFrame (10.0+) exposes alpha directly via
-                -- GetColorAlpha (1 = opaque). OpacitySliderFrame was removed
-                -- in 10.0 — without this the alpha read was always 1, so the
-                -- fade slider never took effect live.
+                -- GetColorAlpha added in 10.0; OpacitySliderFrame removed at the same time.
                 if ColorPickerFrame.GetColorAlpha then
                     a = ColorPickerFrame:GetColorAlpha()
                 elseif OpacitySliderFrame then
@@ -796,9 +668,6 @@ function Options:CreateColorPicker(parent, label, getter, setter)
     return container
 end
 
--- Slash handler. Options:Toggle() is pcall-guarded so a failure surfaces a
--- one-line error in chat instead of silently doing nothing; success is
--- silent (the window appearing is the feedback).
 local function eqSlashHandler(msg)
     msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     if msg == "chain" then
@@ -813,14 +682,10 @@ local function eqSlashHandler(msg)
         if Sess and Sess.Print then Sess:Print() end
         return
     elseif msg == "whatsnew" or msg == "changes" then
-        -- Re-open the "What's New" popup on demand (it otherwise auto-shows
-        -- once per major release). Always shows, regardless of the one-shot
-        -- seen flag, since the user explicitly asked for it.
         local WN = ns:GetSubsystem("WhatsNew")
         if WN and WN.Show then WN:Show() end
         return
     elseif msg == "about" then
-        -- Open Options straight to the About tab.
         Options:Show()
         Options:SelectTab("about")
         return
@@ -845,12 +710,6 @@ local function eqSlashHandler(msg)
         Options:DumpDirections()
         return
     elseif msg == "questzone" then
-        -- /eqs questzone — diagnose how each quest's ZONE resolves, to fix the
-        -- "new zone quests not grouped by zone" report WITHOUT guessing an API.
-        -- Mirrors Core/Cache.lua's walk: q.zone currently = the running quest-log
-        -- HEADER title only (no geographic resolver). This prints, per quest, the
-        -- header it sits under plus what each candidate map API returns, so we can
-        -- pick a VERIFIED resolver for non-geographic / headerless Midnight quests.
         if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo) then
             print("|cffEBB706EQ QuestZone|r: quest log API unavailable.")
             return
@@ -883,11 +742,6 @@ local function eqSlashHandler(msg)
         end
         return
     elseif msg == "chaindump" then
-        -- /eqs chaindump — print the currently-open Chain Guide chain's
-        -- chainID/questlineID + every node (index, type, id, x/y, name) from the
-        -- player's OWN client, so an authored graph overlay can be built from
-        -- verified IDs (no guessing). For the Campaign Map each node id is a
-        -- chapter chainID; for a quest chain each id is a quest ID.
         local DBm = ns:GetSubsystem("ChainGuideDatabase")
         local H   = ns:GetSubsystem("ChainGuideHistory")
         local state   = H and H.Current and H:Current()
@@ -918,12 +772,6 @@ local function eqSlashHandler(msg)
         end
         return
     elseif msg == "campdump" then
-        -- /eqs campdump — print every registered campaign's chapter spine straight
-        -- from the player's client. On 12.0 a chapter ID *is* its questline ID, so
-        -- this is the authoritative chapter→questline mapping for authoring/verifying
-        -- campaign overlays (no guessing). Also lists each chapter's live quest IDs.
-        -- Questline data loads async, so a chapter may report 0 quests on the first
-        -- run (the query primes it) — re-run /eqs campdump and it fills in.
         local DBm = ns:GetSubsystem("ChainGuideDatabase")
         if not (C_CampaignInfo and C_CampaignInfo.GetChapterIDs
                 and C_QuestLine and C_QuestLine.GetQuestLineQuests) then
@@ -960,10 +808,6 @@ local function eqSlashHandler(msg)
         end
         return
     elseif msg:match("^zonedump") then
-        -- /eqs zonedump <zone> — print the live quest list for every routed
-        -- questline in a zone category (the zone counterpart of /eqs campdump),
-        -- so zone overlays can be authored/verified against real IDs. Re-run if a
-        -- questline reports 0 quests (questline data loads async on first touch).
         local hint = msg:match("^zonedump%s+(.+)$")
         local DBm  = ns:GetSubsystem("ChainGuideDatabase")
         if not (hint and DBm and ns.QUESTLINE_ROUTING
@@ -971,7 +815,6 @@ local function eqSlashHandler(msg)
             print("|cffEBB706EQ ZoneDump|r: usage |cffffffff/eqs zonedump <zone>|r (eversong, zulaman, harandar, voidstorm, arator)")
             return
         end
-        -- Match punctuation/space-insensitively so "zulaman" finds "Zul'Aman".
         local lower = hint:lower():gsub("[^%w]", "")
         local catID, catName
         for id, cat in pairs(DBm.categories) do
@@ -1006,9 +849,6 @@ local function eqSlashHandler(msg)
         end
         return
     elseif msg:match("^zonebar") then
-        -- /eqs zonebar [debug] — report what the Zone Progress bar resolved the
-        -- current zone to; "debug" also toggles a chat hint that names any zone
-        -- with no routing entry (so a new zone can be added to the table).
         local ZP = ns:GetSubsystem("TrackerZoneProgress")
         if msg:match("debug") then
             ns.zoneBarDebug = not ns.zoneBarDebug
@@ -1017,8 +857,6 @@ local function eqSlashHandler(msg)
         if ZP and ZP.PrintStatus then ZP:PrintStatus() end
         return
     elseif msg == "skindebug" then
-        -- Dump the tracker scroll bar's widget shape so the scroll-bar skin can
-        -- be targeted to whatever Blizzard ships on this client.
         local T = ns:GetSubsystem("Tracker")
         local f = T and T.frame
         local sf = f and f.scroll
@@ -1034,7 +872,6 @@ local function eqSlashHandler(msg)
             tostring(bar.ScrollDownButton), tostring(bar.Forward)))
         return
     elseif msg:match("^profile") then
-        -- /eqs profile [show|reset|mem on|mem off]
         local rest = msg:match("^profile%s*(.*)$") or ""
         local Profiler = ns:GetSubsystem("Profiler")
         if not Profiler then return end
@@ -1082,22 +919,12 @@ local function eqSlashHandler(msg)
     end
 end
 
--- Slash commands. The short alias is "/eqs", NOT "/eq": IsSecureCmd("/EQ")
--- is true because "/eq" is Blizzard's built-in *secure* shorthand for
--- "/equip" (equip an item by name). WoW's chat parser dispatches secure
--- commands before it ever consults SlashCmdList, so a "/eq" handler is
--- unreachable, and overriding Blizzard's secure command would break
--- equipping items and risk taint. "/eqs" and the full "/everythingquests"
--- are not secure, so both route here through the normal slash path.
+-- "/eq" is Blizzard's secure /equip; WoW dispatches it before SlashCmdList so
+-- a "/eq" handler is unreachable and risks taint. Use "/eqs" only.
 SLASH_EVERYTHINGQUESTS1 = "/eqs"
 SLASH_EVERYTHINGQUESTS2 = "/everythingquests"
 SlashCmdList["EVERYTHINGQUESTS"] = eqSlashHandler
 
--- /eqs scenario — print everything Blizzard tells us about the current
--- scenario/dungeon/raid. When the Tracker labels something as the
--- generic "Scenario", running this from inside the instance gives us
--- the scenarioType / textureKit / instanceType combo needed to add a
--- proper label in Modules/Tracker/Scenario.lua's categoryLabel().
 function Options:DumpScenarioInfo()
     local function line(label, value) print(("|cffEBB706EQ Scenario|r %s: %s"):format(label, tostring(value))) end
 
@@ -1116,9 +943,6 @@ function Options:DumpScenarioInfo()
         line("stepName", stepName or "(nil)")
     end
 
-    -- C_ScenarioInfo.GetScenarioInfo() returns a struct; its .name is a
-    -- separate candidate for the specific instance/delve name and sometimes
-    -- differs from C_Scenario.GetInfo's first return.
     if C_ScenarioInfo and C_ScenarioInfo.GetScenarioInfo then
         local si = C_ScenarioInfo.GetScenarioInfo()
         line("GetScenarioInfo.name", (si and si.name) or "(nil)")
@@ -1131,9 +955,6 @@ function Options:DumpScenarioInfo()
         line("difficulty",     tostring(diffName) .. " (id " .. tostring(diffID) .. ")")
     end
 
-    -- Which field would Step 2's resolveName() pick as the two-tier name
-    -- line? Hypothesis order: instance name -> GetScenarioInfo.name ->
-    -- scenarioName. This line lets us confirm the choice live before wiring it.
     do
         local instName = GetInstanceInfo and select(1, GetInstanceInfo()) or nil
         local si = C_ScenarioInfo and C_ScenarioInfo.GetScenarioInfo and C_ScenarioInfo.GetScenarioInfo()
@@ -1151,19 +972,13 @@ function Options:DumpScenarioInfo()
     end
 end
 
--- /eqs questobj — for every watched quest, dumps what the objective APIs
--- return. The point is the empty case: some quests render with no sub-text
--- because C_QuestLog.GetQuestObjectives() is an empty table (e.g. "go talk to
--- X" quests). This surfaces the candidate fallback sources so we can see what
--- Blizzard/ElvUI show in their place (the user reports ElvUI shows "Quest
--- Discovered") and wire the matching text without guessing.
 function Options:DumpQuestObjectives()
     local function p(s) print("|cffEBB706EQ QuestObj|r " .. s) end
     if not C_QuestLog then p("C_QuestLog unavailable"); return end
 
     local num     = (C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetNumQuestLogEntries()) or 0
     local savedID = C_QuestLog.GetSelectedQuest and C_QuestLog.GetSelectedQuest()
-    local getText = _G.GetQuestLogQuestText   -- selection-based global; guarded
+    local getText = _G.GetQuestLogQuestText
     local shown   = 0
 
     for i = 1, num do
@@ -1183,7 +998,6 @@ function Options:DumpQuestObjectives()
                         j, tostring(o.type), tostring(o.finished), tostring(o.text)))
                 end
                 if #objs == 0 then
-                    -- Candidate fallback sources for the empty case.
                     local compText = C_QuestLog.GetQuestLogCompletionText
                                      and C_QuestLog.GetQuestLogCompletionText(id)
                     p(("    completionText=%q"):format(tostring(compText)))
@@ -1198,19 +1012,12 @@ function Options:DumpQuestObjectives()
         end
     end
 
-    -- Restore the player's selected quest (we mutated it to read objectivesText).
     if savedID and savedID ~= 0 and C_QuestLog.SetSelectedQuest then
         C_QuestLog.SetSelectedQuest(savedID)
     end
     if shown == 0 then p("no watched quests found") end
 end
 
--- /eqs dir — diagnoses "Get Directions". Prints every coordinate source the
--- Chain Guide waypoint resolver consults for the super-tracked (or first
--- watched) quest, each as map + normalized coords + straight-line yards from
--- the player, then the source Resolve() actually picks. Tells us at a glance
--- whether the waypoint lands wrong because the quest isn't seen as active, a
--- stale harvested giver coord is winning, or GetNextWaypoint itself points far.
 function Options:DumpDirections()
     local function p(s) print("|cffEBB706EQ Dir|r " .. s) end
     if not C_Map then p("C_Map unavailable"); return end
@@ -1224,8 +1031,6 @@ function Options:DumpDirections()
         pCont, pWorld = C_Map.GetWorldPosFromMapPos(pMap, pPos)
     end
 
-    -- Straight-line yards from the player to a (mapID, x, y); nil when the
-    -- target is on a different continent or world pos is unavailable.
     local function yards(mapID, x, y)
         if not (pWorld and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return nil end
         local c, w = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(x, y))
@@ -1247,7 +1052,6 @@ function Options:DumpDirections()
             d and ("  |cff88ff88%.0f yds|r"):format(d) or "  |cff888888(off-continent)|r"))
     end
 
-    -- Diagnose the super-tracked quest first, else the first watched quest.
     local questID = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
                     and C_SuperTrack.GetSuperTrackedQuestID()
     if (not questID or questID == 0) and C_QuestLog and C_QuestLog.GetQuestIDForQuestWatchIndex
@@ -1282,16 +1086,14 @@ function Options:DumpDirections()
     local ce = DB and DB.chainCache and DB.chainCache.questCoords and DB.chainCache.questCoords[questID]
     line("harvested cache", ce and ce.m, ce and ce.x, ce and ce.y)
 
-    -- Turn-in probes. When GetNextWaypoint is empty (a complete quest) these
-    -- are the candidate sources for a hand-in coordinate we could feed TomTom.
     local complete = C_QuestLog and C_QuestLog.IsComplete and C_QuestLog.IsComplete(questID)
     local ready    = C_QuestLog and C_QuestLog.ReadyForTurnIn and C_QuestLog.ReadyForTurnIn(questID)
     p(("  state:               complete=%s readyForTurnIn=%s"):format(tostring(complete), tostring(ready)))
 
-    local poiFn = _G["QuestPOIGetIconInfo"]   -- legacy global; string index so the
-    if poiFn then                             -- linter doesn't flag a maybe-absent field
+    local poiFn = _G["QuestPOIGetIconInfo"]
+    if poiFn then
         local _, px, py = poiFn(questID)
-        line("QuestPOIGetIconInfo", px and pMap, px, py)   -- posX/posY are on the current map
+        line("QuestPOIGetIconInfo", px and pMap, px, py)
     else
         p("  QuestPOIGetIconInfo  |cff888888(API absent)|r")
     end
@@ -1316,16 +1118,9 @@ function Options:DumpDirections()
     end
 end
 
--- /eqs autopopup — confirms the auto-quest-popup API surface ("Quest
--- Discovered!" / "Quest Complete!" boxes) before we build the tracker module
--- for it. Midnight relocates engine globals into C_ namespaces, so this checks
--- which functions actually exist in this client and what GetAutoQuestPopUp
--- returns (questID + popUpType) so the module is built on the real surface.
 function Options:DumpAutoQuestPopups()
     local function p(s) print("|cffEBB706EQ AutoPopup|r " .. s) end
 
-    -- Function-surface probe: print which candidate APIs exist. _G lookups so
-    -- a missing/renamed global is reported, not a Lua error.
     local function has(name) return _G[name] and "yes" or "no" end
     p(("API: GetNumAutoQuestPopUps=%s GetAutoQuestPopUp=%s RemoveAutoQuestPopUp=%s"):format(
         has("GetNumAutoQuestPopUps"), has("GetAutoQuestPopUp"), has("RemoveAutoQuestPopUp")))
@@ -1358,9 +1153,6 @@ function Options:DumpAutoQuestPopups()
     end
 end
 
--- /eqs wqdebug — surfaces every data source the World Quests tracker
--- section consults, so we can tell which API a missing quest *is* in
--- (and route the new bug fix at it).
 function Options:DumpWorldQuestSources()
     local function info(line) print("|cffEBB706EQ WQ:|r " .. line) end
     local function quest(qid, suffix)
@@ -1376,7 +1168,6 @@ function Options:DumpWorldQuestSources()
     local mapInfo = mapID and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
     info(("player map: %s (id %s)"):format(mapInfo and mapInfo.name or "?", tostring(mapID)))
 
-    -- 1. World-quest watch list (manual + Blizzard auto-watches).
     if C_QuestLog and C_QuestLog.GetNumWorldQuestWatches then
         local n = C_QuestLog.GetNumWorldQuestWatches() or 0
         info(("GetNumWorldQuestWatches: %d"):format(n))
@@ -1386,7 +1177,6 @@ function Options:DumpWorldQuestSources()
         end
     end
 
-    -- 2. WatchPersist's combined view (db + runtime).
     local Watch = ns:GetSubsystem("WQWatchPersist")
     if Watch and Watch.GetTrackedQuests then
         local list = Watch:GetTrackedQuests() or {}
@@ -1394,10 +1184,6 @@ function Options:DumpWorldQuestSources()
         for _, qid in ipairs(list) do print(quest(qid)) end
     end
 
-    -- 3. C_TaskQuest map query for current + parent maps. The function was
-    -- renamed from GetQuestsForPlayerByMapID → GetQuestsOnMap; try the new
-    -- name first and fall back. The field on the returned struct switched
-    -- from questId to questID at the same time, so accept either.
     local taskFn = C_TaskQuest and (C_TaskQuest.GetQuestsOnMap or C_TaskQuest.GetQuestsForPlayerByMapID)
     info(("TaskQuest API: %s"):format(
         (C_TaskQuest and C_TaskQuest.GetQuestsOnMap and "GetQuestsOnMap")
@@ -1414,11 +1200,6 @@ function Options:DumpWorldQuestSources()
                 local qid = q and (q.questId or q.questID)
                 if qid then
                     print(quest(qid, q.inProgress and "  |cff44ff44(inProgress)|r" or "  |cff666666(idle)|r"))
-                    -- For inProgress quests, surface what GetQuestObjectives
-                    -- actually returns right now. An empty list means the
-                    -- quest's data hasn't loaded yet — the tracker won't be
-                    -- able to show objectives until QUEST_DATA_LOAD_RESULT
-                    -- fires and we re-render.
                     if q.inProgress and C_QuestLog and C_QuestLog.GetQuestObjectives then
                         local objs = C_QuestLog.GetQuestObjectives(qid) or {}
                         if #objs == 0 then
@@ -1439,7 +1220,6 @@ function Options:DumpWorldQuestSources()
         end
     end
 
-    -- 4. Player quest log: task / bounty / world-quest flagged entries.
     if C_QuestLog and C_QuestLog.GetNumQuestLogEntries then
         local n = C_QuestLog.GetNumQuestLogEntries() or 0
         info(("QuestLog entries: %d"):format(n))
@@ -1465,7 +1245,6 @@ function Options:DumpWorldQuestSources()
         end
     end
 
-    -- 5. Threat / on-map quests via dedicated helpers.
     if C_QuestLog and C_QuestLog.GetActiveThreatMaps then
         local maps = C_QuestLog.GetActiveThreatMaps() or {}
         info(("GetActiveThreatMaps: %d"):format(#maps))

@@ -1,27 +1,3 @@
--- Modules/Nameplates/QuestIcons.lua
--- Quest icons on NPC nameplates: a "!" (skull for kill objectives, a chat
--- bubble for talk-to objectives, the quest's item icon for use-item ones)
--- plus the REMAINING count or percent. Lets you see quest objectives out in
--- the 3D world instead of guessing which mob counts.
---
--- This mirrors ElvUI's nameplate quest icons but is built independently. It
--- defaults OFF when ElvUI is loaded (ElvUI shows its own, so we'd double up);
--- otherwise ON. Toggle on the General options tab.
---
--- DETECTION (two-source join, the model ElvUI uses):
---   1. activeQuests cache — rebuilt from C_QuestLog on quest-log changes.
---      Objectives are keyed by their DISPLAY TEXT -> { value, type, isPercent,
---      itemTexture }. value is REMAINING (numRequired - numFulfilled), or
---      (100 - progress) for progressbar/area objectives. Finished objectives
---      are skipped so completed steps show nothing.
---   2. Per-unit tooltip scan via C_TooltipInfo.GetUnit — walk the lines by
---      Enum.TooltipDataLineType (QuestPlayer / QuestTitle / QuestObjective) to
---      learn which of MY quests/objectives this specific NPC belongs to, then
---      look the objective text up in the cache. The objective text is the join
---      key (identical between the tooltip and C_QuestLog on retail).
--- The tooltip scan result is cached per unit GUID, so we only re-scan when a
--- new mob appears on a plate or the quest log changes — never per frame.
-
 local _, ns = ...
 
 local QI = ns:RegisterSubsystem("NameplateQuestIcons", {})
@@ -29,8 +5,7 @@ local QI = ns:RegisterSubsystem("NameplateQuestIcons", {})
 local ICON_SIZE = 24
 local SPACING   = 3
 
--- Tooltip line-type enum (numeric fallback from a live /eqs autopopup-style
--- probe of ElvUI: 17 = QuestTitle, 8 = QuestObjective, 18 = QuestPlayer).
+-- Numeric fallbacks: 17 = QuestTitle, 8 = QuestObjective, 18 = QuestPlayer (probed from live client).
 local LT = Enum and Enum.TooltipDataLineType
 local QUEST_TITLE     = (LT and LT.QuestTitle)     or 17
 local QUEST_OBJECTIVE = (LT and LT.QuestObjective) or 8
@@ -44,8 +19,6 @@ local function ok(v)
     return true
 end
 
--- enUS objective-verb classification (icon choice only; the COUNT never
--- depends on this). Other locales fall through to the generic "!".
 local KILL_WORDS = { "slain", "slay", "kill", "defeat", "destroy", "eliminat", "wound" }
 local CHAT_WORDS = { "speak", "talk" }
 local function objType(text, hasItem)
@@ -62,8 +35,6 @@ local function elvUILoaded()
     return (f and f("ElvUI")) and true or false
 end
 
--- ── Quest objective cache ─────────────────────────────────────────────
--- [questTitle] = { [objectiveText] = { value, type, isPercent, itemTexture } }
 local activeQuests = {}
 
 local function rebuildCache()
@@ -79,7 +50,7 @@ local function rebuildCache()
             if objectives then
                 local itemTexture
                 if GetQuestLogSpecialItemInfo then
-                    local _, tex = GetQuestLogSpecialItemInfo(i)   -- index-based; tex = icon
+                    local _, tex = GetQuestLogSpecialItemInfo(i)
                     itemTexture = tex
                 end
                 local objMap
@@ -113,9 +84,6 @@ local function rebuildCache()
     end
 end
 
--- ── Per-unit tooltip scan ─────────────────────────────────────────────
--- Fills `out` (reused per plate, no per-scan allocation) with references to
--- the cache entries this unit matches. Returns the count.
 local function scanInto(unit, out)
     wipe(out)
     if not (C_TooltipInfo and C_TooltipInfo.GetUnit) then return 0 end
@@ -147,7 +115,6 @@ local function scanInto(unit, out)
     return count
 end
 
--- ── Icon frame per nameplate ──────────────────────────────────────────
 local TEX = {
     DEFAULT = { atlas = "SmallQuestBang" },
     KILL    = { tex   = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull" },
@@ -162,7 +129,6 @@ local function buildSlot(frame)
     ic.text = frame:CreateFontString(nil, "OVERLAY")
     ic.text:SetFont(STANDARD_TEXT_FONT, 13, "OUTLINE")
     ic.text:SetTextColor(1, 0.94, 0.6)
-    -- Anchored just to the right of the icon, vertically centered, in render().
     ic.text:SetPoint("LEFT", ic, "RIGHT", 2, 0)
     ic.text:Hide()
     return ic
@@ -174,8 +140,6 @@ local function getIconFrame(plate)
     f = CreateFrame("Frame", nil, plate)
     f:SetFrameStrata("HIGH")
     f:SetSize(ICON_SIZE, ICON_SIZE)
-    -- Just to the right of the nameplate, vertically centered on it. The count
-    -- then sits just to the right of the icon (see render).
     f:SetPoint("LEFT", plate, "RIGHT", 4, 0)
     f.slots = { buildSlot(f), buildSlot(f), buildSlot(f), buildSlot(f) }
     plate.EQQuestIcons = f
@@ -199,14 +163,12 @@ local function render(plate, list, count)
     end
     if not count or count == 0 then f:Hide(); return end
 
-    -- Lay icons out left -> right starting at the plate's right edge; each
-    -- icon's count sits just to its right, and the next icon clears it.
     local x, shown = 0, 0
     for i = 1, count do
         local q = list[i]
         if q and (q.isPercent or (q.value and q.value > 0)) then
             local ic = f.slots[shown + 1]
-            if not ic then break end          -- cap at the pre-built slot count
+            if not ic then break end
             shown = shown + 1
 
             local def = TEX[q.type] or TEX.DEFAULT
@@ -226,8 +188,6 @@ local function render(plate, list, count)
             ic:Show()
 
             local advance = ICON_SIZE
-            -- Count shown only when >1 (or a percent); never on chat (talk)
-            -- objectives. Matches Blizzard/ElvUI so single-kill mobs don't read "1".
             if q.type ~= "CHAT" and (q.isPercent or (q.value and q.value > 1)) then
                 ic.text:SetText(q.isPercent and (q.value .. "%") or q.value)
                 ic.text:Show()
@@ -245,8 +205,7 @@ local function render(plate, list, count)
     end
 end
 
--- ── Update flow ───────────────────────────────────────────────────────
-local activePlates = {}   -- [unitToken] = true (visible nameplates)
+local activePlates = {}
 
 local function updatePlate(unit, event)
     if not (QI.enabled and unit) then return end
@@ -261,14 +220,14 @@ local function updatePlate(unit, event)
     f.list = f.list or {}
     local count
     if f.guid ~= guid then
-        f.guid = guid                       -- new mob on this plate → scan
+        f.guid = guid
         count = scanInto(unit, f.list)
         f.count = count
     elseif event == "QUEST_LOG_UPDATE" then
-        count = scanInto(unit, f.list)       -- progress may have changed → re-scan
+        count = scanInto(unit, f.list)
         f.count = count
     else
-        count = f.count                      -- same mob, cosmetic event → reuse
+        count = f.count
     end
     render(plate, f.list, count)
 end
@@ -277,14 +236,11 @@ local function refreshAllPlates(event)
     for unit in pairs(activePlates) do updatePlate(unit, event) end
 end
 
--- Coalesce the (potentially bursty) quest-log refresh: rebuild the cache once,
--- then re-scan visible plates. Hoisted so Events:Throttle reuses it.
 local function questLogRefresh()
     rebuildCache()
     refreshAllPlates("QUEST_LOG_UPDATE")
 end
 
--- Event handlers (file-scope so Enable/Disable can On/Off the exact refs).
 local function onPlateAdded(_, unit)
     if not unit then return end
     activePlates[unit] = true
@@ -316,7 +272,7 @@ local REGISTERED = {
 function QI:IsEnabled()
     local DB = ns:GetSubsystem("DB")
     local v = DB and DB.db.profile.general.questNameplateIcons
-    if v == nil then return not elvUILoaded() end   -- auto: on unless ElvUI present
+    if v == nil then return not elvUILoaded() end
     return v and true or false
 end
 
@@ -330,7 +286,6 @@ function QI:ApplyEnabled()
     if on then
         for event, fn in pairs(REGISTERED) do Events:On(event, fn) end
         rebuildCache()
-        -- Pick up nameplates already on screen (toggled on mid-session).
         if C_NamePlate and C_NamePlate.GetNamePlates then
             for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
                 local unit = plate.namePlateUnitToken
@@ -353,13 +308,7 @@ function QI:OnEnable()
     self.enabled = false
     self:ApplyEnabled()
 
-    -- One-time conflict prompt for ElvUI users. ElvUI shows its own nameplate
-    -- quest icons, so rather than silently defaulting ours off (and leaving
-    -- the user unaware the feature exists), ask once which they'd like. Shown
-    -- only while the setting is still "auto" (nil) and ElvUI is loaded;
-    -- choosing either button writes an explicit value so it never asks again.
-    -- Uses EQ's own Dialog (not Blizzard StaticPopup) to stay clear of the
-    -- Quit/Logout taint. Deferred so it lands after the loading screen.
+    -- Uses EQ's own Dialog (not Blizzard StaticPopup) to stay clear of the Quit/Logout taint.
     local DB = ns:GetSubsystem("DB")
     local g  = DB and DB.db.profile.general
     if g and g.questNameplateIcons == nil and not g.npConflictAsked and elvUILoaded() then

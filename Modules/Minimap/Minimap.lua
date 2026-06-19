@@ -1,7 +1,3 @@
--- Modules/Minimap/Minimap.lua
--- Minimap launcher button via LibDBIcon (so it works in Titan Panel,
--- ElvUI's data-broker bar, ChocolateBar, etc. — not a custom button).
-
 local _, ns = ...
 
 local M = ns:RegisterSubsystem("Minimap", {})
@@ -23,8 +19,6 @@ function M:OnInitialize()
                 local CG = ns:GetSubsystem("ChainGuide")
                 if CG then CG:Toggle() end
             elseif ToggleQuestLog then
-                -- Defer to Blizzard's quest log map frame; we no longer
-                -- ship our own quest log window.
                 ToggleQuestLog()
             end
         end,

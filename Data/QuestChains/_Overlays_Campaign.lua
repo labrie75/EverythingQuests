@@ -1,16 +1,6 @@
--- Data/QuestChains/_Overlays_Campaign.lua
--- GENERATED DRAFT campaign-chapter overlays - verify in-game, then graduate
--- the verified ones into _Overlays.lua and drop them from here. Topology is
--- from authored reference data; layout is auto-laid to the centred-tree
--- convention. Only chains whose draft positions every LIVE quest (coverage-
--- clean per the dump) are emitted, so these should render without
--- stragglers - the open question per chain is purely whether the layout reads
--- well. Regenerate: python docs/_check_coverage.py docs/_campdump.txt --emit
 local _, ns = ...
 ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
 
-    -- Whispers in the Twilight  (questline 5719, Midnight Campaign)
-    -- (94871/94993/95008 are war-table/meta "Other" quests, excluded in QuestLineSource — chain ends at 86745)
     ns.CHAINGUIDE_OVERLAYS[5719] = {
         layout = {
             [86733] = { x = 1, y = 0  },
@@ -43,7 +33,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Shadowfall  (questline 5720, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5720] = {
         layout = {
             [86621] = { x = 1, y = 0  },
@@ -80,7 +69,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Ripple Effects  (questline 5721, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5721] = {
         layout = {
             [86637] = { x = 1, y = 0  },
@@ -113,7 +101,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Dis Was Our Land  (questline 5722, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5722] = {
         layout = {
             [86708] = { x = 1, y = 0  },
@@ -152,7 +139,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Path of de Hash'ey  (questline 5723, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5723] = {
         layout = {
             [86653] = { x = 1, y = 0  },
@@ -195,7 +181,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- De Amani Never Die  (questline 5724, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5724] = {
         layout = {
             [86683] = { x = 1, y = 0  },
@@ -222,8 +207,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Call of the Goddess  (questline 5726, Midnight Campaign)
-    -- (86874 is a Harandar "Other" quest, excluded in QuestLineSource — chain ends at 86890)
     ns.CHAINGUIDE_OVERLAYS[5726] = {
         layout = {
             [86930] = { x = 1, y = 0  },
@@ -272,7 +255,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Path of Light  (questline 5750, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5750] = {
         layout = {
             [89193] = { x = 1, y = 0  },
@@ -309,7 +291,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Regrets of the Past  (questline 5751, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5751] = {
         layout = {
             [86822] = { x = 1, y = 0  },
@@ -350,7 +331,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Into the Abyss  (questline 5728, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5728] = {
         layout = {
             [89388] = { x = 1, y = 0  },
@@ -377,7 +357,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Night's Veil  (questline 5729, Midnight Campaign)
     ns.CHAINGUIDE_OVERLAYS[5729] = {
         layout = {
             [86536] = { x = 1, y = 0  },
@@ -412,8 +391,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Dawn of Reckoning  (questline 5730, Midnight Campaign)
-    -- (95276 is a Voidstorm "Other" quest, excluded in QuestLineSource — chain ends at 86522)
     ns.CHAINGUIDE_OVERLAYS[5730] = {
         layout = {
             [86509] = { x = 1, y = 0  },
@@ -450,7 +427,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Foothold  (questline 5792, The War of Light and Shadow)  [tail auto-appended: 94957 - verify]
     ns.CHAINGUIDE_OVERLAYS[5792] = {
         layout = {
             [90777] = { x = 1, y = 0  },
@@ -487,7 +463,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Gathering of the Elves  (questline 5795, The War of Light and Shadow)
     ns.CHAINGUIDE_OVERLAYS[5795] = {
         layout = {
             [88920] = { x = 1, y = 0  },
@@ -522,7 +497,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Dawn of a New Well  (questline 5798, The War of Light and Shadow)
     ns.CHAINGUIDE_OVERLAYS[5798] = {
         layout = {
             [92689] = { x = 1, y = 0  },

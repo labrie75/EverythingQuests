@@ -1,37 +1,15 @@
--- Modules/ChainGuide/QuestLineSource.lua
--- Pulls chain content live from Blizzard's questline API:
---   C_QuestLine.GetAvailableQuestLines(uiMapID)  → questlines visible in a map
---   C_QuestLine.GetQuestLineQuests(questLineID) → ordered quest list per chain
---
--- A category aggregates questlines from every uiMapID it covers. Zones often
--- span multiple sub-maps (e.g. Eversong Woods + Silvermoon City), so the
--- resolver returns a *list* of mapIDs and discovery walks all of them.
---
--- Sources, in priority order:
---   1. Hand-authored chains in Data/QuestChains/* (full graphs).
---      A hand-authored chain with `questlineID = N` suppresses the API's
---      duplicate of N for the same category.
---   2. Saved-variable overrides in db.profile.chainGuide.zoneMapIDs.
---      Built up at runtime by /eqs discover.
---   3. Seed mapIDs in Data/QuestChains/_Index.lua (cat.mapIDs / cat.mapID).
-
 local _, ns = ...
 
 local QLS = ns:RegisterSubsystem("ChainGuideQuestLineSource", {})
 
-QLS._discovered     = {}        -- [categoryID] = true
-QLS._populated      = {}        -- [chainID]   = true
-QLS._registered     = {}        -- [questLineID] = true (cross-category dedup)
-QLS._retryScheduled = {}        -- [chainID]   = true (item-load retry inflight)
+QLS._discovered     = {}
+QLS._populated      = {}
+QLS._registered     = {}
+QLS._retryScheduled = {}
 
--- Scratch tables for /eqs discover printout dedup. Reused across invocations
--- instead of being allocated fresh — minor but consistent with the rest of
--- the addon's allocation discipline.
 local _discoverSeen   = {}
 local _discoverUnique = {}
 
--- Wipe everything we sourced from the API so a settings change can
--- re-trigger discovery from scratch (toggling showUnroutedChains, etc.).
 function QLS:Reset()
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     for chainID, chain in pairs(Database.chains) do
@@ -40,22 +18,19 @@ function QLS:Reset()
     self._discovered = {}
     self._populated  = {}
     self._registered = {}
-    -- Campaign chains live in their own source/reset bucket.
     local CS = ns:GetSubsystem("ChainGuideCampaignSource")
     if CS and CS.Reset then CS:Reset() end
 end
 
-local CHAIN_ID_OFFSET = 5000000 -- keep API-derived IDs disjoint from hand-authored ones
+local CHAIN_ID_OFFSET = 5000000
 
 local function showUnrouted()
     local DB = ns:GetSubsystem("DB")
     local cg = DB and DB.db and DB.db.profile and DB.db.profile.chainGuide
     if cg and cg.showUnroutedChains ~= nil then return cg.showUnroutedChains end
-    return false                  -- default: clean, routed-only list
+    return false
 end
 
--- Routing entries are { cat = categoryID, name = "..." }. Older callers
--- want just the category, so accept either shape.
 local function routedEntry(questLineID)
     local map = ns.QUESTLINE_ROUTING
     if not map then return nil end
@@ -80,9 +55,6 @@ local function authoredQuestlinesInCategory(catID)
     return set
 end
 
--- Returns the saved override list for a category, normalizing legacy single-
--- value entries (number) into one-element arrays so callers don't care which
--- shape the saved variable holds.
 local function getOverrideList(catID)
     local DB = ns:GetSubsystem("DB")
     local map = DB and DB.db and DB.db.profile and DB.db.profile.chainGuide
@@ -94,8 +66,6 @@ local function getOverrideList(catID)
     return nil
 end
 
--- All mapIDs the discoverer should query for `catID`: union of seed (from
--- _Index.lua) and saved overrides, deduplicated, in seed-then-override order.
 local function resolveMapIDs(cat, catID)
     local out, seen = {}, {}
     local function push(m)
@@ -103,21 +73,19 @@ local function resolveMapIDs(cat, catID)
     end
     if cat then
         if cat.mapIDs then for _, m in ipairs(cat.mapIDs) do push(m) end end
-        push(cat.mapID)                       -- legacy single-value seed
+        push(cat.mapID)
     end
     local list = getOverrideList(catID)
     if list then for _, m in ipairs(list) do push(m) end end
     return out
 end
 
--- Append a discovered mapID to a category's saved override list, deduped.
 local function appendMapIDOverride(catID, mapID)
     local DB = ns:GetSubsystem("DB")
     if not (DB and DB.db) then return end
     local cg = DB.db.profile.chainGuide
     cg.zoneMapIDs = cg.zoneMapIDs or {}
     local cur = cg.zoneMapIDs[catID]
-    -- Migrate legacy single-number entry into an array as a side effect.
     if type(cur) == "number" then cur = { cur }; cg.zoneMapIDs[catID] = cur end
     if type(cur) ~= "table" then cur = {}; cg.zoneMapIDs[catID] = cur end
     for i = 1, #cur do
@@ -126,9 +94,6 @@ local function appendMapIDOverride(catID, mapID)
     cur[#cur + 1] = mapID
 end
 
--- Best-effort name → category. Exact case-insensitive match wins over
--- substring; substring catches cases like "Eversong Woods (Midnight)" or
--- the user typing "eversong" as a hint.
 local function matchCategoryByName(name)
     if not name or name == "" then return nil end
     local Database = ns:GetSubsystem("ChainGuideDatabase")
@@ -145,12 +110,6 @@ local function matchCategoryByName(name)
     return nil
 end
 
--- Stub-register every chain we know exists in this category. The routing
--- table is the source of truth — it carries questlines whether the player
--- has them, hasn't started them, or finished them. The API is consulted
--- *additionally* to surface any unrouted questlines (only shown when the
--- showUnroutedChains toggle is on) and to keep us forward-compatible with
--- patches that introduce questlines not yet in our routing.
 function QLS:EnsureZoneChains(catID)
     if self._discovered[catID] then return end
 
@@ -158,11 +117,6 @@ function QLS:EnsureZoneChains(catID)
     local cat = Database.categories[catID]
     if not cat then return end
 
-    -- Campaign categories are sourced live from Blizzard's campaign API
-    -- (C_CampaignInfo chapter spine), not the static questline routing —
-    -- the campaign is cross-zone and never matched a questline category.
-    -- Mark discovered and bail so the static routing/API-map walk below
-    -- never re-files campaign questlines under their zone.
     if cat.campaignID then
         local CS = ns:GetSubsystem("ChainGuideCampaignSource")
         if CS then CS:EnsureCampaignChains(catID) end
@@ -174,12 +128,6 @@ function QLS:EnsureZoneChains(catID)
 
     local function registerChain(qlID, destCat, name)
         if self._registered[qlID] or skip[qlID] then return end
-        -- A campaign-chapter questline lives ONLY under its campaign
-        -- category (CampaignSource owns it). Don't also file it under its
-        -- zone — that was the "Whispers in the Twilight shows twice" case.
-        -- registerChain only ever runs for non-campaign categories (the
-        -- campaign categories bail to CampaignSource above), so this is an
-        -- unconditional skip.
         local CS = ns:GetSubsystem("ChainGuideCampaignSource")
         if CS and CS.IsChapterQuestline and CS:IsChapterQuestline(qlID) then
             return
@@ -197,9 +145,6 @@ function QLS:EnsureZoneChains(catID)
         self._registered[qlID] = true
     end
 
-    -- 1. Register every routed questline whose category == catID. This is
-    --    the path that surfaces COMPLETED questlines: GetAvailableQuestLines
-    --    drops them, but our routing table doesn't.
     local routing = ns.QUESTLINE_ROUTING or {}
     for qlID, entry in pairs(routing) do
         local destCat = (type(entry) == "table") and entry.cat or entry
@@ -207,10 +152,6 @@ function QLS:EnsureZoneChains(catID)
         if destCat == catID then registerChain(qlID, destCat, name) end
     end
 
-    -- 2. Also walk the API for this category's mapIDs. Routed questlines
-    --    (handled above) are skipped via _registered; unrouted questlines
-    --    are routed elsewhere if known, dropped if unknown unless the
-    --    user has opted in via showUnroutedChains.
     if C_QuestLine and C_QuestLine.GetAvailableQuestLines then
         local mapIDs = resolveMapIDs(cat, catID)
         local includeUnrouted = showUnrouted()
@@ -234,26 +175,12 @@ function QLS:EnsureZoneChains(catID)
     self._discovered[catID] = true
 end
 
--- Quests that Blizzard's GetQuestLineQuests returns as members of a questline
--- but which are NOT part of the curated storyline: war-table / campaign-meta /
--- auto-granted progression quests. The reference addon files exactly these in
--- per-zone "Other" buckets (separate from every story chain). Left in, they
--- tail-onto a chain's spine and become a bogus "next step" with no quest to
--- accept (e.g. 94871 "Eversong" is given by a Scouting Map war-table, and
--- 94993/95008 "Adventuring in Midnight" have no giver at all). We drop them so
--- each chain ends at its real finale. NOTE: only reference-confirmed extras go
--- here — never a genuinely new quest the reference simply predates (e.g. 94957).
 local NON_CHAIN_QUESTS = {
-    -- Eversong "Other Both": Scouting Map / Adventuring-in-Midnight meta line
     [93811] = true, [94871] = true, [94993] = true, [95008] = true,
-    -- Harandar "Other Both"
     [86874] = true, [89035] = true, [93566] = true,
-    -- Voidstorm "Other Both"
     [92641] = true, [95276] = true,
 }
 
--- Build items[] from the questline's quest list. No-op if the chain already
--- has authored items, no questlineID, or we've populated it before.
 function QLS:EnsureChainItems(chain)
     if not chain or self._populated[chain.id] then return end
     if not chain.questlineID then return end
@@ -265,21 +192,10 @@ function QLS:EnsureChainItems(chain)
 
     local quests = C_QuestLine.GetQuestLineQuests(chain.questlineID)
     if not quests or #quests == 0 then
-        -- No live questline data. If a curated quest list exists for this
-        -- questline (unreleased patch content the client can't serve yet), build
-        -- a PROVISIONAL linear chain from it so the chain isn't blank. It's built
-        -- below like any item list; a later session naturally swaps to the real
-        -- questline once Blizzard's client serves it.
         local curated = ns.CHAINGUIDE_CURATED_ITEMS and ns.CHAINGUIDE_CURATED_ITEMS[chain.questlineID]
         if curated and #curated > 0 then
             quests = curated
         else
-            -- Blizzard's questline data isn't loaded yet for this chain. The
-            -- player would otherwise have to click the chain a second (or
-            -- third) time before its quests showed up — schedule a one-shot
-            -- retry + re-render so the next pass picks up the loaded data
-            -- automatically. Guarded by _retryScheduled so a flood of renders
-            -- can't queue up duplicate timers.
             if not self._retryScheduled[chain.id] then
                 self._retryScheduled[chain.id] = true
                 C_Timer.After(0.3, function()
@@ -300,8 +216,6 @@ function QLS:EnsureChainItems(chain)
     for i = 1, #quests do
         local qid = quests[i]
         if not NON_CHAIN_QUESTS[qid] then
-            -- Renumber as we go (n, not i) so the linear spine stays contiguous
-            -- after any excluded "Other" quests are skipped.
             n = n + 1
             items[n] = {
                 type        = "quest",
@@ -315,16 +229,10 @@ function QLS:EnsureChainItems(chain)
     chain.items = items
     chain._normalized = true
     self._populated[chain.id] = true
-    -- Now that the live quest list is in, lay any authored graph overlay over
-    -- it (idempotent; no-op when no overlay is registered for this chain).
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     if Database and Database.ApplyOverlay then Database:ApplyOverlay(chain) end
 end
 
--- /eqs discover [<hint>]
---   No hint: auto-match the player's current zone name to a category.
---   With hint: assign current mapID to whichever category fuzzy-matches the
---   hint (e.g. "/eqs discover eversong" while in Silvermoon City).
 function QLS:PrintCurrentZone(hint)
     local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
     if not mapID then
@@ -352,7 +260,7 @@ function QLS:PrintCurrentZone(hint)
         local Database = ns:GetSubsystem("ChainGuideDatabase")
         local cat = Database.categories[catID]
         appendMapIDOverride(catID, mapID)
-        self._discovered[catID] = nil      -- force a re-discover with the new mapID list
+        self._discovered[catID] = nil
         print(("  Added to category |cffffffff%s|r."):format(cat and cat.name or tostring(catID)))
         local CG = ns:GetSubsystem("ChainGuide")
         if CG and CG.frame and CG.frame:IsShown() and CG.RenderCurrent then
@@ -369,8 +277,6 @@ function QLS:PrintCurrentZone(hint)
         print("  No questlines reported by the API yet (move around the zone and retry).")
         return
     end
-    -- The API repeats a questline once per entry-point quest; dedupe by ID
-    -- so the printout matches what the chain guide will actually display.
     wipe(_discoverSeen)
     wipe(_discoverUnique)
     for i = 1, #lines do

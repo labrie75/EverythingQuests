@@ -1,12 +1,3 @@
--- Modules/Tracker/Achievements.lua
--- Tracked-achievement section for the on-screen tracker, mirroring Blizzard's
--- objective tracker: each achievement the player is tracking shows as a header
--- (icon + name) with its criteria listed beneath — a checkmark for finished
--- criteria, a colorized "X/Y" prefix for measured progress, and grey text for
--- the rest. Pure display: tracking/untracking still happens in the Achievement
--- UI. Same pooled, count-returning Render contract as Endeavors/Profession so
--- the Frame.lua section dispatch treats it identically.
-
 local _, ns = ...
 local L = ns.L
 
@@ -17,15 +8,11 @@ local LINE_H       = 14
 local ROW_GAP      = 2
 local LABEL_PAD    = 6
 local LINE_INDENT  = 14
--- Safety cap so a tracked achievement with a huge criteria list (e.g. a big
--- exploration or dungeon meta) can't flood the whole tracker.
 local MAX_CRITERIA = 12
 
--- Bit in GetAchievementCriteriaInfo's `flags` (return #7) marking a PROGRESS-BAR
--- criterion (Blizzard's EVALUATION_TREE_FLAG_PROGRESS_BAR). These criteria
--- ("61/100"-style meters — the delve puzzle achievement, Brann/Buddy System
--- tiers, etc.) carry their progress in quantity/reqQuantity but have an EMPTY
--- criteriaString, so they need detecting separately from named-counter criteria.
+-- GetAchievementCriteriaInfo flags bit 0x1 (EVALUATION_TREE_FLAG_PROGRESS_BAR):
+-- progress-bar criteria have an EMPTY criteriaString but real quantity/reqQuantity,
+-- so they must be detected via this flag rather than by checking criteriaString.
 local PROGRESS_BAR_FLAG = 0x1
 
 A.headerPool    = {}
@@ -33,21 +20,9 @@ A.linePool      = {}
 A.activeHeaders = {}
 A.activeLines   = {}
 
--- Achievement tracking moved to the unified content-tracking system; the
--- legacy GetTrackedAchievements() still exists as a fallback for older
--- clients. Resolve the enum once.
 local ACH_TYPE    = (Enum and Enum.ContentTrackingType and Enum.ContentTrackingType.Achievement)
 local STOP_MANUAL = (Enum and Enum.ContentTrackingStopType and Enum.ContentTrackingStopType.Manual) or 2
 
--- Achievement header rows are clickable: LEFT opens Blizzard's achievement
--- window to this achievement (OpenAchievementFrameToAchievement is Blizzard's
--- own objective-tracker handler — it loads Blizzard_AchievementUI on demand,
--- shows the frame, and scrolls to the id), RIGHT untracks it via the modern
--- content-tracking API (StopTracking is AllowedWhenUntainted, so combat-safe).
--- The tracker's achievement section is NON-secure, so these clicks add no taint
--- to the secure quest-item-button chain. [[reference-tracker-secure-taint]]
--- Static file-scope handlers (wired once in buildHeader); the row carries its
--- id/name in _achID/_achName, cleared on pool release.
 local function headerOnMouseUp(self, button)
     local id = self._achID
     if not id then return end
@@ -55,10 +30,8 @@ local function headerOnMouseUp(self, button)
         if C_ContentTracking and C_ContentTracking.StopTracking and ACH_TYPE then
             C_ContentTracking.StopTracking(ACH_TYPE, id, STOP_MANUAL)
         elseif RemoveTrackedAchievement then
-            RemoveTrackedAchievement(id)   -- legacy fallback (older clients)
+            RemoveTrackedAchievement(id)
         end
-        -- CONTENT_TRACKING_UPDATE / TRACKED_ACHIEVEMENT_LIST_CHANGED fires and
-        -- refreshes this section; no manual Refresh needed.
     elseif button == "LeftButton" then
         if OpenAchievementFrameToAchievement then
             OpenAchievementFrameToAchievement(id)
@@ -144,7 +117,6 @@ local function getTrackedAchievements()
         end
     end
     if #out == 0 and GetTrackedAchievements then
-        -- Legacy varargs API: returns up to MAX_TRACKED_ACHIEVEMENTS ids.
         local t = { GetTrackedAchievements() }
         for i = 1, #t do
             if t[i] and t[i] ~= 0 then out[#out + 1] = t[i] end
@@ -166,15 +138,10 @@ function A:Render(content, contentWidth, yStart, collapsed)
 
     local Media = ns:GetSubsystem("Media")
 
-    -- Follow the user's tracker color scheme exactly like the Quests / World
-    -- Quests sections: the achievement name uses the title-color override when
-    -- one is set (else Blizzard yellow), and completed criteria use that same
-    -- color when "override complete green" is on (else green). Computed ONCE
-    -- per render, not per row — this path is GC-sensitive.
     local DB = ns:GetSubsystem("DB")
     local t  = DB and DB.db and DB.db.profile and DB.db.profile.tracker
     local ov = t and t.titleColorOverride
-    local simplify = t and t.simplifyAchievements   -- #4: show only incomplete criteria
+    local simplify = t and t.simplifyAchievements
     local doneHex = "44ff44"
     if t and t.overrideCompleteGreen ~= false and ov and ov.r then
         doneHex = ("%02x%02x%02x"):format(
@@ -194,14 +161,11 @@ function A:Render(content, contentWidth, yStart, collapsed)
             row:SetWidth(contentWidth)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
-            -- Inline achievement icon (|T...:0|t auto-sizes to the line) so
-            -- the row reads at a glance without an extra anchored texture.
             local label = name
             if icon then label = "|T" .. icon .. ":0|t " .. name end
             row.title:SetText(label)
             row._achID   = id
             row._achName = name
-            -- Pooled rows always reset color, so set both branches explicitly.
             if ov and ov.r then
                 row.title:SetTextColor(ov.r, ov.g, ov.b)
             else
@@ -216,20 +180,12 @@ function A:Render(content, contentWidth, yStart, collapsed)
                 if shownCrit >= MAX_CRITERIA then break end
                 local critString, _, critDone, quantity, reqQuantity, _, critFlags =
                     GetAchievementCriteriaInfo(id, c)
-                -- A PROGRESS-BAR criterion (the "61/100"-style meter behind the
-                -- delve puzzle achievement, Brann/Buddy System tiers, etc.) has an
-                -- EMPTY criteriaString but real quantity/reqQuantity, so the old
-                -- "critString ~= ''" gate dropped it — only simple named-counter
-                -- achievements ("Complete 500 delves") ever showed an X/Y. Detect
-                -- it via the engine flag and render its X/Y too.
                 local hasText      = critString and critString ~= ""
                 local isProgressBar = critFlags and bit.band(critFlags, PROGRESS_BAR_FLAG) ~= 0
                 local hasMeter      = reqQuantity and reqQuantity > 1
                 if (hasText or isProgressBar) and not (simplify and critDone) then
                     local line
                     if critDone then
-                        -- Completed: checkmark + the criterion name, or the
-                        -- "X/Y" for a (now full) progress bar with no name.
                         local critLabel = (hasText and critString)
                                        or (hasMeter and (quantity .. "/" .. reqQuantity))
                         if critLabel then
@@ -237,10 +193,6 @@ function A:Render(content, contentWidth, yStart, collapsed)
                                    .. doneHex .. critLabel .. "|r"
                         end
                     elseif hasMeter then
-                        -- Measured / progress-bar criterion: colorize the "X/Y"
-                        -- prefix like the Quests/World Quests sections. Append the
-                        -- criterion name when it has one (progress bars don't, so
-                        -- they read as a clean "X/Y").
                         local suffix = hasText and (" " .. critString) or ""
                         line = "- " .. colorizeProgress(quantity .. "/" .. reqQuantity .. suffix)
                     elseif hasText then

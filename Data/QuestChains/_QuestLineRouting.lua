@@ -1,16 +1,6 @@
--- Data/QuestChains/_QuestLineRouting.lua
--- Authoritative list of every questline we expose, plus its category and
--- display name. The chain guide registers a chain for every entry here
--- regardless of whether the player has completed it — Blizzard's
--- C_QuestLine.GetAvailableQuestLines only returns *available* questlines,
--- so we couldn't surface completed storylines without this list.
---
--- Loaded AFTER _Index.lua so ns.CAT.* is available.
-
 local _, ns = ...
 
 ns.QUESTLINE_ROUTING = {
-    -- Eversong Woods
     [5719] = { cat = ns.CAT.EVERSONG_WOODS, name = "Whispers in the Twilight" },
     [5720] = { cat = ns.CAT.EVERSONG_WOODS, name = "Shadowfall" },
     [5721] = { cat = ns.CAT.EVERSONG_WOODS, name = "Ripple Effects" },
@@ -31,7 +21,6 @@ ns.QUESTLINE_ROUTING = {
     [5784] = { cat = ns.CAT.EVERSONG_WOODS, name = "The Drinking Debt" },
     [5804] = { cat = ns.CAT.EVERSONG_WOODS, name = "Theft Tracking" },
     [5958] = { cat = ns.CAT.EVERSONG_WOODS, name = "Daggerspine Landing" },
-    -- Zul'Aman
     [5722] = { cat = ns.CAT.ZULAMAN, name = "Dis Was Our Land" },
     [5723] = { cat = ns.CAT.ZULAMAN, name = "Path of De Hashey" },
     [5938] = { cat = ns.CAT.ZULAMAN, name = "Where War Slumbers" },
@@ -53,7 +42,6 @@ ns.QUESTLINE_ROUTING = {
     [5975] = { cat = ns.CAT.ZULAMAN, name = "Something Vile This Way Comes" },
     [6045] = { cat = ns.CAT.ZULAMAN, name = "River Walkers of the Prowl" },
     [6052] = { cat = ns.CAT.ZULAMAN, name = "Bloodstains" },
-    -- Voidstorm
     [5728] = { cat = ns.CAT.VOIDSTORM, name = "Into the Abyss" },
     [5729] = { cat = ns.CAT.VOIDSTORM, name = "The Night's Veil" },
     [5730] = { cat = ns.CAT.VOIDSTORM, name = "Dawn of Reckoning" },
@@ -73,7 +61,6 @@ ns.QUESTLINE_ROUTING = {
     [5936] = { cat = ns.CAT.VOIDSTORM, name = "A Dance with the Devil" },
     [6012] = { cat = ns.CAT.VOIDSTORM, name = "A Domanaar's Best Friend" },
     [6001] = { cat = ns.CAT.VOIDSTORM, name = "A More Potent Foe" },
-    -- Harandar
     [5725] = { cat = ns.CAT.HARANDAR, name = "Of Caves and Cradles" },
     [5726] = { cat = ns.CAT.HARANDAR, name = "Call of the Goddess" },
     [5907] = { cat = ns.CAT.HARANDAR, name = "A Goblin in Harandar" },
@@ -91,26 +78,12 @@ ns.QUESTLINE_ROUTING = {
     [6032] = { cat = ns.CAT.HARANDAR, name = "Bloomtown" },
     [5910] = { cat = ns.CAT.HARANDAR, name = "The Grudge Pit" },
     [5932] = { cat = ns.CAT.HARANDAR, name = "Trials of the Shulka" },
-    -- Arator
     [5750] = { cat = ns.CAT.ARATOR, name = "The Path of Light" },
     [5751] = { cat = ns.CAT.ARATOR, name = "Regrets of the Past" },
-    -- Revelations (patch 12.0.7): post-campaign saga gated behind Voidstorm's
-    -- Dawn of Reckoning. 6050 "Legacy of the Amani" has an authored branching
-    -- overlay (_Overlays_Revelations.lua); 6229-6232 (the March on Quel'Danas
-    -- raid lead-up) have no reference topology yet → render as linear API spines.
     [6050] = { cat = ns.CAT.REVELATIONS, name = "Legacy of the Amani" },
     [6229] = { cat = ns.CAT.REVELATIONS, name = "An Island of Fangs" },
     [6230] = { cat = ns.CAT.REVELATIONS, name = "Ghosts of the Past" },
     [6231] = { cat = ns.CAT.REVELATIONS, name = "Original Sin" },
     [6232] = { cat = ns.CAT.REVELATIONS, name = "The Battle for Atal'Utek" },
-    -- Midnight Campaign: intentionally NOT routed here. The campaign spine
-    -- is sourced live from Blizzard's campaign API in
-    -- Modules/ChainGuide/CampaignSource.lua (C_CampaignInfo → 17 ordered
-    -- chapters), so it always matches the player's real in-game campaign.
-    -- The previous hand-picked list here was wrong: verified in-game,
-    -- 5792/5793/5795/5797/5798 (Foothold, The Voidspire, Gathering of the
-    -- Elves, March on Quel'Danas, Dawn of a New Well) are NOT chapters of
-    -- campaign 270, and chapter 5727 "Emergence" was missing entirely.
-    -- 5811 "The Light's Summons" / 5979 "The Darkening Sky" ARE chapters
-    -- (1 and 17) and now come from the API.
+    -- Campaign spine is sourced live via C_CampaignInfo in CampaignSource.lua; do not add campaign questlines here.
 }

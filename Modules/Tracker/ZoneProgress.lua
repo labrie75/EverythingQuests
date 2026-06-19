@@ -1,47 +1,3 @@
--- Modules/Tracker/ZoneProgress.lua
--- Optional per-zone quest progress bar for the on-screen tracker. Shows the
--- player's "lifetime" questline completion for their current zone, e.g.
---   Eversong Woods          12 / 47
---   [#########----------------------]
---
--- WHY THIS IS BUILT THE WAY IT IS:
--- WoW has no API for "all quests in a zone", and C_QuestLine.GetAvailableQuestLines
--- DROPS completed questlines — so a live scan gives an empty bar on a character
--- who has finished the zone (i.e. most players' main). v1.14.0 tried to persist
--- a discovered set to work around that; it failed exactly there, because a
--- completed main never discovers anything to persist.
---
--- The denominator therefore comes from ChainGuide's AUTHORED routing table
--- (ns.QUESTLINE_ROUTING), which lists every questline in a zone regardless of
--- completion — that table exists for precisely this reason (see
--- Data/QuestChains/_QuestLineRouting.lua). Flow:
---   1. zoneRoot() → the player's current Zone-type uiMapID.
---   2. _ResolveCategory() maps that uiMapID to a ChainGuide category. Resolution
---      is locale-safe: a learned account-wide uiMapID→catID cache first, then an
---      English name match, then a majority vote of any live-available questlines
---      against the routing table (which also seeds the cache for other locales /
---      future completed visits).
---   3. The category's routed questlines ARE the denominator. Each questline's
---      quest list comes from C_QuestLine.GetQuestLineQuests (static game data,
---      NOT completion-filtered), cached account-wide in qlQuests with an async
---      retry for lists Blizzard hasn't loaded yet.
---   4. Completion is PER-CHARACTER, computed LIVE (IsQuestFlaggedCompleted),
---      never persisted. So every toon sees its own count against the same
---      complete, stable denominator — instantly, no discovery, no cross-char
---      dependency, no hoops.
---
--- Account-wide caches in ns.db.global.zoneProgress:
---   * qlQuests[questLineID] = { questID, ... }   -- static quest lists, monotonic
---   * zoneCat[uiMapID]      = catID              -- learned zone→category map
---
--- The whole subsystem is gated behind db.profile.tracker.showZoneProgressBar
--- (OFF by default). Every event handler and Render early-returns when the flag
--- is off, so there is zero ongoing cost for users who don't opt in.
---
--- Coverage = zones present in the routing data (current-content Midnight zones).
--- An unresolved zone hides the bar; "/eqs zonebar debug" prints the unresolved
--- uiMapID so a new zone can be added to routing.
-
 local _, ns = ...
 
 local ZP = ns:RegisterSubsystem("TrackerZoneProgress", {})
@@ -49,21 +5,18 @@ local ZP = ns:RegisterSubsystem("TrackerZoneProgress", {})
 local RECOMPUTE_KEY   = "eq.zoneprogress.recompute"
 local ZONE_KEY        = "eq.zoneprogress.zone"
 local DEBOUNCE_DELAY  = 0.25
-local RETRY_DELAY     = 0.3        -- mirrors ChainGuide EnsureChainItems
-local MAX_HOPS        = 5          -- parent-map climb safety cap
+local RETRY_DELAY     = 0.3
+local MAX_HOPS        = 5
 
--- Bar visuals mirror the proven StatusBar widget in Modules/Tracker/Scenario.lua.
 local BAR_H       = 12
 local ROW_PAD_TOP = 2
 local ROW_PAD_BOT = 4
 
-ZP._countCache     = {}   -- [zoneRootID] = { completed=, total=, name= }
-ZP._retryScheduled = {}   -- [questLineID] = true (one in-flight retry per line)
-ZP._seen           = {}   -- reused scratch for union dedupe (wipe()'d each Recompute)
-ZP._scratchMaps    = {}   -- reused scratch for the map + children list
-ZP._voteTally      = {}   -- reused scratch for category majority vote
-
--- ── small accessors ──────────────────────────────────────────────────────
+ZP._countCache     = {}
+ZP._retryScheduled = {}
+ZP._seen           = {}
+ZP._scratchMaps    = {}
+ZP._voteTally      = {}
 
 local function DBsub() return ns:GetSubsystem("DB") end
 
@@ -73,15 +26,12 @@ local function enabled()
     return (p and p.showZoneProgressBar == true) or false
 end
 
--- "tracker" (a section on the on-screen tracker) or "floating" (standalone
--- movable frame). Defaults to floating.
 local function location()
     local db = DBsub()
     local p = db and db.db and db.db.profile and db.db.profile.tracker
     return (p and p.zoneProgressLocation) or "floating"
 end
 
--- Floating-frame state sub-table (position / scale / lock).
 local function barState()
     local db = DBsub()
     local p = db and db.db and db.db.profile and db.db.profile.tracker
@@ -90,7 +40,6 @@ local function barState()
     return p.zoneProgressBar
 end
 
--- Account-wide questline -> quest-list cache (static game data).
 local function qlQuestStore()
     local db = DBsub()
     if not (db and db.db and db.db.global) then return nil end
@@ -100,10 +49,6 @@ local function qlQuestStore()
     return zp.qlQuests
 end
 
--- Account-wide learned uiMapID -> ChainGuide catID map. Locale-independent
--- (keyed by mapID, valued by our own category constant), so a localized client
--- that once saw available questlines in a zone keeps resolving it after the
--- character completes the zone — and every other character reuses it.
 local function zoneCatStore()
     local db = DBsub()
     if not (db and db.db and db.db.global) then return nil end
@@ -113,10 +58,6 @@ local function zoneCatStore()
     return zp.zoneCat
 end
 
--- Case-insensitive zone-name -> ChainGuide catID. Works out of the box on an
--- English client (category names are authored in English); other locales fall
--- back to the live majority vote in _VoteCategory. Mirrors ChainGuide's own
--- matchCategoryByName: exact match wins, else substring either direction.
 local function categoryByName(name)
     if not name or name == "" then return nil end
     local Database = ns:GetSubsystem("ChainGuideDatabase")
@@ -134,16 +75,10 @@ local function categoryByName(name)
     return nil
 end
 
--- uiMapID -> ChainGuide catID via the category's authored mapIDs (seeded in
--- Data/QuestChains/_Index.lua) plus any per-character /eqs discover overrides.
--- Locale-INDEPENDENT and works on a completed main, so this is the strongest
--- signal — tried before name matching.
 local function categoryByMapID(rootID)
     if not rootID then return nil end
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     if not (Database and Database.categories) then return nil end
-    -- Per-character override list (cg.zoneMapIDs[catID] = { mapID, ... }), the
-    -- same table /eqs discover appends to for the chain guide.
     local db = DBsub()
     local overrides = db and db.db and db.db.profile and db.db.profile.chainGuide
                       and db.db.profile.chainGuide.zoneMapIDs
@@ -163,10 +98,6 @@ local function categoryByMapID(rootID)
     return nil
 end
 
--- Climb parentMapID until the first Zone-type ancestor, so a player standing
--- in a building/city sub-map (Micro/Dungeon) resolves to the surrounding zone
--- and sees one consistent bar. Returns rootID, name (nil if no map / instanced
--- area where GetBestMapForUnit gives nothing useful).
 local function zoneRoot()
     if not (C_Map and C_Map.GetBestMapForUnit) then return nil end
     local mapID = C_Map.GetBestMapForUnit("player")
@@ -182,17 +113,10 @@ local function zoneRoot()
         if not parent or parent <= 0 then break end
         id = parent
     end
-    -- No Zone ancestor (orphan/instanced map): fall back to the raw map.
     local info = C_Map.GetMapInfo(mapID)
     return mapID, info and info.name or nil
 end
 
--- ── discovery + quest-list caching ─────────────────────────────────────────
-
--- Cache a questline's quest list (account-wide, monotonic). An empty result
--- means Blizzard hasn't loaded the data yet; schedule a single retry + a
--- recompute, exactly like ChainGuide's EnsureChainItems. Guarded so a flood of
--- renders can't stack duplicate timers.
 function ZP:EnsureQuests(qlID)
     if not (qlID and C_QuestLine and C_QuestLine.GetQuestLineQuests) then return end
     local store = qlQuestStore()
@@ -205,25 +129,18 @@ function ZP:EnsureQuests(qlID)
             C_Timer.After(RETRY_DELAY, function()
                 self._retryScheduled[qlID] = nil
                 self:EnsureQuests(qlID)
-                self:ScheduleRecompute()   -- a newly-loaded list changes the count
+                self:ScheduleRecompute()
             end)
         end
         return
     end
 
-    -- Monotonic: never shrink a cached list. A partial async re-fetch could
-    -- return fewer quests and wobble the denominator between sessions.
     local existing = store[qlID]
     if not existing or #quests >= #existing then
         store[qlID] = quests
     end
 end
 
--- ── zone → category resolution ──────────────────────────────────────────────
-
--- Lazily-built reverse index of the routing table: catID -> { questLineID, ... }.
--- Rebuilt only if the routing table identity changes (a data patch), so it costs
--- one pass per session.
 function ZP:_CategoryQuestLines(catID)
     local routing = ns.QUESTLINE_ROUTING
     if not (routing and catID) then return nil end
@@ -243,10 +160,6 @@ function ZP:_CategoryQuestLines(catID)
     return self._catIndex[catID]
 end
 
--- Majority vote: scan live-available questlines on this zone (and child maps)
--- and return the category most of them route to. Locale-independent (uses
--- questline IDs, not names). A character who has COMPLETED the zone gets nothing
--- here — which is why _ResolveCategory tries the cache and the name match first.
 function ZP:_VoteCategory(rootID)
     if not (rootID and C_QuestLine and C_QuestLine.GetAvailableQuestLines and ns.QUESTLINE_ROUTING) then
         return nil
@@ -286,13 +199,6 @@ function ZP:_VoteCategory(rootID)
     return bestCat
 end
 
--- Locale-independent fallback: majority-vote a zone's PREVIOUSLY discovered
--- questlines against the routing table. The discovery may have been captured on
--- another character (or an earlier build) while the questlines were still
--- available, so this resolves a completed main with zero live data. Reads the
--- interim account-wide set (global.zoneProgress.discovered) and the legacy
--- per-character set (char.zoneProgress.questlines), both written by v1.14.0/the
--- discovery-based builds.
 function ZP:_CategoryFromHistory(rootID)
     local routing = ns.QUESTLINE_ROUTING
     if not (rootID and routing) then return nil end
@@ -322,13 +228,6 @@ function ZP:_CategoryFromHistory(rootID)
     return bestCat
 end
 
--- Resolve a zone-root uiMapID to a ChainGuide category, caching any hit
--- account-wide. Priority, strongest signal first:
---   1. learned cache (account-wide, locale-independent),
---   2. authored category mapIDs (locale-independent, works on a completed main),
---   3. English zone-name match,
---   4. previously-discovered questlines (locale-independent, completed-safe),
---   5. live majority vote of currently-available questlines.
 function ZP:_ResolveCategory(rootID, name)
     if not rootID then return nil end
     local cache = zoneCatStore()
@@ -342,12 +241,6 @@ function ZP:_ResolveCategory(rootID, name)
     return catID
 end
 
--- ── counting ───────────────────────────────────────────────────────────────
-
--- Count unique quests across this zone's AUTHORED questlines (from routing);
--- completed = those flagged complete for THIS character. Allocation-free
--- (reused _seen scratch + integer counters). Result cached per zone root; a
--- nil category (zone not in routing) yields total 0 → the bar hides.
 function ZP:Recompute(rootID, name)
     if not rootID then return end
     local store = qlQuestStore()
@@ -366,7 +259,7 @@ function ZP:Recompute(rootID, name)
             local qlID  = lines[li]
             local quests = store[qlID]
             if not quests then
-                self:EnsureQuests(qlID)        -- async load; retry re-recomputes
+                self:EnsureQuests(qlID)
                 quests = store[qlID]
             end
             if quests then
@@ -394,8 +287,6 @@ function ZP:Recompute(rootID, name)
     if total == 0 and not catID then self:_DebugUnresolved(rootID, name) end
 end
 
--- Optional chat hint (off unless "/eqs zonebar debug" set the flag) naming the
--- uiMapID we couldn't map to routing, so a new zone can be added to the table.
 function ZP:_DebugUnresolved(rootID, name)
     if not ns.zoneBarDebug then return end
     if not self._debugSeen then self._debugSeen = {} end
@@ -405,8 +296,6 @@ function ZP:_DebugUnresolved(rootID, name)
         :format(name or "?", rootID))
 end
 
--- "/eqs zonebar" report: current zone, the category it resolved to, and the
--- live count. Forces a fresh Recompute so the numbers are current.
 function ZP:PrintStatus()
     local rootID, name = zoneRoot()
     if not rootID then
@@ -426,9 +315,6 @@ function ZP:PrintStatus()
                 (c and c.completed) or 0, (c and c.total) or 0))
 end
 
--- Debounced "recompute current zone + repaint", shared by the quest events and
--- the questline-load retry. Trailing-edge is correct: quest-complete flags
--- settle after the event fires.
 function ZP:ScheduleRecompute()
     if not enabled() then return end
     local Events = ns:GetSubsystem("Events")
@@ -443,15 +329,11 @@ function ZP:ScheduleRecompute()
     Events:Debounce(RECOMPUTE_KEY, DEBOUNCE_DELAY, self._recomputeThunk)
 end
 
--- Repaint whichever surface is active: the tracker section and/or the floating
--- frame. Both are cheap and self-gating, so calling both is fine.
 function ZP:_Repaint()
     local Tracker = ns:GetSubsystem("Tracker")
     if Tracker and Tracker.Refresh then Tracker:Refresh() end
     self:UpdateFrame()
 end
-
--- ── lifecycle ───────────────────────────────────────────────────────────────
 
 function ZP:OnEnable()
     local Events = ns:GetSubsystem("Events")
@@ -479,18 +361,10 @@ function ZP:OnEnable()
     Events:On("QUEST_TURNED_IN",       onQuest)
     Events:On("QUEST_REMOVED",         onQuest)
 
-    -- The denominator is authored (routing), so a completed main no longer needs
-    -- a live scan. But on a localized client the zone→category resolution may
-    -- still fall back to a majority vote of live-available questlines, and
-    -- GetAvailableQuestLines is ASYNC (empty on the first call, delivered later
-    -- via QUESTLINE_UPDATE). Re-resolve when that data lands so the cache learns
-    -- the mapping. enabled()-gated, so it's free when the feature is off.
+    -- GetAvailableQuestLines is async; re-resolve when data lands so the cache learns the mapping.
     Events:On("QUESTLINE_UPDATE", onZone)
 end
 
--- Called by the options checkbox so toggling ON paints the bar immediately
--- (rather than waiting for the next zone change), and toggling OFF drops the
--- cached counts so no stale bar can linger.
 function ZP:SetEnabled(on)
     if on then
         local rootID, name = zoneRoot()
@@ -504,16 +378,9 @@ function ZP:SetEnabled(on)
     self:_Repaint()
 end
 
--- ── standalone movable frame ─────────────────────────────────────────────────
--- Used when zoneProgressLocation == "floating": a small backdrop frame the
--- user can drag anywhere, scale (Appearance tab), and lock (right-click menu).
--- Created lazily — users who never enable floating mode pay nothing.
-
 local FRAME_W       = 220
 local FRAME_BAR_H   = 12
 
--- Apply saved position, scale, and lock chrome. Unlocked shows a brand-red
--- border as a "you can grab this" affordance; locked hides it.
 function ZP:ApplySettings()
     local f = self.frame
     if not f then return end
@@ -523,19 +390,12 @@ function ZP:ApplySettings()
                st.x or 0, st.y or 220)
     f:SetScale(st.scale or 1.0)
 
-    -- Background fill (the dark panel behind the bar). Slightly more opaque when
-    -- unlocked so the grab target reads clearly. Off → fully transparent.
     if st.showBackground == false then
         f:SetBackdropColor(0, 0, 0, 0)
     else
         f:SetBackdropColor(0, 0, 0, st.locked and 0.40 or 0.55)
     end
 
-    -- Border. Shown whenever the Border option is on, in the user's chosen color
-    -- (default brand red #6D0501). Off → hidden in every state. Previously the
-    -- border was a lock affordance (hidden when locked); the colour option
-    -- supersedes that so a picked colour is actually visible during normal locked
-    -- use. The background-alpha shift above still hints at lock state.
     if st.showBorder == false then
         f:SetBackdropBorderColor(0, 0, 0, 0)
     else
@@ -603,7 +463,7 @@ function ZP:_AcquireFrame()
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.title:SetPoint("TOPLEFT", 6, -4)
     f.title:SetJustifyH("LEFT")
-    f.title:SetTextColor(0.93, 0.32, 0.10)        -- section-header color
+    f.title:SetTextColor(0.93, 0.32, 0.10)
 
     f.count = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.count:SetPoint("TOPRIGHT", -6, -5)
@@ -628,9 +488,6 @@ function ZP:_AcquireFrame()
     return f
 end
 
--- Refresh the floating frame: show only when enabled AND floating AND the
--- current zone has data; otherwise hide. Reads the same cached counts the
--- tracker section uses.
 function ZP:UpdateFrame()
     local show = enabled() and location() == "floating"
     if not show then
@@ -658,8 +515,6 @@ function ZP:UpdateFrame()
     f.bar:SetValue(pct)
     f.bar.label:SetText(("%d%%"):format(math.floor(pct + 0.5)))
 
-    -- Header + count text colors: user overrides (Appearance → Zone Bar) or the
-    -- built-in defaults (section-header red / gold).
     local st = barState() or {}
     local hc = st.headerColor
     if hc then f.title:SetTextColor(hc.r, hc.g, hc.b, hc.a or 1)
@@ -668,8 +523,6 @@ function ZP:UpdateFrame()
     if cc then f.count:SetTextColor(cc.r, cc.g, cc.b, cc.a or 1)
     else       f.count:SetTextColor(0.92, 0.72, 0.02) end
 
-    -- Font: the bar's own typeface override (nil = follow the tracker font);
-    -- size and outline still come from the tracker's settings.
     local Media = ns:GetSubsystem("Media")
     if Media and Media.ApplyTrackerFont then
         local bf = st.font
@@ -681,7 +534,6 @@ function ZP:UpdateFrame()
     f:Show()
 end
 
--- Option-tab setters.
 function ZP:SetLocation(loc)
     local db = DBsub()
     if db and db.db then db.db.profile.tracker.zoneProgressLocation = loc end
@@ -700,9 +552,6 @@ function ZP:SetLocked(b)
     self:ApplySettings()
 end
 
--- Live-apply an appearance change from the Appearance tab. ApplySettings repaints
--- the backdrop (border/background); UpdateFrame repaints text/font/colors. Both
--- no-op safely when the floating frame hasn't been built yet.
 function ZP:RefreshAppearance()
     self:ApplySettings()
     self:UpdateFrame()
@@ -718,13 +567,11 @@ function ZP:SetShowBackground(b)
     self:RefreshAppearance()
 end
 
--- nil c → fall back to the default brand red. Applied via ApplySettings (backdrop).
 function ZP:SetBorderColor(c)
     local st = barState(); if st then st.borderColor = c end
     self:ApplySettings()
 end
 
--- name == "" / nil → follow the tracker font; otherwise an LSM font name.
 function ZP:SetBarFont(name)
     local st = barState(); if st then st.font = (name ~= "" and name) or nil end
     self:UpdateFrame()
@@ -740,10 +587,6 @@ function ZP:SetCountColor(c)
     self:UpdateFrame()
 end
 
--- ── header + render ─────────────────────────────────────────────────────────
-
--- Frame.lua's render loop calls this for the "zoneprogress" section header to
--- show the live zone name + "<done>/<total>" instead of the static title.
 function ZP:HeaderInfo()
     local rootID, name = zoneRoot()
     if not rootID then return nil end
@@ -752,8 +595,6 @@ function ZP:HeaderInfo()
     return (c.name or name), (c.completed or 0) .. "/" .. (c.total or 0)
 end
 
--- Lazily build the single StatusBar (one zone bar, not a pooled list). Copies
--- the widget recipe from Modules/Tracker/Scenario.lua:122-153.
 function ZP:_AcquireBar(parent)
     local bar = self.bar
     if bar then
@@ -783,19 +624,13 @@ function ZP:_AcquireBar(parent)
     return bar
 end
 
--- Allocation-free "nothing to show" return (also hides a previously-shown bar).
 function ZP:_hideBar()
     if self.bar then self.bar:Hide() end
     return 0, 0
 end
 
--- Returns (height, count, total). count>0 makes Frame.lua show the header;
--- returning 0 auto-hides the whole section (no zone / no data / disabled).
 function ZP:Render(content, contentWidth, yStart, collapsed)
     if not enabled() then return self:_hideBar() end
-    -- Only draw the tracker section when the user chose the tracker location;
-    -- the floating frame handles the other case (Frame.lua's sectionVisible
-    -- gates this too, but be defensive).
     if location() ~= "tracker" then return self:_hideBar() end
 
     local rootID, name = zoneRoot()
@@ -803,8 +638,6 @@ function ZP:Render(content, contentWidth, yStart, collapsed)
 
     local cache = self._countCache[rootID]
     if not cache then
-        -- First paint for this zone with the feature on: resolve + count now
-        -- so the bar appears on this pass (e.g. right after enabling).
         self:Recompute(rootID, name)
         cache = self._countCache[rootID]
     end
@@ -813,8 +646,6 @@ function ZP:Render(content, contentWidth, yStart, collapsed)
     if total <= 0 then return self:_hideBar() end
     local completed = (cache and cache.completed) or 0
 
-    -- Collapsed: keep the header (count>0 so it stays clickable to expand) but
-    -- draw no bar body.
     if collapsed then
         if self.bar then self.bar:Hide() end
         return 0, 1, total

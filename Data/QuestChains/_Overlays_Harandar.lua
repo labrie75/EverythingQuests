@@ -1,15 +1,6 @@
--- Data/QuestChains/_Overlays_Harandar.lua
--- GENERATED DRAFT Harandar zone overlays - verify in-game, then graduate
--- the verified ones into _Overlays.lua and drop them from here. Topology is
--- from authored reference data; layout is auto-laid to the centred-tree
--- convention. Only chains whose draft positions every LIVE quest (coverage-
--- clean per the dump) are emitted, so these should render without
--- stragglers - the open question per chain is purely whether the layout reads
--- well. Regenerate: python docs/_check_coverage.py docs/_zonedump_harandar.txt --emit
 local _, ns = ...
 ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
 
-    -- The Legend of Aln'sharan  (questline 5909, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5909] = {
         layout = {
             [90467] = { x = 0, y = 0  },
@@ -25,7 +16,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Grudge Pit  (questline 5910, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5910] = {
         layout = {
             [90615] = { x = 1, y = 0  },
@@ -56,7 +46,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Trials of the Shulka  (questline 5932, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5932] = {
         layout = {
             [90824] = { x = 1, y = 0  },
@@ -81,7 +70,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Late Bloomers  (questline 5935, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5935] = {
         layout = {
             [90537] = { x = 1, y = 0  },
@@ -100,7 +88,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Peril Among Petals  (questline 5944, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5944] = {
         layout = {
             [91063] = { x = 1, y = 0  },
@@ -119,7 +106,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Greenspeaker's Vigil  (questline 5952, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5952] = {
         layout = {
             [91346] = { x = 1, y = 0  },
@@ -134,7 +120,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Haranir Never Say Die  (questline 5960, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5960] = {
         layout = {
             [91550] = { x = 1, y = 0  },
@@ -149,7 +134,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Harandar's Kitchen  (questline 5966, Harandar)
     ns.CHAINGUIDE_OVERLAYS[5966] = {
         layout = {
             [91585] = { x = 0, y = 0  },
@@ -164,7 +148,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Bloomtown  (questline 6032, Harandar)
     ns.CHAINGUIDE_OVERLAYS[6032] = {
         layout = {
             [92732] = { x = 1, y = 0  },
@@ -181,7 +164,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Silence at Fungara Village  (questline 6036, Harandar)
     ns.CHAINGUIDE_OVERLAYS[6036] = {
         layout = {
             [91375] = { x = 1, y = 0  },
@@ -200,7 +182,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Predator Reintroduction  (questline 6040, Harandar)
     ns.CHAINGUIDE_OVERLAYS[6040] = {
         layout = {
             [92864] = { x = 0, y = 0  },

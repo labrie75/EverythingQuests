@@ -1,16 +1,3 @@
--- Modules/WorldQuests/ZoneMap.lua
--- Per-zone world quest list. Stacks below the Summary widget when the
--- player views a Zone-type map (mapType == 3). Each row shows the reward
--- icon, quest title, and time-left. Click → super-track. Right-click →
--- track/untrack via the same WQWatchPersist API the pin uses.
---
--- Design choices:
---   • Hides on continent / cosmic maps so it doesn't dwarf the Summary
---     widget when there are 50+ quests across a continent.
---   • Reads the SHADOW canvas's pin pool (same as Summary) so it stays in
---     lock-step with what's actually rendered — filters automatically apply.
---   • Sorts by time-remaining ascending so urgent WQs surface first.
-
 local _, ns = ...
 local L = ns.L
 
@@ -23,17 +10,12 @@ local ROW_H        = 32
 local ROW_GAP      = 2
 local ICON_SIZE    = 26
 local PIN_TEMPLATE = "EQWorldQuestPinTemplate"
--- Cap the on-map list so a zone with many WQs (Legion zones carry ~25) scrolls
--- inside a bounded panel instead of growing screen-tall. The scroll bar (and
--- scrolling) only engage PAST this many rows — fewer than this sizes to fit
--- with no bar at all.
 local MAX_VISIBLE_ROWS = 10
-local BAR_W            = 18   -- right inset reserved for the scroll bar
+local BAR_W            = 18
 
 Z.rowPool   = {}
 Z.activeRows = {}
 
--- Shared WQ time helpers — single source of truth in Core/Util.lua.
 local Util = ns.Util
 
 local function questTitle(questID)
@@ -44,7 +26,6 @@ local function questTitle(questID)
     return "World Quest"
 end
 
--- ─── Row pool ──────────────────────────────────────────────────────────
 local function buildRow(parent)
     local r = CreateFrame("Button", nil, parent)
     r:SetHeight(ROW_H)
@@ -103,9 +84,6 @@ local function buildRow(parent)
                 end)
             end
         else
-            -- Left-click follows the WQ (super-track / arrow) AND lists it in
-            -- the tracker, so selecting a WQ from the zone list tracks it with
-            -- no extra right-click → Track step. Untrack stays on the menu.
             if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                 C_SuperTrack.SetSuperTrackedQuestID(self.questID)
             end
@@ -136,7 +114,6 @@ local function releaseAll()
     end
 end
 
--- ─── Build / refresh ───────────────────────────────────────────────────
 function Z:Build()
     if self.frame then return end
     if not WorldMapFrame then return end
@@ -175,12 +152,6 @@ function Z:Build()
     f.header:SetPoint("TOP", 0, -PAD)
     f.header:SetTextColor(1.0, 0.82, 0)
 
-    -- Rows live in a scroll child so a zone with many WQs caps at
-    -- MAX_VISIBLE_ROWS instead of growing a screen-tall panel.
-    -- UIPanelScrollFrameTemplate shows its bar ONLY when the content overflows
-    -- (scroll range > 0), so a short list has no bar and the panel sizes to fit
-    -- exactly. The right inset reserves room for the bar so it never covers the
-    -- row text; mouse-wheel is wired by hand (the template doesn't do it).
     local scroll = CreateFrame("ScrollFrame", "EQZoneQuestListScroll", f, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT",  f, "TOPLEFT",   PAD,           -(HEADER_H + PAD))
     scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(PAD + BAR_W), -(HEADER_H + PAD))
@@ -206,7 +177,6 @@ function Z:Refresh()
     if not self.frame then return end
 
     local DB = ns:GetSubsystem("DB")
-    -- Master WQ switch off, or the zone-map toggle off → no zone list.
     if not (DB and DB.db.profile.worldQuests.enabled ~= false
             and DB.db.profile.worldQuests.showOnZoneMap) then
         self.frame:Hide()
@@ -297,11 +267,6 @@ function Z:Refresh()
         y = y + ROW_H + ROW_GAP
     end
 
-    -- Content = all rows; the scroll frame caps at MAX_VISIBLE_ROWS so the panel
-    -- never grows past that. The template hides its bar when the content fits
-    -- (range 0) and shows it once it overflows: few WQs → no bar + exact-fit
-    -- panel, many WQs → capped + scrollable. Reset scroll to top each refresh so
-    -- a zone change doesn't leave it stranded mid-list.
     list:SetHeight(math.max(1, y))
     local scrollH = math.min(y, MAX_VISIBLE_ROWS * (ROW_H + ROW_GAP))
     self.frame.scroll:SetHeight(math.max(1, scrollH))

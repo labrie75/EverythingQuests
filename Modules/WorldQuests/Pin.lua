@@ -1,17 +1,8 @@
--- Modules/WorldQuests/Pin.lua
--- Pin mixin used by Pin.xml's EQWorldQuestPinTemplate. The pin's job is to
--- show ONE world quest at a glance: reward icon centered, ring colored by
--- reward category, time-left text below. Hover -> tooltip with title +
--- reward + time. Click -> super-track. Right-click -> dismiss the world map.
-
-local _, _ns = ...   -- ns retained (renamed to _ns) in case future tooltip/click logic needs subsystem lookups
+local _, _ns = ...
 
 EQWorldQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
 local Pin = EQWorldQuestPinMixin
 
--- Ring color per reward category. Picked to be readable on the world-map
--- background while staying loosely consistent with what players already
--- associate (gold = yellow, gear = blue, etc.).
 local RING_COLORS = {
     gold     = { 1.00, 0.82, 0.00 },
     gear     = { 0.00, 0.44, 0.87 },
@@ -24,8 +15,6 @@ local RING_COLORS = {
     other    = { 0.70, 0.70, 0.70 },
 }
 
--- Shared WQ time helpers — single source of truth in Core/Util.lua so the
--- pin label's color and format match the zone list and tooltip exactly.
 local Util = _ns.Util
 
 function Pin:OnLoad()
@@ -35,8 +24,7 @@ function Pin:OnLoad()
 end
 
 -- Required empty stub — newer canvas iterates pins and calls this; missing
--- it trips the assertion at MapCanvas.lua:280 (same trap we hit on the
--- regular quest pin earlier in the project).
+-- it trips the assertion at MapCanvas.lua:280.
 function Pin:CheckMouseButtonPassthrough() end
 
 function Pin:OnAcquired(questID, x, y, reward)
@@ -44,9 +32,6 @@ function Pin:OnAcquired(questID, x, y, reward)
     self.reward  = reward
     self:SetPosition(x, y)
 
-    -- Apply user pin scale from Options. Map canvas pin scale is bounded
-    -- by SetScalingLimits (set in OnLoad: 0.6 - 1.4). The user slider keys
-    -- to a 0.5-2.0 range; we clamp via SetScale on the pin frame itself.
     local DB = _ns:GetSubsystem("DB")
     if DB and DB.db.profile.worldQuests and DB.db.profile.worldQuests.pinScale then
         local s = math.max(0.5, math.min(2.0, DB.db.profile.worldQuests.pinScale))
@@ -60,15 +45,11 @@ function Pin:OnAcquired(questID, x, y, reward)
         Rewards:ApplyToTexture(self.icon, reward)
     end
 
-    -- Time left text + color
     local mins = C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes
                  and C_TaskQuest.GetQuestTimeLeftMinutes(questID)
     self.timeText:SetText(Util.WQTimeShort(mins))
     self.timeText:SetTextColor(Util.WQTimeColor(mins))
 
-    -- Apply selection visual based on whether this quest is super-tracked.
-    -- Sets ring color + size — the un-selected branch handles the default
-    -- "ring tinted by reward category" style, so we don't double-set it above.
     local superID = (C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
                      and C_SuperTrack.GetSuperTrackedQuestID()) or 0
     self:UpdateSelectionVisual(questID == superID)
@@ -76,18 +57,12 @@ function Pin:OnAcquired(questID, x, y, reward)
     self:Show()
 end
 
--- Re-skin the pin to indicate "this is the currently super-tracked quest".
--- Called by both OnAcquired (initial paint) and the provider's
--- UpdateSelections sweep when SUPER_TRACKING_CHANGED fires. Cheap — only
--- touches size/color, no frame creation.
 function Pin:UpdateSelectionVisual(isSelected)
     self.isSelected = isSelected
     if isSelected then
         self:SetSize(42, 42)
         self.ring:SetSize(42, 42)
         self.icon:SetSize(28, 28)
-        -- Bright yellow ring overrides the category color so the active
-        -- quest pops out regardless of which reward type it is.
         self.ring:SetVertexColor(1.00, 1.00, 0.30, 1)
     else
         self:SetSize(34, 34)
@@ -163,10 +138,6 @@ function Pin:OnClick(button)
     if button == "RightButton" then
         pinContextMenu(self)
     else
-        -- Left-click on a WQ pin both follows it (super-track / arrow) AND
-        -- adds it to the tracker, so "select a world quest on the map" lists
-        -- it without a separate right-click → Track step. Untrack still
-        -- lives on the right-click menu.
         if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
             C_SuperTrack.SetSuperTrackedQuestID(self.questID)
         end

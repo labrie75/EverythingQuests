@@ -1,23 +1,3 @@
--- Modules/Tracker/DragDrop.lua
--- Manual reorder via drag-and-drop. Active only when sort mode == "manual";
--- silently no-ops otherwise so the user doesn't accidentally lose their
--- "by zone" ordering with a stray drag.
---
--- Design: we never move the dragged block frame itself (it's anchored to the
--- scroll content; StartMoving would unanchor it and Refresh would reposition
--- it back, producing a snap-back jitter). Instead we display two helpers:
---
---   GHOST     — a small frame that follows the cursor with the dragged
---               quest's title. Owned by the subsystem; reused across drags.
---   INDICATOR — a 2px horizontal yellow line that hovers in the gap between
---               two blocks (or above the first / below the last) showing
---               where the drop will land.
---
--- On drop we walk the currently-rendered block list, compute a sequential
--- ordinal map with the dragged quest inserted at the target index, and write
--- it back to db.profile.tracker.manualOrder. The next Refresh re-sorts
--- visibly. Pool consists of one ghost + one indicator — the cheapest possible.
-
 local _, ns = ...
 
 local DD = ns:RegisterSubsystem("TrackerDragDrop", {})
@@ -25,19 +5,9 @@ local DD = ns:RegisterSubsystem("TrackerDragDrop", {})
 DD.dragQuestID = nil
 DD.dropIndex   = nil
 
--- Canonical "throttled OnUpdate" pattern for the addon. WoW fires OnUpdate
--- every visual frame (60+/s on modern hardware), but most per-frame work
--- only needs to run a handful of times per second to look smooth. We
--- accumulate `elapsed` into a file-scope counter and only run the real
--- handler when the accumulator crosses the throttle threshold — one
--- number, zero per-frame allocation, no closures created in the hot path.
--- 30 Hz is below the visible cursor-lag threshold for dragging.
 local GHOST_THROTTLE_S = 1/30
 local _ghostAccum      = 0
 
--- Hoisted to module scope: defining `function() DD:UpdateDragVisuals() end`
--- inside OnBlockDragStart would allocate a fresh closure per drag-start.
--- One handler reused across every drag instead.
 local function ghostOnUpdate(_, elapsed)
     _ghostAccum = _ghostAccum + elapsed
     if _ghostAccum < GHOST_THROTTLE_S then return end
@@ -45,7 +15,6 @@ local function ghostOnUpdate(_, elapsed)
     DD:UpdateDragVisuals()
 end
 
--- ─── Ghost / indicator factories ───────────────────────────────────────
 local function ensureGhost()
     if DD.ghost then return DD.ghost end
     local g = CreateFrame("Frame", nil, UIParent)
@@ -55,11 +24,11 @@ local function ensureGhost()
 
     local bg = g:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
-    bg:SetColorTexture(0.92, 0.72, 0.02, 0.55)              -- yellow translucent
+    bg:SetColorTexture(0.92, 0.72, 0.02, 0.55)
 
     local border = g:CreateTexture(nil, "BORDER")
     border:SetAllPoints()
-    border:SetColorTexture(0.635, 0.0, 0.039, 1)           -- EQ red 1px outline (drawn behind bg)
+    border:SetColorTexture(0.635, 0.0, 0.039, 1)
 
     g.text = g:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     g.text:SetPoint("LEFT",  4, 0)
@@ -80,12 +49,11 @@ local function ensureIndicator()
     i:Hide()
     local t = i:CreateTexture(nil, "OVERLAY")
     t:SetAllPoints()
-    t:SetColorTexture(0.92, 0.72, 0.02, 1)                  -- bright yellow drop line
+    t:SetColorTexture(0.92, 0.72, 0.02, 1)
     DD.indicator = i
     return i
 end
 
--- ─── Drag lifecycle ────────────────────────────────────────────────────
 local function isManualMode()
     local DB = ns:GetSubsystem("DB")
     return DB and DB.db.profile.tracker.sortMode == "manual"
@@ -107,8 +75,6 @@ function DD:OnBlockDragStart(block)
 
     ensureIndicator():Show()
 
-    -- Throttled OnUpdate (see GHOST_THROTTLE_S comment up top). Reset the
-    -- accumulator so the first tick of this drag fires promptly.
     _ghostAccum = 0
     g:SetScript("OnUpdate", ghostOnUpdate)
 end
@@ -118,16 +84,11 @@ function DD:UpdateDragVisuals()
     local g = self.ghost
     if not g then return end
 
-    -- Position ghost at cursor (cursor coords are in screen pixels; divide
-    -- by effective scale to express in UIParent units).
     local cx, cy = GetCursorPosition()
     local s = g:GetEffectiveScale()
     g:ClearAllPoints()
     g:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cx / s + 12, cy / s - 24)
 
-    -- Find drop target: the first active block whose top edge is BELOW the
-    -- cursor (cursor is above its top → would insert before it). If none,
-    -- insertion is at the end.
     local Blocks = ns:GetSubsystem("TrackerBlocks")
     if not (Blocks and Blocks.active) then return end
 
@@ -142,19 +103,17 @@ function DD:UpdateDragVisuals()
     -- (loop doesn't run then anyway).
     local blockScale = (n > 0 and active[1]:GetEffectiveScale()) or s
     local cursorScreenY = cy / blockScale
-    local targetIndex = n + 1                                -- default: insert at end
+    local targetIndex = n + 1
     for i = 1, n do
         local b = active[i]
         local top = b:GetTop()
         if top and cursorScreenY > top - (b:GetHeight() * 0.5) then
-            -- Cursor is in the upper half of this block → insert ABOVE it
             targetIndex = i
             break
         end
     end
     self.dropIndex = targetIndex
 
-    -- Position the insertion indicator
     local ind = self.indicator
     if not ind then return end
     ind:ClearAllPoints()
@@ -186,20 +145,6 @@ function DD:OnBlockDragStop()
     self.dragQuestID, self.dropIndex = nil, nil
 end
 
--- ─── Commit ────────────────────────────────────────────────────────────
--- Compute the new manualOrder map by walking the currently-active blocks in
--- their CURRENT visible order, removing the dragged quest, then splicing it
--- back in at dropIndex. Sequential ordinals (1..N) — gaps would let other
--- entries (filtered-out quests) collide ambiguously.
---
--- Quests that are filtered out of the tracker right now (unwatched, wrong
--- zone, type-filtered, collapsed section) aren't in Blocks.active, so a naive
--- rebuild-from-visible would erase their saved ordinal and sink them to the
--- bottom (99999) when they reappear. To preserve them, we MERGE the new
--- visible order back into the previously-saved order: each saved slot that
--- held a visible quest is refilled from the new on-screen order, while a
--- filtered-out quest keeps its exact slot. Stale entries for quests no longer
--- in the log are pruned (via the Cache) so manualOrder can't grow unbounded.
 function DD:Commit(draggedQuestID, dropIndex)
     local DB = ns:GetSubsystem("DB")
     local Blocks = ns:GetSubsystem("TrackerBlocks")
@@ -208,27 +153,18 @@ function DD:Commit(draggedQuestID, dropIndex)
     local profile  = DB.db.profile.tracker
     local oldOrder = profile.manualOrder
 
-    -- Collect visible questIDs in current order, excluding the dragged one.
     local seq = {}
     for i = 1, #Blocks.active do
         local qid = Blocks.active[i].questID
         if qid and qid ~= draggedQuestID then seq[#seq + 1] = qid end
     end
 
-    -- Splice the dragged quest back in. dropIndex was computed against the
-    -- pre-removal list, so a drop "at" index N is identical to inserting at
-    -- the same position in the post-removal list since we removed one item.
     local insertAt = math.min(math.max(dropIndex, 1), #seq + 1)
     table.insert(seq, insertAt, draggedQuestID)
 
-    -- Set of quests visible this pass (so we know which saved slots to refill).
     local visible = {}
     for i = 1, #seq do visible[seq[i]] = true end
 
-    -- Walk the previously-saved order in ascending ordinal. Every slot that
-    -- held a visible quest is refilled from `seq` (consumed in the new
-    -- on-screen order); every filtered-out quest still in the log keeps its
-    -- slot in place. Quests gone from the log are dropped here.
     local Cache  = ns:GetSubsystem("Cache")
     local merged, si = {}, 1
     if oldOrder then
@@ -247,14 +183,11 @@ function DD:Commit(draggedQuestID, dropIndex)
             end
         end
     end
-    -- Visible quests beyond the saved visible-slot count (newly appeared, or
-    -- no saved order yet) append in their on-screen order.
     while si <= #seq do
         merged[#merged + 1] = seq[si]
         si = si + 1
     end
 
-    -- Sequential ordinals (1..N) — gaps would let entries collide ambiguously.
     local order = {}
     for i = 1, #merged do order[merged[i]] = i end
     profile.manualOrder = order
@@ -263,8 +196,6 @@ function DD:Commit(draggedQuestID, dropIndex)
     if Tracker then Tracker:Refresh() end
 end
 
--- Called by Blocks.lua's buildBlock to wire up the drag-start/stop scripts
--- once per pooled block. The block's questID is read fresh at drag time.
 function DD:WireBlock(block)
     block:RegisterForDrag("LeftButton")
     block:SetScript("OnDragStart", function(b) DD:OnBlockDragStart(b) end)

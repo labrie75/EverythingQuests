@@ -1,34 +1,12 @@
--- Modules/MapPOI/Provider.lua
--- MapCanvasDataProvider that paints quest POIs on the world map for every
--- quest in the player's log. Supplements (does NOT replace) Blizzard's
--- built-in quest POI provider — removing Blizzard's has historically caused
--- taint, so we layer our pins on top.
---
--- Registration goes through LibMapPinHandler (a parallel "shadow canvas"),
--- not WorldMapFrame:AddDataProvider directly. Direct registration causes the
--- canvas's secureexecuterange iteration to assert on the addon-tainted
--- provider entry (Blizzard_MapCanvas.lua:280: assertion failed!). The shadow
--- canvas keeps our provider in a parallel list and dispatches to it via
--- hooked canvas methods — Blizzard's secureexecuterange only ever sees its
--- own clean list. See Libs/LibMapPinHandler/LibMapPinHandler.lua for details.
---
--- We register on PLAYER_ENTERING_WORLD rather than PLAYER_LOGIN because
--- WorldMapFrame isn't always fully initialized at PLAYER_LOGIN, and the
--- canonical pattern uses PEW.
-
 local _, ns = ...
 
 local M = ns:RegisterSubsystem("MapPOIProvider", {})
 
 local PIN_TEMPLATE = "EQQuestPinTemplate"
 
--- ─── Data provider mixin ──────────────────────────────────────────────
 local providerMixin = CreateFromMixins(MapCanvasDataProviderMixin)
 
--- The canvas must be told which frame TYPE backs each pin template name,
--- otherwise AcquirePin trips an assertion when it tries to instantiate a pin
--- from an unregistered template. SetPinTemplateType only takes effect for the
--- *current* canvas, so we register here in OnAdded.
+-- SetPinTemplateType only takes effect for the current canvas; must register here in OnAdded, not earlier.
 function providerMixin:OnAdded(mapCanvas)
     MapCanvasDataProviderMixin.OnAdded(self, mapCanvas)
     mapCanvas:SetPinTemplateType(PIN_TEMPLATE, "BUTTON")
@@ -40,36 +18,16 @@ function providerMixin:RemoveAllData()
     end
 end
 
--- Module-scope scratch table reused across every _DoRefresh call. Tracks
--- which questIDs the primary source already covered so the secondary
--- (Cache-walked) source doesn't double-pin them. wipe()d at the top of
--- _DoRefresh — never allocated fresh.
 local _seenQids = {}
 
--- The actual refresh work. Public RefreshAllData below throttles into
--- this. Two-source coverage:
---   1. Blizzard's POI API for the obvious quests on this map.
---   2. Walk the player's quest log Cache; any quest with a waypoint on
---      this map but no POI flag gets pinned too (campaign quests,
---      super-tracked-only quests, etc. that slip through GetQuestsOnMap).
--- The previous version returned a `{qid -> {x,y}}` table and iterated
--- it to AcquirePin — that allocated one fresh sub-table per pin plus
--- the wrapper table on every refresh. Now we AcquirePin inline and use
--- a single reused _seenQids set for dedup.
 function providerMixin:_DoRefresh()
     self:RemoveAllData()
 
-    -- User toggle (General tab): hide EQ's red quest pins entirely.
-    -- RemoveAllData() above already cleared any live pins, so simply
-    -- returning here leaves the world map clean.
     local DB = ns:GetSubsystem("DB")
     if DB and DB.db.profile.map and DB.db.profile.map.showQuestPins == false then
         return
     end
 
-    -- Early-out when the world map isn't visible. Without this, every
-    -- QUEST_LOG_UPDATE while the map is closed still ran the full walk
-    -- and discarded the result — meaningful waste during active play.
     if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
 
     local map = self:GetMap()
@@ -113,10 +71,6 @@ function providerMixin:_DoRefresh()
     end
 end
 
--- Throttle: Blizzard's canvas fires several events on map open (OnShow,
--- OnMapChanged, RefreshAllDataProviders, ReapplyPinFrameLevels, etc.) and
--- without coalescing we'd run _DoRefresh multiple times in the same frame
--- burst. 50ms is below human-perceptible delay and easily covers the burst.
 function providerMixin:RefreshAllData()
     if self._refreshPending then return end
     self._refreshPending = true
@@ -126,14 +80,10 @@ function providerMixin:RefreshAllData()
     end)
 end
 
--- Provider's OnMapChanged is what the shadow canvas dispatches via
--- secureexecuterange when Blizzard's canvas fires OnMapChanged. Default
--- behavior: refresh pins for the new map.
 function providerMixin:OnMapChanged()
     self:RefreshAllData()
 end
 
--- ─── Subsystem lifecycle ───────────────────────────────────────────────
 local function attach(self)
     if self.attached then return end
     if not WorldMapFrame then return end
@@ -151,13 +101,8 @@ end
 function M:OnEnable()
     local Events = ns:GetSubsystem("Events")
 
-    -- Lazy attachment: PLAYER_ENTERING_WORLD fires after PLAYER_LOGIN once the
-    -- world is fully loaded. This is the canonical timing; trying
-    -- to attach at PLAYER_LOGIN can race against WorldMapFrame initialization.
     Events:On("PLAYER_ENTERING_WORLD", function() attach(self) end)
 
-    -- Repaint when the player's quest log changes. The shadow canvas already
-    -- handles OnMapChanged dispatch for free; we just need quest-state events.
     local function refresh()
         if self.provider and WorldMapFrame and WorldMapFrame:IsShown() then
             self.provider:RefreshAllData()

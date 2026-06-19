@@ -1,12 +1,3 @@
--- Modules/MapPOI/Pin.lua
--- Pin mixin used by Pin.xml template "EQQuestPinTemplate".
--- Extends Blizzard's MapCanvasPinMixin so the WorldMap canvas handles
--- positioning, frame-level layering, and pooling for free.
---
--- Visual: a 22×22 button with a quest icon. Ready-to-turn-in quests get
--- the gossip "?" icon; in-progress quests get the standard quest dot.
--- Hover -> tooltip with title + remaining objectives. Click -> super-track.
-
 local _, ns = ...
 
 EQQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
@@ -25,19 +16,11 @@ function Pin:OnLoad()
     self:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 end
 
--- Called by MapCanvasMixin:AcquirePin(template, ...). The trailing args are
--- whatever Provider.lua passes after the template name.
 function Pin:OnAcquired(questID, x, y, isComplete)
     self.questID    = questID
     self.isComplete = isComplete
     self:SetPosition(x, y)
 
-    -- Permanent visual: EQ-red ring (matches the addon-suite brand color
-    -- #6D0501) wrapped around the standard quest `!`/`?` icon. The ring makes
-    -- ours readable as quest pins while clearly distinguishing them from
-    -- Blizzard's plain yellow icons even when stacked at the same coords.
-    -- Uses the worldquest-emissary-ring atlas as the ring background with a
-    -- standard quest icon centered on top.
     if self.ring then
         self.ring:SetAtlas("worldquest-emissary-ring")
         self.ring:SetVertexColor(0.635, 0.0, 0.039, 1)           -- #a2000a
@@ -46,9 +29,7 @@ function Pin:OnAcquired(questID, x, y, isComplete)
     self.icon:SetVertexColor(1, 1, 1, 1)
     self.numberText:SetText("")
 
-    -- The XML template is hidden="true" so leftover/unacquired pins don't
-    -- render as stray frames. AcquirePin doesn't auto-Show — the provider
-    -- owns visibility.
+    -- AcquirePin doesn't auto-Show — the provider owns visibility.
     self:Show()
 end
 
@@ -58,16 +39,14 @@ function Pin:OnReleased()
     self.numberText:SetText("")
 end
 
--- The canvas auto-wires script "OnEnter" to method "OnMouseEnter" if defined.
 function Pin:OnMouseEnter()
     if not self.questID then return end
     local Cache = ns:GetSubsystem("Cache")
     local q = Cache:Get(self.questID)
     if not q then return end
 
-    -- EQ's private tooltip, not the shared GameTooltip: drawing a map-pin hover
-    -- on the shared tooltip seeds our taint onto it, which the next AreaPOI
-    -- tooltip inherits and crashes on under Midnight's secret-value rules.
+    -- Private tooltip, not GameTooltip: sharing GameTooltip seeds our taint onto it,
+    -- which the next AreaPOI tooltip inherits and crashes under Midnight's secret-value rules.
     local tip = ns.Util.PinTooltip()
     tip:SetOwner(self, "ANCHOR_RIGHT")
     tip:SetText(q.title or ("Quest #" .. tostring(self.questID)),
@@ -103,7 +82,6 @@ end
 function Pin:OnClick(button)
     if not self.questID then return end
     if button == "RightButton" then
-        -- Right-click: open Blizzard's quest map frame to this quest.
         if C_AddOns and C_AddOns.LoadAddOn then
             C_AddOns.LoadAddOn("Blizzard_QuestLog")
         end
@@ -113,7 +91,6 @@ function Pin:OnClick(button)
             ToggleQuestLog()
         end
     else
-        -- Left-click: super-track
         if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
             C_SuperTrack.SetSuperTrackedQuestID(self.questID)
         end

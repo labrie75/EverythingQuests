@@ -1,23 +1,3 @@
--- Modules/Tracker/SuperTrackPersist.lua
--- Blizzard restores the previously super-tracked quest on login, which
--- revives the in-game waypoint arrow (and TomTom's, when installed —
--- TomTom hooks C_SuperTrack.SetSuperTrackedQuestID and renders an arrow
--- following whatever quest is restored). When the player has not asked
--- for that persistence (the default), we clear the super-track shortly
--- after a FRESH login so the session starts clean.
---
--- Critically, this must only fire on a genuine login / client restart —
--- NOT on a /reload. A reload is a mid-session refresh; the player still
--- has a quest focused and expects it to stay focused. We tell the two
--- apart with PLAYER_ENTERING_WORLD's isInitialLogin arg (true only on a
--- real login, false on /reload and on zone changes). Clearing in OnEnable
--- instead — which runs on every PLAYER_LOGIN, and /reload fires
--- PLAYER_LOGIN too — was the bug that wiped super-tracking on every reload.
---
--- Gated by db.profile.general.restoreSuperTrackOnLogin (default false =
--- clear on fresh login). The clear runs on a small delay so Blizzard's
--- own restore (which lands around login) has settled first.
-
 local _, ns = ...
 
 local STP = ns:RegisterSubsystem("TrackerSuperTrackPersist", {})

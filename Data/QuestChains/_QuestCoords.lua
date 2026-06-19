@@ -1,7 +1,3 @@
--- Data/QuestChains/_QuestCoords.lua
--- Quest-giver map coordinates for the Chain Guide waypoint feature.
--- [questID] = { m = uiMapID, x = 0-1, y = 0-1 }. Generated data; do not hand-edit.
-
 local _, ns = ...
 
 ns.CHAINGUIDE_QUEST_COORDS = {

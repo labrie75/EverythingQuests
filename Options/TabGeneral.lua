@@ -1,7 +1,3 @@
--- Options/TabGeneral.lua
--- Top-level toggles: tracker behavior, minimap button, slash commands,
--- profile management, reset button.
-
 local _, ns = ...
 local L = ns.L
 
@@ -22,13 +18,9 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
             end
     end
 
-    -- ─── LEFT COLUMN: behavior toggles ───────────────────────────────────
     local h = Options:CreateSectionHeader(content, L["General"])
     h:SetPoint("TOPLEFT", 8, -8)
 
-    -- Top-level toggle for EQ's own world-map quest pins (the red rings).
-    -- Lives in db.profile.map.showQuestPins; refresh the live provider so
-    -- the change shows immediately if the world map is open.
     local function questPinsGet()
         local DB = ns:GetSubsystem("DB")
         return not DB or not DB.db.profile.map
@@ -51,10 +43,6 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         L["These are the round red markers Everything Quests puts on the big world map for quests you've already picked up (the ones in your quest log). A red \"!\" means \"go here for this quest's next step.\" A red \"?\" means \"this quest is done \226\128\148 go here to turn it in.\" Quests you haven't accepted yet keep the game's own yellow \"!\" markers; EQ does not change those. Uncheck this box and all of EQ's red markers go away."])
     qpins:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
 
-    -- Lock = no drag-to-move AND no resize. Dedicated setter (not the shared
-    -- generalSetting) so it also reconciles the resize grip: ApplyLockState
-    -- hides + disables it when locked. The grip's own OnMouseDown re-checks
-    -- this flag live too, so resize is blocked even before the next repaint.
     local function lockGet()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.general.lockTracker
@@ -118,10 +106,6 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         L["Restores the waypoint arrow."])
     restore:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
-    -- Nameplate quest icons. Custom get/set: the stored value is nil until the
-    -- user touches it, which resolves to ON unless ElvUI is loaded (ElvUI shows
-    -- its own, so we avoid doubling up). Toggling writes an explicit bool and
-    -- applies live through the module.
     local function npGet()
         local QI = ns:GetSubsystem("NameplateQuestIcons")
         return QI and QI.IsEnabled and QI:IsEnabled()
@@ -138,7 +122,6 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         L["Shows the \"!\" + count on objective mobs."])
     nameplates:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -2)
 
-    -- Minimap button — uses LibDBIcon's hide flag stored in db.char.minimap.
     local function mmGet()
         local DB = ns:GetSubsystem("DB")
         return DB and not DB.char.minimap.hide
@@ -155,7 +138,6 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
     local mm = Options:CreateCheckbox(content, L["Show minimap button"], mmGet, mmSet)
     mm:SetPoint("TOPLEFT", nameplates, "BOTTOMLEFT", 0, -2)
 
-    -- ─── Reset profile button ───────────────────────────────────────────
     local reset = Options:CreateYellowButton(content, L["Reset all settings"], function()
         local Dialog = ns:GetSubsystem("Dialog")
         if not Dialog then return end
@@ -174,13 +156,9 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
     reset:SetSize(160, 24)
     reset:SetPoint("TOPLEFT", mm, "BOTTOMLEFT", 0, -16)
 
-    -- ─── RIGHT COLUMN: profiles + slash command list ────────────────────
     local profilesHeader = Options:CreateSectionHeader(content, L["Profiles"])
     profilesHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
-    -- profileList is passed as a function (not a static table) so the
-    -- dropdown re-fetches each time it opens — newly created profiles
-    -- show up without rebuilding the widget.
     local function profileList()
         local DB = ns:GetSubsystem("DB")
         local out = {}
@@ -202,16 +180,13 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         end
     end
 
-    -- Create a new profile that carries the current profile's settings
-    -- over instead of starting from defaults — matches the user expectation
-    -- of "make a copy of what I have under a new name".
     local function createProfileCopiedFromCurrent(name)
         local DB = ns:GetSubsystem("DB")
         if not (DB and DB.db) then return end
         local source = DB.db:GetCurrentProfile()
-        DB.db:SetProfile(name)                  -- creates + switches to the new profile
+        DB.db:SetProfile(name)
         if source and source ~= name and DB.db.CopyProfile then
-            DB.db:CopyProfile(source, true)     -- silent = true: no confirmation popup
+            DB.db:CopyProfile(source, true)
         end
         ReloadUI()
     end
@@ -220,10 +195,6 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
     profDD:SetPoint("TOPLEFT", profilesHeader, "BOTTOMLEFT", 0, -16)
     profDD:SetWidth(280)
 
-    -- New Profile button — AceDB's SetProfile creates the profile on
-    -- demand if it doesn't already exist, so we just need a name from
-    -- the user. Empty input is rejected; existing name is treated as
-    -- "switch to that profile".
     local function promptNewProfile()
         local Dialog = ns:GetSubsystem("Dialog")
         if not Dialog then return end

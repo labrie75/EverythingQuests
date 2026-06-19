@@ -1,31 +1,20 @@
--- Core/Util.lua
--- Shared helpers: color tokens, time formatting, money formatting, table ops.
-
 local _, ns = ...
 
 local Util = ns:RegisterSubsystem("Util", {})
 
--- Style tokens (the Everything-suite palette). SINGLE SOURCE OF TRUTH — wire
--- modules to these instead of re-declaring the literals (which had drifted:
--- two files shipped #6D0501 as {0.42,0.02,0.02}, a visibly purpler red).
--- The brand red is exactly #6D0501 = 109/255, 5/255, 1/255 = 0.427,0.020,0.004
--- (matches Core/DB.lua's borderColor default and Core/Dialog.lua).
--- Brand red brightened from #6D0501 to #a2000a = 162/255, 0/255, 10/255 =
--- 0.635, 0.000, 0.039 (the original was a touch too dark in-game).
 Util.color = {
     optionsBg     = { 0.00,  0.00,  0.00,  0.95 },
-    tabActive     = { 0.635, 0.000, 0.039, 1.00 },                      -- #a2000a
+    tabActive     = { 0.635, 0.000, 0.039, 1.00 },
     tabInactive   = { 0.10,  0.10,  0.10,  0.85 },
     tabText       = { 1.00,  1.00,  1.00,  1.00 },
-    brandRed      = { 0.635, 0.000, 0.039, 1.00 },                      -- #a2000a canonical
-    headerRed     = { 0.635, 0.000, 0.039, 1.00 },                      -- = brandRed (section headers)
-    buttonYellow  = { 0.92,  0.72,  0.02,  1.00 },                      -- #EBB706
-    statYellow    = { 0.92,  0.72,  0.02,  1.00 },                      -- = buttonYellow
-    muted         = { 0.70,  0.70,  0.70,  1.00 },                      -- secondary label grey
-    dim           = { 0.50,  0.50,  0.50,  1.00 },                      -- tertiary / disabled grey
+    brandRed      = { 0.635, 0.000, 0.039, 1.00 },
+    headerRed     = { 0.635, 0.000, 0.039, 1.00 },
+    buttonYellow  = { 0.92,  0.72,  0.02,  1.00 },
+    statYellow    = { 0.92,  0.72,  0.02,  1.00 },
+    muted         = { 0.70,  0.70,  0.70,  1.00 },
+    dim           = { 0.50,  0.50,  0.50,  1.00 },
 }
 
--- Format an integer count as "1.2k" / "12.3k" / "1.2m" once it gets big.
 function Util.AbbrevNumber(n)
     if not n then return "" end
     if n >= 1000000 then return ("%.1fm"):format(n / 1000000) end
@@ -33,7 +22,6 @@ function Util.AbbrevNumber(n)
     return tostring(n)
 end
 
--- Format seconds-remaining as "12m" / "3h" / "2d".
 function Util.FmtTimeShort(secs)
     if not secs or secs <= 0 then return "" end
     if secs < 3600  then return ("%dm"):format(secs / 60) end
@@ -41,8 +29,6 @@ function Util.FmtTimeShort(secs)
     return ("%dd"):format(secs / 86400)
 end
 
--- Format an elapsed duration as "1h 47m" / "47m" / "30s" (e.g. play-session
--- length). Unlike FmtTimeShort this keeps the minutes alongside the hours.
 function Util.FmtDuration(secs)
     secs = math.max(0, math.floor(secs or 0))
     local h = math.floor(secs / 3600)
@@ -52,15 +38,6 @@ function Util.FmtDuration(secs)
     return ("%ds"):format(secs)
 end
 
--- ── World-quest time-left (single source of truth) ───────────────────
--- All WQ surfaces (map pin, zone list, tooltip) take minutes from
--- C_TaskQuest.GetQuestTimeLeftMinutes and MUST agree on urgency color and
--- formatting — otherwise the same quest looks differently urgent depending
--- on where you read it. One ramp here; callers pick Short (compact pin
--- label) or Long (roomy list/tooltip) for text.
-
--- Urgency color by minutes remaining: <30 red, <2h orange, <12h yellow,
--- else green. nil / expired → a distinct red.
 function Util.WQTimeColor(mins)
     if not mins or mins <= 0 then return 1.00, 0.10, 0.10 end
     if mins < 30  then return 1.00, 0.25, 0.25 end
@@ -69,7 +46,6 @@ function Util.WQTimeColor(mins)
     return 0.50, 1.00, 0.50
 end
 
--- Compact, for the space-constrained map-pin label: "" / "45m" / "3h" / "2d".
 function Util.WQTimeShort(mins)
     if not mins or mins <= 0 then return "" end
     if mins < 60   then return ("%dm"):format(mins) end
@@ -77,7 +53,6 @@ function Util.WQTimeShort(mins)
     return ("%dd"):format(math.floor(mins / 1440))
 end
 
--- Verbose, for the zone list and tooltip: "Expired" / "45m" / "3h 5m".
 function Util.WQTimeLong(mins)
     if not mins or mins <= 0 then return "Expired" end
     local h = math.floor(mins / 60)
@@ -86,7 +61,6 @@ function Util.WQTimeLong(mins)
     return ("%dm"):format(m)
 end
 
--- RGB hex string -> {r,g,b,a}. "6D0501" or "#6D0501".
 function Util.HexToRGBA(hex, alpha)
     hex = hex:gsub("^#", "")
     local r = tonumber(hex:sub(1, 2), 16) / 255
@@ -95,13 +69,6 @@ function Util.HexToRGBA(hex, alpha)
     return r, g, b, alpha or 1
 end
 
--- Sanitize a saved manual-order map ({ [questID] = ordinal }) loaded from
--- SavedVariables. A corrupt non-numeric ordinal would crash the tracker's
--- manual-sort comparator (it does `number < value`); stale / duplicate /
--- gappy ordinals are merely untidy. Returns a FRESH compact map: only
--- numeric questID -> numeric ordinal entries survive, re-sequenced 1..N
--- preserving their relative order. Cold path (login only), so the small
--- temp tables are fine; GC-neutral at runtime.
 function Util.ReconcileOrder(orderMap)
     if type(orderMap) ~= "table" then return {} end
     local list = {}
@@ -116,14 +83,6 @@ function Util.ReconcileOrder(orderMap)
     return clean
 end
 
--- ── Objective "X/Y" progress colorization (single source of truth) ───
--- The tracker's quest blocks (Blocks.lua) and the World Quests section
--- (Tracker/Events.lua) both color the have/need count identically: red at
--- zero, amber in progress, green when complete. This lived as two hand-synced
--- copies — and the Events one allocated a fresh gsub closure per objective
--- line. One implementation here, with a hoisted replacer that captures no
--- upvalues (reused, so no per-call closure), keeps both surfaces identical
--- and allocation-light on the render hot path.
 local function progressRepl(have, need)
     local h, n = tonumber(have), tonumber(need)
     if not (h and n) then return have .. "/" .. need end
@@ -140,23 +99,10 @@ function Util.ColorizeProgress(text)
     return (text:gsub("(%d+)%s*/%s*(%d+)", progressRepl))
 end
 
--- Strip a leading "X/Y" count from RAW objective text (used when the user
--- hides objective numbers). Leading-anchored, and meant to run BEFORE any
--- color escapes are added so it can never eat into a |cAARRGGBB..|r code.
 function Util.StripLeadingCount(text)
     return (text:gsub("^%s*%d+%s*/%s*%d+%s*", ""))
 end
 
--- ── Quest title resolver (single source of truth) ────────────────────
--- Quest titles come from different APIs depending on quest kind and load
--- state: C_QuestLog.GetTitleForQuestID covers normal log quests, while
--- QuestUtils_GetQuestName and C_TaskQuest.GetQuestInfoByQuestID fill in
--- world/task quests and quests whose data is still streaming in. Several call
--- sites only consulted GetTitleForQuestID and showed a bare "Quest #<id>" for
--- everything else — this is the shared resolver they should all use.
---   withNumberFallback truthy -> returns "Quest #<id>" when nothing resolves
---   withNumberFallback falsy  -> returns nil (so the caller can chain its own
---                                fallback, e.g. a curated item.name)
 function Util.QuestTitle(questID, withNumberFallback)
     if questID then
         if C_QuestLog and C_QuestLog.GetTitleForQuestID then
@@ -183,15 +129,6 @@ function Util.QuestTitle(questID, withNumberFallback)
     return nil
 end
 
--- ── Frame-pool acquire (single source of truth) ──────────────────────
--- A dozen surfaces (Chain Guide, History, World Quests, and the tracker's
--- scenario / profession / event / endeavor sections, auto-complete and
--- auto-quest popups) keep a free-list `pool` of reusable frames plus an
--- `active` list of the ones currently shown, and re-acquire them every
--- render. The acquire half was copy-pasted identically: pop from the pool,
--- build a fresh one via factory(parent) on a miss, reparent, show, and
--- record it in `active`. This is that half, lifted to one place. The release
--- half stays per-module (each surface resets different fields on its rows).
 function Util.AcquirePooled(pool, active, parent, factory)
     local f = tremove(pool)
     if not f then f = factory(parent) end
@@ -201,19 +138,9 @@ function Util.AcquirePooled(pool, active, parent, factory)
     return f
 end
 
--- Private tooltip for EQ's world-map pins (and the pin-like rows that share
--- the WQ tooltip). Drawing a pin hover on the SHARED GameTooltip leaves EQ's
--- insecure execution taint on that singleton; under Midnight's "secret value"
--- system the NEXT tooltip shown on it — e.g. Blizzard's AreaPOI POI tooltip —
--- can then throw "secret value (execution tainted by 'EverythingQuests')"
--- during its widget layout. A dedicated frame keeps EQ off the shared tooltip
--- entirely, so an AreaPOI hover never inherits our taint. Lazily created so we
--- only pay for it once a map pin is actually hovered.
---
--- Trade-off: this tooltip is NOT restyled by tooltip-skinning addons (ElvUI,
--- TipTac, …) and won't carry third-party "extra line" injections — EQ draws
--- all of its own content (title/objectives/rewards/time), so nothing is lost
--- functionally, only the borrowed skin.
+-- Using a private GameTooltip frame instead of the shared GameTooltip singleton
+-- prevents EQ's insecure taint from propagating to Blizzard's AreaPOI tooltip
+-- under Midnight's "secret value" system, which would crash on the next AreaPOI hover.
 local _pinTooltip
 function Util.PinTooltip()
     if not _pinTooltip then

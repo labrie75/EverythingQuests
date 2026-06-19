@@ -1,13 +1,7 @@
--- Modules/WorldQuests/Tooltip.lua
--- Rich tooltip for world quest pins and tracker rows: title, faction,
--- objectives, every reward (money / items / currencies / XP), time-left.
--- Built on standard GameTooltip APIs only — no third-party tooltip lib.
-
 local _, ns = ...
 
 local T = ns:RegisterSubsystem("WQTooltip", {})
 
--- Shared WQ time helpers — single source of truth in Core/Util.lua.
 local Util = ns.Util
 
 local function questTitle(questID)
@@ -35,9 +29,6 @@ local function factionName(questID)
     return nil
 end
 
--- Show tooltip for a world quest. `owner` is the frame to anchor against
--- (typically a pin button or tracker row). Caller is responsible for hiding
--- via GameTooltip:Hide() in OnLeave.
 function T:Show(owner, questID)
     if not (owner and questID) then return end
     -- Use EQ's private tooltip, not the shared GameTooltip: a pin hover drawn

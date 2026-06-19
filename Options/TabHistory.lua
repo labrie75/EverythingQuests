@@ -1,11 +1,3 @@
--- Options/TabHistory.lua
--- "History" tab in the Options window. Controls:
---   • Master enable toggle
---   • Retention size slider (0 = unlimited)
---   • "Open Quest History" button — pops the standalone history window
---   • "Populate from past completions" — manual backfill button per char
---   • "Wipe history" — destructive, gated by a static-popup confirmation
-
 local _, ns = ...
 local L = ns.L
 
@@ -34,8 +26,6 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
         L["When on, Everything Quests writes an entry to your account-wide quest history every time you turn in a quest. The data is shared across all of your characters; the history window can filter by character."])
     ena:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
 
-    -- Retention slider (200..10000 step 200; 0 means unlimited, set via a
-    -- separate "unlimited" checkbox below the slider for clarity).
     local function retGet()
         local DB = ns:GetSubsystem("DB")
         return (DB and DB.db.profile.history.retention) or 5000
@@ -57,7 +47,6 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
             L["When the history grows past this many entries, the oldest ones are dropped. Set higher if you want a longer record, lower to save disk space. 5000 entries is enough for several months of heavy questing."])
     end
 
-    -- ─── Actions ────────────────────────────────────────────────────────
     local openBtn = Options:CreateYellowButton(content, L["Open Quest History"], function()
         local HF = ns:GetSubsystem("HistoryFrame")
         if HF and HF.Open then HF:Open() end
@@ -94,9 +83,6 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
     Options:AttachTooltip(rescanBtn, L["Re-scan for quest names"],
         L["Some quests in the backfilled history show up as \"Quest #12345\" because Blizzard hasn't sent the client their name yet. This button asks the server for every missing one. Quests the server flatly has no data for (retired or internal IDs) will keep their numeric placeholder."])
 
-    -- Restore from the automatic logout backup. EQ keeps a few rolling
-    -- snapshots of your history and self-restores on load if it ever detects
-    -- the data went missing; this button is the manual escape hatch.
     local restoreBtn = Options:CreateYellowButton(content, L["Restore history from backup"], function()
         local R = ns:GetSubsystem("History")
         if not (R and R.BackupInfo) then return end
@@ -143,9 +129,7 @@ ns:GetSubsystem("Options"):AddTab("history", L["History"], function(content)
             end,
         })
     end)
-    -- Full-width to align with the other four, but brand-red text + extra gap
-    -- above so the one destructive action clearly stands apart.
     wipeBtn:SetSize(280, 24)
     wipeBtn:SetPoint("TOPLEFT", restoreBtn, "BOTTOMLEFT", 0, -16)
-    if wipeBtn.text then wipeBtn.text:SetTextColor(0.635, 0.000, 0.039) end   -- #a2000a
+    if wipeBtn.text then wipeBtn.text:SetTextColor(0.635, 0.000, 0.039) end
 end)

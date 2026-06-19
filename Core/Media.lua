@@ -2,9 +2,6 @@ local _, ns = ...
 
 local Media = ns:RegisterSubsystem("Media", {})
 
--- Quest-complete sound roster — standard WoW voice/UI sound file IDs so the
--- options are familiar. Default ("Work Complete") is the peon "Work
--- complete" voice line.
 local SOUNDS = {
     { name = "EQ: Work Complete",   file = 558132 },   -- PeonBuildingComplete1.ogg
     { name = "EQ: BloodElf (M)",    file = 539400 },
@@ -35,12 +32,6 @@ local SOUNDS = {
     { name = "EQ: Worgen (F)",      file = 542028 },
 }
 
--- Bundled fonts. Files live in Media/Fonts/ (alongside their OFL / Ubuntu
--- licence .txt files) and ship with the addon so every user gets the full
--- selection with zero external dependencies. Registered names are what the
--- user sees in the Appearance font dropdown. The first entry is the DB
--- default (Core/DB.lua tracker.font) and must match it exactly — LSM
--- lookups are case- and space-sensitive.
 local FONT_PATH = [[Interface\AddOns\EverythingQuests\Media\Fonts\]]
 local FONTS = {
     { name = "GothamXNarrow Black",      file = FONT_PATH .. "GothamXNarrow-Black.ttf" },  -- DB default
@@ -87,11 +78,6 @@ local FONTS = {
     { name = "Ubuntu Bold",              file = FONT_PATH .. "Ubuntu-Bold.ttf" },
 }
 
--- WoW's own built-in fonts, for users who want the stock look. "WoW Default"
--- points at STANDARD_TEXT_FONT so it stays locale-correct (the client swaps in
--- the right Friz Quadrata glyphs for Cyrillic/Korean/etc.). LSM already ships
--- locale-aware registrations for some of these names; LSM:Register is a no-op
--- when a name already exists, so listing them here is harmless either way.
 local WOW_FONTS = {
     { name = "WoW Default (Friz Quadrata)", file = STANDARD_TEXT_FONT or [[Fonts\FRIZQT__.TTF]] },
     { name = "WoW Arial Narrow",            file = [[Fonts\ARIALN.TTF]] },
@@ -151,24 +137,12 @@ function Media:GetFontFile(name)
         local f = LSM:Fetch("font", name or "Friz Quadrata TT")
         if f then return f end
     end
-    -- LSM missing: resolve our own WoW-font names before the generic fallback.
     for _, f in ipairs(WOW_FONTS) do
         if f.name == name then return f.file end
     end
     return STANDARD_TEXT_FONT
 end
 
--- Drop-shadow behind tracker text (Appearance "Text Shadow"). When enabled, a
--- coloured shadow cast at a user-tunable offset (Appearance "Shadow Size",
--- tracker.textShadowStrength, applied as (d, -d)); when disabled, the shadow is
--- explicitly cleared (alpha 0 + zero offset) so a font template's inherited
--- shadow never lingers. The offset defaults to 2: the tracker font's default
--- OUTLINE draws a ~1px dark border that fully hides a 1px shadow, so the shadow
--- has to sit far enough out to read past the outline — a larger value reads as
--- a bigger / more pronounced shadow. Allocation-free.
--- Shared low-level apply: enabled/color/strength come from whichever cfg block
--- the caller owns (main tracker text, or the separate scenario banner). Cleared
--- explicitly when disabled so an inherited template shadow can't linger.
 local function setShadow(fontstring, enabled, color, strength)
     if enabled then
         fontstring:SetShadowColor(color and color.r or 0, color and color.g or 0, color and color.b or 0, color and color.a or 1)
@@ -185,11 +159,6 @@ local function applyShadow(cfg, fontstring)
               cfg and cfg.textShadowStrength)
 end
 
--- Apply the user's tracker font to a FontString. sizeDelta is added to the
--- configured size (e.g., -2 for sub-text, -3 for category labels). fontOverride
--- (optional) swaps just the typeface — size and outline still come from the
--- tracker config — so a surface can use its own font while honoring the global
--- size/outline (used by the floating Zone Bar's per-bar font option).
 function Media:ApplyTrackerFont(fontstring, sizeDelta, fontOverride)
     if not fontstring then return end
     local DB = ns:GetSubsystem("DB")
@@ -202,10 +171,6 @@ function Media:ApplyTrackerFont(fontstring, sizeDelta, fontOverride)
     applyShadow(cfg, fontstring)
 end
 
--- Apply the tracker font at the user's independent TITLE size: the base font
--- size plus the Appearance "Title Size Offset" (tracker.titleSizeDelta). Used
--- for quest/achievement/profession/etc. title lines so titles can be sized
--- apart from objective text. fontOverride swaps just the typeface (Zone Bar).
 function Media:ApplyTrackerTitleFont(fontstring, fontOverride)
     if not fontstring then return end
     local DB = ns:GetSubsystem("DB")
@@ -214,9 +179,6 @@ function Media:ApplyTrackerTitleFont(fontstring, fontOverride)
     self:ApplyTrackerFont(fontstring, cfg.titleSizeDelta or 0, fontOverride)
 end
 
--- Apply only the text-shadow setting to a FontString whose font is set
--- elsewhere — the quest-block path in Tracker/Blocks.lua sets its own font
--- directly (per-pass, change-gated) rather than via ApplyTrackerFont.
 function Media:ApplyTextShadow(fontstring)
     if not fontstring then return end
     local DB = ns:GetSubsystem("DB")
@@ -224,11 +186,6 @@ function Media:ApplyTextShadow(fontstring)
     applyShadow(DB.db.profile.tracker, fontstring)
 end
 
--- Apply the SEPARATE scenario-banner shadow (Appearance "Scenario" group) to a
--- FontString. Used for the scenario / delve banner's Stage + name lines, which
--- are distinct chrome from the main tracker text, so they carry their own
--- toggle/colour/size. Defaults (ON, 1px, black) preserve the banner's formerly
--- hardcoded (1,-1) shadow. The scenario objective rows still use ApplyTextShadow.
 function Media:ApplyScenarioShadow(fontstring)
     if not fontstring then return end
     local DB = ns:GetSubsystem("DB")

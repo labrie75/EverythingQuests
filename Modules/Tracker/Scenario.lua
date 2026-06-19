@@ -3,16 +3,15 @@ local L = ns.L
 
 local S = ns:RegisterSubsystem("TrackerScenario", {})
 
-local SUBHEADER_H      = 26   -- single-line header band; matches Frame.lua
-                              -- SECTION_H so it sizes like the other sections
-local CAT_GAP          = 1    -- gap between the category line and name line
+local SUBHEADER_H      = 26
+local CAT_GAP          = 1
 local BANNER_GAP       = 6
 local CRITERIA_LINE_GAP = 4
 local BAR_H            = 16
 local BAR_W_RATIO      = 0.85
 
-local HEADER_COLOR   = { 0.93, 0.32, 0.10 }   -- prominent instance-name line
-local CATEGORY_COLOR = { 0.78, 0.78, 0.78 }   -- muted "Delves" category line
+local HEADER_COLOR   = { 0.93, 0.32, 0.10 }
+local CATEGORY_COLOR = { 0.78, 0.78, 0.78 }
 
 S.criteriaPool   = {}
 S.activeCriteria = {}
@@ -41,9 +40,6 @@ local function pickAtlases(textureKit)
     return normal, final, kit
 end
 
--- The top tier of the header: the broad category word ("Delves", "Dungeon",
--- "Raid"...). instType / diffID are passed in from a single GetInstanceInfo()
--- call so we don't re-query the client per helper.
 local function categoryLabel(scenarioType, textureKit, scenarioName, instType, diffID)
     -- scenarioType 8 = Delves. Verified live via C_Scenario.GetInfo /
     -- C_ScenarioInfo.GetScenarioInfo inside a Midnight delve; the legacy
@@ -63,10 +59,6 @@ local function categoryLabel(scenarioType, textureKit, scenarioName, instType, d
     -- type 3 here would mislabel every normal dungeon as a Follower Dungeon.
     if diffID == 205 then return "Follower Dungeon" end
 
-    -- Midnight world events report scenarioType 0 / textureKit
-    -- "midnight-scenario"; the name is the only reliable signal, so match
-    -- it directly rather than the kit (other Midnight scenarios may share
-    -- the kit and should keep the generic label).
     if scenarioName then
         local n = scenarioName:lower()
         if n:find("void incursion") or n:find("void assault") then
@@ -74,31 +66,15 @@ local function categoryLabel(scenarioType, textureKit, scenarioName, instType, d
         end
     end
 
-    -- Generic fallback: when neither scenarioType nor textureKit match
-    -- something we recognize, fall back to the broad instance category.
-    -- instanceType is authoritative ("party" = dungeon, "raid" = raid, etc.),
-    -- so any future dungeon or follower dungeon that reports an unclassified
-    -- scenarioType still labels as "Dungeon" instead of generic "Scenario".
     if instType == "party"    then return "Dungeon"     end
     if instType == "raid"     then return "Raid"        end
     if instType == "pvp"      then return "Battleground" end
     if instType == "arena"    then return "Arena"       end
 
-    -- Auto-name: anything still unclassified (open-world Midnight events,
-    -- story scenarios, future content) gets the scenario's OWN name from
-    -- Blizzard rather than the generic word "Scenario". We only fall back to
-    -- the literal "Scenario" when Blizzard hands us no name at all.
     if scenarioName and scenarioName ~= "" then return scenarioName end
     return "Scenario"
 end
 
--- The bottom tier: the specific instance name ("The Darkway", "Windrunner
--- Spire"). GetInstanceInfo()'s first return is the only universally reliable
--- source — for delves, C_Scenario.GetInfo and C_ScenarioInfo.GetScenarioInfo
--- both return the generic word "Delves", while GetInstanceInfo gives the real
--- delve name. Verified live across delve / follower dungeon / normal dungeon.
--- Open-world scenarios (instanceType "none") aren't instanced, so there
--- GetInstanceInfo names the zone, not the event — use the scenario's own name.
 local function resolveName(scenarioName, instName, instType)
     if instName and instName ~= "" and instType and instType ~= "none" then
         return instName
@@ -114,9 +90,9 @@ end
 -- markers, so detect those and show the bar alone instead.
 local function looksInternal(s)
     if not s or s == "" then return false end
-    if s:find("^%s*%d+%.%d+%.%d+") then return true end   -- leading "12.0.5"
-    if s:find("%-%s*Step%s+%d+") then return true end      -- "- Step 02"
-    if s:find("Scenario%s+%d%d") then return true end      -- "Scenario 01"
+    if s:find("^%s*%d+%.%d+%.%d+") then return true end
+    if s:find("%-%s*Step%s+%d+") then return true end
+    if s:find("Scenario%s+%d%d") then return true end
     return false
 end
 
@@ -184,11 +160,6 @@ function S:Build()
     subHeader:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     subHeader:SetPoint("TOPRIGHT", container, "TOPRIGHT", 0, 0)
 
-    -- Two-tier header: a small category line ("Delves") above the prominent
-    -- instance name ("The Darkway"). When there's no distinct name the
-    -- category line is hidden and the name line carries the label alone, so
-    -- single-label scenarios still look like the other section headers.
-    -- Anchors are state-driven in ApplyHeaderLabels (one- vs two-line).
     subHeader.cat = subHeader:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     subHeader.cat:SetJustifyH("LEFT")
     subHeader.cat:SetTextColor(CATEGORY_COLOR[1], CATEGORY_COLOR[2], CATEGORY_COLOR[3])
@@ -233,11 +204,6 @@ function S:Build()
     self.banner    = banner
 end
 
--- Resolve and lay out the two-tier header. Refresh() fires on several chatty
--- scenario events (criteria/spell updates etc.), so this is change-gated: a
--- single GetInstanceInfo() supplies every signal, and when none of the
--- label-affecting inputs moved we bail before touching SetText / fonts /
--- GetStringHeight. That keeps string churn and layout passes off the hot path.
 function S:ApplyHeaderLabels(scenarioType, textureKit, scenarioName)
     local subHeader = self.subHeader
     local instName, instType, diffID
@@ -253,7 +219,7 @@ function S:ApplyHeaderLabels(scenarioType, textureKit, scenarioName)
     local cat     = categoryLabel(scenarioType, textureKit, scenarioName, instType, diffID)
     local name    = resolveName(scenarioName, instName, instType)
     local twoTier = name ~= nil and name:lower() ~= cat:lower()
-    local primary = name or cat   -- the prominent line; name when we have one
+    local primary = name or cat
 
     local Media = ns:GetSubsystem("Media")
     subHeader.text:SetText(primary)
@@ -281,11 +247,6 @@ function S:ApplyHeaderLabels(scenarioType, textureKit, scenarioName)
     end
 end
 
--- Re-apply the scenario banner's drop-shadow from current settings (Appearance
--- "Scenario" group) to the Stage + name lines. Separate from the main tracker
--- text shadow. Called from the render path and from the options setter so a
--- toggle/colour/size change previews live on an active banner (no-op when the
--- banner hasn't been built yet / no scenario is up).
 function S:ApplyBannerShadow()
     local banner = self.banner
     if not banner then return end
@@ -317,8 +278,6 @@ function S:Refresh()
             banner.WidgetContainer:UnregisterForWidgetSet()
         end
         container:SetHeight(1)
-        -- Invalidate the label signature so re-entering a scenario rebuilds
-        -- the header (the relayout in ApplyHeaderLabels is change-gated).
         self._sType, self._sKit, self._sName, self._sInst = nil, nil, nil, nil
         return
     end
@@ -390,16 +349,10 @@ function S:Refresh()
         banner.Stage:Show()
         banner.Name:SetText(stageName or "")
         banner.Name:Show()
-        -- The banner lines carry their own shadow (Appearance "Scenario"),
-        -- separate from the main tracker text shadow. Re-applied each render so
-        -- toggling / restyling it previews live on an active scenario.
         self:ApplyBannerShadow()
     end
 
     releaseAllCriteria()
-    -- Resolved once for the loop (no per-row lookup): criteria lines route
-    -- through the shared text-shadow helper so they honour the Appearance
-    -- "Text Shadow" toggle like every other tracker objective line.
     local Media = ns:GetSubsystem("Media")
     local prev, prevAnchor = banner, "BOTTOM"
     local barWidth = math.floor(container:GetWidth() * BAR_W_RATIO)

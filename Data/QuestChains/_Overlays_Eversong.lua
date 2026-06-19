@@ -1,15 +1,6 @@
--- Data/QuestChains/_Overlays_Eversong.lua
--- GENERATED DRAFT Eversong zone overlays - verify in-game, then graduate
--- the verified ones into _Overlays.lua and drop them from here. Topology is
--- from authored reference data; layout is auto-laid to the centred-tree
--- convention. Only chains whose draft positions every LIVE quest (coverage-
--- clean per the dump) are emitted, so these should render without
--- stragglers - the open question per chain is purely whether the layout reads
--- well. Regenerate: python docs/_check_coverage.py docs/_zonedump_eversong.txt --emit
 local _, ns = ...
 ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
 
-    -- The Drinking Debt  (questline 5784, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5784] = {
         layout = {
             [87455] = { x = 1, y = 0  },
@@ -24,7 +15,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Theft Tracking  (questline 5804, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5804] = {
         layout = {
             [94388] = { x = 0, y = 0  },
@@ -40,7 +30,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Port Detective  (questline 5805, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5805] = {
         layout = {
             [87392] = { x = 1, y = 0  },
@@ -61,7 +50,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- One Adventurous Hatchling  (questline 5898, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5898] = {
         layout = {
             [89383] = { x = 0, y = 0  },
@@ -74,7 +62,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Paladin Rescue  (questline 5908, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5908] = {
         layout = {
             [90546] = { x = 1, y = 0  },
@@ -104,7 +91,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Fear and Fel  (questline 5931, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5931] = {
         layout = {
             [90835] = { x = 1, y = 0  },
@@ -123,7 +109,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- How to Train Your Protege  (questline 5937, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5937] = {
         layout = {
             [94393] = { x = 1, y = 0  },
@@ -142,7 +127,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Sunbath, Take Me Away  (questline 5949, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5949] = {
         layout = {
             [91271] = { x = 1, y = 0  },
@@ -157,7 +141,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Daggerspine Landing  (questline 5958, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5958] = {
         layout = {
             [94370] = { x = 1, y = 0  },
@@ -176,7 +159,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Far Striding  (questline 5969, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[5969] = {
         layout = {
             [94371] = { x = 1, y = 0  },
@@ -209,7 +191,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Blinding Sun  (questline 6018, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[6018] = {
         layout = {
             [87399] = { x = 1, y = 0  },
@@ -224,7 +205,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Flowers for Amalthea  (questline 6020, Eversong Woods)
     ns.CHAINGUIDE_OVERLAYS[6020] = {
         layout = {
             [92021] = { x = 0, y = 0  },

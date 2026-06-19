@@ -1,13 +1,4 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
-    <!--
-        EQChainPinTemplate — virtual button used by Modules/ChainGuide/MapPinProvider.
-        One pin per quest in the player's tracked chain. The mixin (MapPin.lua)
-        tints the ring per status (gold = next step, cyan = on quest, green =
-        done, grey = future) so the chain reads at a glance on the world map.
-
-        No <Scripts>: MapCanvasMixin:AcquirePin auto-wires OnEnter/OnLeave/OnClick
-        to the mixin's same-named methods on first acquisition.
-    -->
     <Button name="EQChainPinTemplate" mixin="EQChainPinMixin" hidden="true" virtual="true">
         <Size x="28" y="28"/>
         <Layers>

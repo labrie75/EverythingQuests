@@ -119,6 +119,12 @@ L["Approximate questline progress."] = "Примерный прогресс по
 L["Float as a movable bar"] = "Перенос панели"
 L["Drag to move; right-click to lock or reset."] = "Перетащите, чтобы переместить; \nПКМ - чтобы заблокировать или сбросить."
 L["Changes apply immediately to the on-screen tracker."] = "Изменения применяются к экранному трекеру немедленно."
+L["Simplify tracked achievements"] = "Упрощать отслеживаемые достижения"
+L["Show only incomplete criteria for tracked achievements."] = "Показывать только невыполненные критерии для отслеживаемых достижений."
+L["Show Options icon on the tracker"] = "Показывать значок настроек на трекере"
+L["A small cogwheel at the top-right of the tracker that opens the options panel."] = "Небольшая шестерёнка в правом верхнем углу трекера, открывающая панель настроек."
+L["Show Chain Guide icon on the tracker"] = "Показывать значок Путеводителя по цепочкам на трекере"
+L["A small book at the top-right of the tracker that opens the Chain Guide."] = "Небольшая книга в правом верхнем углу трекера, открывающая Путеводитель по цепочкам."
 
 -- ─── Options/TabWorldQuests.lua ───
 L["Gold"] = "Золото"
@@ -185,6 +191,8 @@ L["%d days ago"] = "%d дн. назад"
 L["\n|cffaaaaaaLast pruned: %s|r"] = "\n|cffaaaaaaПоследняя очистка: %s|r"
 L["Prune stale entries now"] = "Очистить устаревшие записи"
 L["|cffEBB706EQ|r: pruned |cffffffff%d|r stale character record(s) and |cffffffff%d|r waypoint(s)."] = "|cffEBB706EQ|r: удалено |cffffffff%d|r устаревших записей персонажей и |cffffffff%d|r точек пути."
+L["Show tracked chain on the world map"] = "Показывать отслеживаемую цепочку на карте мира"
+L["Pin the quests of the chain you're following on the world map, with your next step highlighted. Track a chain from the Track button in the Chain Guide."] = "Закрепляет задания цепочки, которую вы проходите, на карте мира, выделяя следующий шаг. Отслеживайте цепочку с помощью кнопки «Отслеживать» в Путеводителе по цепочкам."
 
 -- ─── Options/TabAppearance.lua ───
 L["Appearance"] = "Внешний вид"
@@ -224,6 +232,16 @@ L["Zone Bar Appearance"] = "Внешний вид полосы зоны"
 L["Same as tracker font"] = "Как шрифт трекера"
 L["Header Color"] = "Цвет заголовка"
 L["Count Color"] = "Цвет счётчика"
+L["Title Size Offset"] = "Изменение размера заголовка"
+L["Sizes quest and achievement titles separately from the objective text. This value is added to the Font Size above: 0 keeps titles the same size as the base font, positive makes them larger, negative smaller."] = "Изменяет размер заголовков заданий и достижений отдельно от текста целей. Это значение прибавляется к размеру шрифта выше: 0 оставляет заголовки того же размера, что и базовый шрифт, положительные значения увеличивают их, отрицательные - уменьшают."
+L["Text Shadow"] = "Тень текста"
+L["Draws a soft drop-shadow behind all tracker text so it stays readable over bright or busy backgrounds. Use Shadow Color to tint it and Shadow Size to set how far it's cast."] = "Отрисовывает мягкую тень позади всего текста трекера, чтобы он оставался читаемым на ярких или насыщенных фонах. Используйте «Цвет тени» для оттенка и «Размер тени» для настройки её отступа."
+L["Shadow Color"] = "Цвет тени"
+L["Shadow Size"] = "Размер тени"
+L["How far the text drop-shadow is cast behind the letters. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while Text Shadow is on."] = "Насколько далеко от букв отбрасывается тень. Большие значения создают более крупную и заметную тень, меньшие - делают её компактной. Применяется только при включённой тени текста."
+L["Scenario"] = "Сценарий"
+L["Draws a drop-shadow behind the scenario / delve banner text (the Stage and name lines). This is SEPARATE from the Text Shadow above, which affects only the quest and objective text — the banner is styled on its own."] = "Отрисовывает тень позади текста баннера сценария / вылазки (строки «Этап» и название). Это ОТДЕЛЬНАЯ настройка от «Тени текста» выше, которая влияет только на задания и цели - баннер стилизуется отдельно."
+L["How far the scenario banner's drop-shadow is cast. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while the Scenario Text Shadow above is on."] = "Насколько далеко отбрасывается тень баннера сценария. Большие значения создают более крупную и заметную тень, меньшие - делают её компактной. Применяется только при включённой тени текста сценария."
 
 -- ─── Options/TabHistory.lua ───
 L["History"] = "История"
@@ -291,17 +309,34 @@ L["%d active"] = "%d активно"
 L["|cffff9933%d skipped|r"] = "|cffff9933%d пропущено|r"
 L["(optional)"] = "(необязательно)"
 L["(no quests defined for this chain yet)"] = "(для этой цепочки пока нет заданий)"
+L["Level %d"] = "Уровень %d"
+L["Untrack"] = "Не отслеживать"
+L["Track"] = "Отслеживать"
+L["Lv %d  •  ID %d"] = "Ур. %d  •  ID %d"
+L["ON QUEST"] = "В ПРОЦЕССЕ"
+L["NEXT"] = "ДАЛЕЕ"
+L["Continue"] = "Продолжить"
+L["Track this chain"] = "Отслеживать эту цепочку"
+L["Follow this chain — its quests pin on the world map (next step highlighted) and your waypoint auto-advances to the next step as you complete it. Works even with this window closed. Click again to stop."] = "Следуйте этой цепочке - её задания закрепляются на карте мира (следующий шаг выделяется), а ваша путевая точка автоматически перемещается к следующему шагу по мере выполнения. Работает даже при закрытом окне. Нажмите ещё раз, чтобы остановить."
 
 -- ─── Modules/ChainGuide/Frame.lua ───
 L["Back"] = "Назад"
 L["Forward"] = "Вперёд"
 L["Home"] = "Главная"
-L["Find Quest ID"] = "Найти задание по ID"
 L["Go"] = "Искать" 
 L["|cffEBB706EQ Chain Guide:|r found quest |cffffffff%d|r%s — jumping to its chain."] = "|cffEBB706EQ Гид по цепочкам:|r задание |cffffffff%d|r%s найдено — переход к его цепочке."
 L["|cffEBB706EQ Chain Guide:|r quest |cffffffff%d|r%s isn't in any chain I know about."] = "|cffEBB706EQ Гид по цепочкам:|r задание |cffffffff%d|r%s не входит ни в одну известную цепочку."
 L["Pick a category"] = "Выберите категорию"
 L["%d / %d quests done"] = "%d / %d заданий выполнено"
+L["Hide the navigation panel"] = "Скрыть панель навигации"
+L["Collapse the category and chain list so the graph fills the whole window. Click again to bring it back."] = "Сворачивает список категорий и цепочек, чтобы схема заняла всё окно. Нажмите ещё раз, чтобы вернуть её."
+L["Find quest"] = "Найти задание"
+L["Type a quest name or its ID to jump to the chain that contains it."] = "Введите название задания или его ID, чтобы перейти к цепочке, в которую оно входит."
+L["Categories"] = "Категории"
+L["Drag to resize"] = "Перетащите, чтобы изменить размер"
+L["|cffEBB706EQ Chain Guide:|r found |cffffffff%s|r — jumping to its chain."] = "|cffEBB706Путеводитель по цепочкам:|r найдено |cffffffff%s|r - переход к цепочке."
+L["|cffEBB706EQ Chain Guide:|r no chain quest matches |cffffffff%s|r."] = "|cffEBB706Путеводитель по цепочкам:|r ни одно задание цепочки не соответствует |cffffffff%s|r."
+L["Chains"] = "Цепочки"
 
 -- ─── Modules/ChainGuide/QuestMapButton.lua ───
 L["Chain"] = "Цепочка"
@@ -415,6 +450,7 @@ L["Profession"] = "Профессия"
 L["Endeavors"] = "Устремления"
 L["Achievements"] = "Достижения"
 L["Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options."] = "Перетащите верхний край трекера, чтобы переместить его.\n\nВведите |cffEBB706/eqs|r для настроек."
+L["Open the options panel"] = "Открыть панель настроек"
 
 -- ─── Modules/Tracker/Scenario.lua ───
 L["Final Stage"] = "Финальный этап"
@@ -465,3 +501,18 @@ L["|cffEBB706EQ History:|r added %d past completion%s for |cffffffff%s|r (no dat
 L["|cffEBB706EQ History:|r requested %d quest name%s from the server. Names will fill in over the next minute or two."] = "|cffEBB706EQ История:|r запрошено %d названий заданий у сервера. Названия подгрузятся в течение минуты-другой."
 L["|cffEBB706EQ History:|r restored %d entr%s from backup."] = "|cffEBB706EQ История:|r восстановлено %d записей из резервной копии."
 L["%d quest%s turned in"] = "сдано %d заданий"
+L[" for the many hours spent translating Everything Quests into Russian."] = " за множество часов, потраченных на перевод Everything Quests на русский язык."
+
+-- ─── Modules/ChainGuide/CampaignSource.lua ───
+L["Campaign Map"] = "Карта кампании"
+
+-- ─── Modules/ChainGuide/MapPin.lua ───
+L["Your next step"] = "Ваш следующий шаг"
+L["On this quest"] = "Выполняется это задание"
+L["Comes later in the chain"] = "Будет позже в цепочке"
+
+-- ─── Modules/Tracker/Achievements.lua ───
+L["Left-click to open, right-click to untrack."] = "Щёлкните ЛКМ, чтобы открыть, ПКМ - чтобы снять отслеживание."
+
+-- ─── Modules/WorldQuests/ZoneMap.lua ───
+L["%s — %d quests"] = "%s - заданий: %d"

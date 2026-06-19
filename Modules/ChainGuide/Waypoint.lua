@@ -1,34 +1,7 @@
--- Modules/ChainGuide/Waypoint.lua
--- "Get Directions" for a quest, from the Chain Guide or the tracker menu.
---
--- Two cases, because they want opposite things:
---
--- A. Quest is in your log (active OR complete). Blizzard already tracks its
---    live objective — or, once complete, its TURN-IN — and draws that POI on
---    the map. We just super-track the quest and hand navigation to Blizzard.
---    We must NOT drop our own waypoint here: our coords point at the quest
---    GIVER (where it was picked up), which is the wrong place mid-quest or at
---    hand-in, and SetUserWaypoint would also hijack Blizzard's super-track.
---
--- B. Quest is NOT in your log (a future quest browsed in the Chain Guide).
---    Blizzard can't navigate to a quest you don't have, so we resolve the
---    quest-GIVER location ("where do I go to pick this up"), best source first:
---      1. Cache       — prior resolves + passively harvested giver coords.
---                       Account-wide, survives sessions.
---      2. Coord table — the bundled quest-giver coordinate table
---                       (ns.CHAINGUIDE_QUEST_COORDS); broad coverage.
---      3. Questline API — C_QuestLine.GetQuestLineInfo gives the same map
---                       position WoW uses for questline map dots.
---    …then drop a waypoint (TomTom if present, else Blizzard's user waypoint)
---    and open the world map there.
-
 local _, ns = ...
 
 local W = ns:RegisterSubsystem("ChainGuideWaypoint", {})
 
--- ─── Coordinate cache ──────────────────────────────────────────────────
--- Stored on the account-wide chain cache so it's shared across characters
--- (a quest giver is in the same place for everyone).
 local function cacheTable()
     local DB = ns:GetSubsystem("DB")
     if not (DB and DB.chainCache) then return nil end
@@ -40,7 +13,7 @@ local function cacheGet(questID)
     local t = cacheTable()
     local e = t and t[questID]
     if e and e.m and e.x and e.y then
-        e.lastSeen = time()   -- last-used stamp keeps actively-used coords fresh against the prune
+        e.lastSeen = time()
         return e.m, e.x, e.y
     end
 end
@@ -51,13 +24,6 @@ local function cacheSet(questID, mapID, x, y)
     if t then t[questID] = { m = mapID, x = x, y = y, lastSeen = time() } end
 end
 
--- Prune coordinate entries not used within `ttl` seconds. Coords are always
--- re-derivable (static table → C_QuestLine → GetNextWaypoint → re-harvest on
--- the next accept), so dropping a stale entry is invisible to the player. A
--- legacy entry with no lastSeen is stamped on this pass (grace) rather than
--- wiped, so a player's hand-harvested coords aren't cleared wholesale the first
--- time the prune runs after updating. Called from DB:MaybePruneChainCache
--- (throttled, off the login spike). time() is epoch — persists across reboots.
 function W:PruneStaleCoords(now, ttl)
     local t = cacheTable()
     if not t then return 0 end
@@ -75,10 +41,6 @@ function W:PruneStaleCoords(now, ttl)
     return removed
 end
 
--- ─── Candidate maps for a chain ────────────────────────────────────────
--- C_QuestLine.GetQuestLineInfo needs the uiMapID the quest sits on. We try
--- the player's current map first (usually right when questing the zone),
--- then the chain category's seed/override maps.
 local _cand = {}
 local function candidateMaps(chain)
     wipe(_cand)
@@ -109,19 +71,12 @@ local function candidateMaps(chain)
     return _cand
 end
 
--- ─── Resolve questID → mapID, x, y ─────────────────────────────────────
--- Resolves the quest-GIVER location only — used for quests NOT in the log
--- (case B). For a quest you already have, GoTo super-tracks it instead of
--- calling this, so the live objective / turn-in comes straight from Blizzard.
 function W:Resolve(questID, chain)
     if not questID then return nil end
 
     local m, x, y = cacheGet(questID)
     if m then return m, x, y end
 
-    -- Primary broad-coverage source: the bundled quest-giver coordinate
-    -- table. Cached on first hit so a later harvest of the player's own
-    -- observed giver position can still override it.
     local static = ns.CHAINGUIDE_QUEST_COORDS and ns.CHAINGUIDE_QUEST_COORDS[questID]
     if static and static.m and static.x and static.y then
         cacheSet(questID, static.m, static.x, static.y)
@@ -142,7 +97,6 @@ function W:Resolve(questID, chain)
     return nil
 end
 
--- ─── Set the waypoint ──────────────────────────────────────────────────
 function W:SetWaypoint(mapID, x, y, title)
     if TomTom and TomTom.AddWaypoint then
         TomTom:AddWaypoint(mapID, x, y, { title = title, from = "Everything Quests" })
@@ -162,20 +116,12 @@ function W:SetWaypoint(mapID, x, y, title)
     return false
 end
 
--- Open the world map at mapID, but only retarget it when it isn't already
--- there. Retargeting (OpenWorldMap / SetMapID) makes EVERY map data provider —
--- Blizzard's QuestDataProvider AND AreaPOIDataProvider — re-acquire its pins.
--- When EQ drives that from an insecure click, the refresh runs tainted: the
--- provider caches tainted pin/widget state, which is what later blows up an
--- AreaPOI tooltip's "secret value" arithmetic on hover and trips
--- QuestDataProvider's protected SetPassThroughButtons. (Deferring this with
--- C_Timer does NOT help — a closure created by insecure code stays tainted and
--- re-taints the timer's callback when it runs; verified against the taint
--- model. The only real mitigation is to not trigger the refresh needlessly.)
--- So: if the map is already on this mapID, do nothing — that single guard is
--- what actually keeps the providers clean for the common "already here" case.
--- The actual map open/retarget, split out so the combat guard can defer JUST
--- this protected work to PLAYER_REGEN_ENABLED.
+-- Retargeting the world map (OpenWorldMap / SetMapID) makes every map data
+-- provider re-acquire its pins. When EQ drives that from an insecure click the
+-- refresh runs tainted, blowing up AreaPOI "secret value" arithmetic on hover
+-- and tripping QuestDataProvider's protected SetPassThroughButtons. C_Timer
+-- does NOT launder the taint — a closure from insecure code re-taints its
+-- callback. Guard: if the map is already on this mapID, skip the retarget.
 local function doOpenMap(mapID)
     if OpenWorldMap then
         OpenWorldMap(mapID)
@@ -208,15 +154,6 @@ local function openMap(mapID)
     doOpenMap(mapID)
 end
 
--- ─── Live coordinate for an in-log quest ───────────────────────────────
--- The best on-the-ground point for a quest you already have: the next
--- objective while in progress (GetNextWaypoint), or — once complete —
--- the quest's POI on the current map, which is the TURN-IN marker.
--- GetNextWaypoint returns nil for a complete quest, so without the
--- GetQuestsOnMap fallback TomTom would get no hand-in pin (confirmed via
--- /eqs dir: GetNextWaypoint none, GetQuestsOnMap returns the turn-in coord).
--- Only used to feed TomTom — non-TomTom users get the same point straight
--- from Blizzard's quest super-track, which needs no coordinate from us.
 local function liveWaypoint(questID)
     if C_QuestLog and C_QuestLog.GetNextWaypoint then
         local m, x, y = C_QuestLog.GetNextWaypoint(questID)
@@ -238,13 +175,6 @@ local function liveWaypoint(questID)
     return nil
 end
 
--- ─── Resolve a chain quest's BEST map point for a pin (Phase 3) ─────────
--- Picks the right coordinate semantics per quest state, mirroring GoTo's
--- Case A vs B split: an IN-LOG quest pins its LIVE objective / turn-in
--- (liveWaypoint) — the giver coord is the wrong spot mid-quest; a NOT-in-log
--- quest pins its GIVER (Resolve). Returns mapID, x, y, isInLog or nil. Read-
--- only (no super-track / waypoint / map writes), so it is taint-free and safe
--- to call per-quest from the map-pin provider's refresh.
 function W:ResolveForPin(questID, chain)
     if not questID then return nil end
     local inLog = C_QuestLog and C_QuestLog.GetLogIndexForQuestID
@@ -252,21 +182,12 @@ function W:ResolveForPin(questID, chain)
     if inLog then
         local m, x, y = liveWaypoint(questID)
         if m and x and y then return m, x, y, true end
-        -- No live point (data not loaded / off the player's maps): fall back to
-        -- the giver coord so the pin still shows somewhere sensible.
     end
     local m, x, y = self:Resolve(questID, chain)
     if m and x and y then return m, x, y, inLog or false end
     return nil
 end
 
--- ─── Navigate to an in-log quest (Case A) ──────────────────────────────
--- The quest is in your log. Blizzard already tracks its live objective — or
--- its TURN-IN once complete — and draws that POI on your map, so we super-
--- track the quest and let Blizzard guide you. We do NOT drop our own giver
--- waypoint: the giver coord is the wrong spot mid-quest or at hand-in, and
--- SetUserWaypoint would hijack the super-track to it — the original
--- "directions point back where I was standing" bug.
 function W:_goToInLog(questID, title)
     if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
         -- Drop any user-waypoint super-track first, but ONLY if one exists — a
@@ -287,11 +208,6 @@ function W:_goToInLog(questID, title)
             C_SuperTrack.SetSuperTrackedQuestID(questID)
         end
     end
-    -- TomTom draws its arrow from a real coord, so feed it the best live point:
-    -- the next objective while in progress, or the turn-in once complete (see
-    -- liveWaypoint). SetWaypoint's TomTom branch returns before anything else,
-    -- so this is a no-op for non-TomTom users — the super-track above already
-    -- shows Blizzard's objective marker.
     local wm, wx, wy = liveWaypoint(questID)
     if TomTom and TomTom.AddWaypoint and wm and wx and wy then
         self:SetWaypoint(wm, wx, wy, title)
@@ -300,9 +216,6 @@ function W:_goToInLog(questID, title)
     return true
 end
 
--- ─── Navigate to a not-in-log quest's giver (Case B) ───────────────────
--- Resolve where the quest is picked up and drop a waypoint there. Returns
--- false when no location is known so the caller can fall back to a hint.
 function W:_goToGiver(questID, chain, title)
     local mapID, x, y = self:Resolve(questID, chain)
     if mapID and x and y then
@@ -313,27 +226,9 @@ function W:_goToGiver(questID, chain, title)
     return false
 end
 
--- ─── The chain's next actionable step ──────────────────────────────────
--- The earliest quest in the chain the player hasn't completed: their active
--- quest mid-chain, or the next pickup. Skips chain-nav nodes and breadcrumbs
--- (declared optional). Walks items in authored/story order, so for the linear
--- campaign questlines this is exactly "the next thing to do."
---
--- Used to redirect a click on a still-LOCKED future step. The giver coords for
--- a future quest mark where it will *eventually* be offered — useless now,
--- because it isn't given until the earlier steps are done. For a hub-based
--- storyline every such giver also clusters right where you're standing, so the
--- redirect turns "pin at my feet, nothing to accept" into "go do your real
--- next step."
--- Scratch for the same-cell collapse below (reused + wiped per call, so the
--- step scan stays allocation-free). A faction-paired step is carried by our
--- API chains as TWO separate items sharing ONE overlay cell (same x,y) — the
--- key here is the SAME row*4096+col key ChainView's collapse uses.
 local _stepCellDone  = {}
 local _stepCellInLog = {}
 
--- nil when the item isn't positioned by an overlay (linear chains → every item
--- is its own cell, so the collapse below is a no-op and behaviour is unchanged).
 local function stepCellKey(raw)
     if raw.x and raw.y then return raw.y * 4096 + raw.x end
     return nil
@@ -344,8 +239,6 @@ local function nextActionableStep(chain)
     local Database   = ns:GetSubsystem("ChainGuideDatabase")
     local Characters = ns:GetSubsystem("ChainGuideCharacters")
     if not (Database and Characters) then return nil end
-    -- Defensive: ensure items are sourced + normalized. Both are idempotent;
-    -- by click time a render has usually already done this.
     local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
     if QLS and QLS.EnsureChainItems then QLS:EnsureChainItems(chain) end
     Database:NormalizeChain(chain)
@@ -388,8 +281,6 @@ local function nextActionableStep(chain)
             if item and item.id and not Characters:IsQuestCompleted(item.id) then
                 local key = stepCellKey(raw)
                 if not (key and _stepCellDone[key]) then
-                    -- Prefer this cell's in-log member (your faction's accepted
-                    -- quest) over an off-faction sibling that merely sorts first.
                     if key and _stepCellInLog[key] then return _stepCellInLog[key] end
                     return item
                 end
@@ -399,23 +290,10 @@ local function nextActionableStep(chain)
     return nil
 end
 
--- Public wrapper around the local nextActionableStep, so the chain-view
--- renderer can highlight the chain's next step and the "Continue" button can
--- route to it — both reading the SAME source of truth (no logic drift between
--- the badge and the button). Returns the resolved item ({id, ...}) or nil.
 function W:NextActionableStep(chain)
     return nextActionableStep(chain)
 end
 
--- ─── Auto-advancing waypoint (Phase 3B) ────────────────────────────────
--- Quietly point the waypoint at the chain's next actionable step — super-track
--- it if it's in your log, feed TomTom its live/giver coord — WITHOUT opening or
--- retargeting the map and WITHOUT printing. Called automatically when a tracked
--- chain quest is turned in, so it must be silent and taint-light: it adds at
--- most ONE super-track (the same write a "Continue" click makes; guarded against
--- redundant SUPER_TRACKING_CHANGED churn) and never touches the map providers.
--- Returns the step item, or nil when the chain has no remaining step (the
--- caller treats that as "chain complete").
 function W:AdvanceWaypoint(chain)
     local step = nextActionableStep(chain)
     if not (step and step.id) then return nil end
@@ -425,32 +303,22 @@ function W:AdvanceWaypoint(chain)
     if inLog then
         if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
             local cur = C_SuperTrack.GetSuperTrackedQuestID and C_SuperTrack.GetSuperTrackedQuestID()
-            if cur ~= id then C_SuperTrack.SetSuperTrackedQuestID(id) end   -- skip redundant write
+            if cur ~= id then C_SuperTrack.SetSuperTrackedQuestID(id) end
         end
-        -- TomTom only (SetWaypoint's no-TomTom branch prints — unwanted here).
         if TomTom and TomTom.AddWaypoint then
             local wm, wx, wy = liveWaypoint(id)
             if wm and wx and wy then self:SetWaypoint(wm, wx, wy, ns.Util.QuestTitle(id, true)) end
         end
     elseif TomTom and TomTom.AddWaypoint then
-        -- Next step isn't in your log yet: TomTom users get an arrow to the
-        -- giver; everyone else sees the gold map pin (Phase 3A) mark it.
         local m, x, y = self:Resolve(id, chain)
         if m and x and y then self:SetWaypoint(m, x, y, ns.Util.QuestTitle(id, true)) end
     end
     return step
 end
 
--- ─── Public: go to a quest ─────────────────────────────────────────────
 function W:GoTo(questID, chain)
     local title = ns.Util.QuestTitle(questID, true)
 
-    -- Work out what to actually navigate to. Usually it's the clicked quest —
-    -- but a click on a still-LOCKED future step (not in your log, not yet
-    -- completed, and not the chain's next actionable quest) redirects to that
-    -- next step: the thing you can act on right now. Without this, every future
-    -- quest in a hub-based storyline drops a giver pin where you're standing
-    -- that won't offer the quest until you've cleared the earlier steps.
     local navID, navTitle = questID, title
     local clickedInLog = C_QuestLog and C_QuestLog.GetLogIndexForQuestID
                          and C_QuestLog.GetLogIndexForQuestID(questID) ~= nil
@@ -467,29 +335,21 @@ function W:GoTo(questID, chain)
         end
     end
 
-    -- In your log → super-track the live objective / turn-in.
     if C_QuestLog and C_QuestLog.GetLogIndexForQuestID
        and C_QuestLog.GetLogIndexForQuestID(navID) then
         return self:_goToInLog(navID, navTitle)
     end
 
-    -- Not in your log → resolve the giver so you know where to pick it up.
     if self:_goToGiver(navID, chain, navTitle) then
         return true
     end
 
-    -- Nothing known yet — open the chain's best-guess zone and say so rather
-    -- than dead-clicking. It'll be saved automatically on first pickup.
     local maps = candidateMaps(chain)
     if maps[1] then openMap(maps[1]) end
     print(("|cffEBB706EQ|r: no precise location for |cffffffff%s|r yet — it'll be saved automatically the first time you pick it up."):format(navTitle))
     return false
 end
 
--- ─── Passive harvest ───────────────────────────────────────────────────
--- When the player opens a quest giver's dialog or accepts a quest, the
--- giver is right there: record the player's exact position. This is the
--- most accurate "where to go" source and permanently fills cache gaps.
 local function harvest(questID)
     if not (questID and questID > 0) then return end
     if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetPlayerMapPosition) then return end
@@ -503,9 +363,6 @@ local function harvest(questID)
     end
 end
 
--- Membership test for auto-advance: is questID one of the chain's quest items
--- (or any of their faction/race variations)? A cheap id scan — no per-character
--- resolution needed, since the turned-in id is already this character's.
 local function questBelongsToChain(chain, questID)
     if not (chain and chain.items and questID) then return false end
     for i = 1, #chain.items do
@@ -525,23 +382,17 @@ end
 function W:OnEnable()
     local Events = ns:GetSubsystem("Events")
     if not Events then return end
-    -- The Core/Events dispatcher calls handlers as (event, ...), so the
-    -- first param is the event name; real payload starts at the second.
     Events:On("QUEST_DETAIL", function()
         if GetQuestID then harvest(GetQuestID()) end
     end)
     Events:On("QUEST_ACCEPTED", function(_, a, b)
-        -- Retail fires (questID); older builds (questLogIndex, questID).
         harvest(b or a)
     end)
 
-    -- Phase 3B: auto-advance the TRACKED chain's waypoint on each turn-in, so
-    -- the player follows the chain hands-free.
     Events:On("QUEST_TURNED_IN", function(_, questID)
         local CG = ns:GetSubsystem("ChainGuide")
         local chain = CG and CG.GetTrackedChain and CG:GetTrackedChain()
         if not chain then return end
-        -- Ensure the ordered item list exists before testing membership.
         local QLS = ns:GetSubsystem("ChainGuideQuestLineSource")
         if QLS and QLS.EnsureChainItems then QLS:EnsureChainItems(chain) end
         local Database = ns:GetSubsystem("ChainGuideDatabase")
@@ -554,8 +405,6 @@ function W:OnEnable()
         C_Timer.After(0, function()
             local step = self:AdvanceWaypoint(chain)
             if not step and chain.items and #chain.items > 0 then
-                -- No remaining step + the chain is populated → it's finished.
-                -- Stop following it and say so, once.
                 if CG.ClearTrackedChainID then CG:ClearTrackedChainID() end
                 print(("|cffEBB706EQ|r: |cffffffff%s|r complete — no longer following it."):format(chain.name or "This chain"))
             end

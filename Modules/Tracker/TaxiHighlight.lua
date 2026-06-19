@@ -1,22 +1,10 @@
--- Modules/Tracker/TaxiHighlight.lua
--- When the player opens a flight master, paint a soft gold glow on the
--- taxi node closest to the super-tracked quest's next objective. Pure
--- visual nudge — clicking is still the player's job. No taint risk
--- (the FlightMapFrame is insecure).
---
--- Modern UI = `FlightMapFrame` with a pin pool. We resolve via
--- `EnumerateAllPins` (template-rename-proof) and filter by the
--- `taxiNodeData.nodeID` field on each pin. The legacy `TaxiFrame` path is
--- intentionally not handled — Midnight retail uses the flight map.
-
 local _, ns = ...
 
 local TH = ns:RegisterSubsystem("TrackerTaxiHighlight", {})
 
 local MAX_RETRIES   = 3                  -- pin pool may not be populated on the very first frame
-local RETRY_DELAY_S = 0.10               -- ~100 ms is comfortably past the burst (per upstream guidance)
+local RETRY_DELAY_S = 0.10
 
--- Single reusable glow texture, reparented per highlight. Created lazily.
 local _glow
 
 -- Memoized retry closure (one allocation total instead of one per retry).
@@ -27,8 +15,6 @@ local function ensureGlow()
     if _glow then return _glow end
     _glow = UIParent:CreateTexture(nil, "OVERLAY")
     _glow:SetSize(36, 36)
-    -- Prefer a built-in golden glow atlas; fall back to a tinted additive
-    -- white square if the atlas isn't present on this client build.
     local atlasName = "loottoast-glow"
     if C_Texture and C_Texture.GetAtlasInfo
        and C_Texture.GetAtlasInfo(atlasName) then
@@ -46,7 +32,7 @@ local function detachGlow()
     if _glow then
         _glow:Hide()
         _glow:ClearAllPoints()
-        _glow:SetParent(UIParent)        -- detach from whatever pin we last attached to
+        _glow:SetParent(UIParent)
     end
 end
 
@@ -58,9 +44,6 @@ local function attachGlow(pin)
     g:Show()
 end
 
--- Continent-coord position of the super-tracked quest's next objective.
--- Returns nil if there's no super-track, no waypoint, or no rect mapping
--- from the quest's zone into `continentMapID`.
 local function questPosInContinent(continentMapID)
     if not (C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID
             and C_QuestLog and C_QuestLog.GetNextWaypoint
@@ -74,8 +57,6 @@ local function questPosInContinent(continentMapID)
 
     local rect = C_Map.GetMapRectOnMap(wm, continentMapID)
     if not rect then return nil end
-    -- API returns either a table {x,y,width,height} or numeric x1,y1,x2,y2;
-    -- handle the table form (current retail) and bail otherwise.
     local rx, ry, rw, rh = rect.x, rect.y, rect.width, rect.height
     if not (rx and ry and rw and rh) then return nil end
     return rx + wx * rw, ry + wy * rh
@@ -110,14 +91,11 @@ local function attemptHighlight()
     if not mapID then return end
 
     local qcx, qcy = questPosInContinent(mapID)
-    if not qcx then return end                           -- no super-tracked quest with a waypoint on this continent
+    if not qcx then return end
 
     local target = findClosestNode(mapID, qcx, qcy)
     if not target or not target.nodeID then return end
 
-    -- Find the live pin for that nodeID. EnumerateAllPins is the
-    -- template-rename-proof entry point; filter by taxiNodeData so non-taxi
-    -- pins (zone overlays, vignettes) are skipped cleanly.
     if FlightMapFrame.EnumerateAllPins then
         for pin in FlightMapFrame:EnumerateAllPins() do
             local td = pin and pin.taxiNodeData
@@ -127,8 +105,6 @@ local function attemptHighlight()
             end
         end
     end
-    -- Pin pool not populated yet — schedule one or two retries; if still
-    -- empty we silently skip this open.
     if _retriesLeft > 0 then
         _retriesLeft = _retriesLeft - 1
         if not _retryFn then _retryFn = attemptHighlight end

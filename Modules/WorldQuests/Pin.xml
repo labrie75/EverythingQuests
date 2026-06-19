@@ -1,12 +1,4 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
-    <!--
-        EQWorldQuestPinTemplate — bigger than the standard quest pin (34px)
-        because the reward icon needs to be readable at a glance. Mixin
-        EQWorldQuestPinMixin (Pin.lua, loaded before this file) sets the
-        ring colour from the reward category and the icon from the reward
-        texture. No <Scripts>: MapCanvasMixin:AcquirePin auto-wires
-        OnEnter/OnLeave/OnClick to the mixin's same-named methods.
-    -->
     <Button name="EQWorldQuestPinTemplate" mixin="EQWorldQuestPinMixin" hidden="true" virtual="true">
         <Size x="34" y="34"/>
         <Layers>

@@ -1,18 +1,8 @@
--- Options/TabAbout.lua
--- The 7th (last) Options tab: addon info, copyable links, the user-facing
--- slash-command reference, credits, and the in-addon changelog (ns.Changelog).
---
--- Registered LAST so existing string-keyed tabs keep their order. WoW can't
--- open a web browser, so every external link opens a copyable-URL popup via
--- ns:ShowURL (same UX as the Discord invite). Built once, lazily, on first open.
-
 local _, ns = ...
 local L = ns.L
 
 local math_max, math_min = math.max, math.min
 
--- Inline colour escapes (brand palette). Headers use CreateSectionHeader's
--- brand red; these are for emphasis inside body text.
 local GOLD  = "|cffEBB706"
 local MUTED = "|cffb3b3b3"
 local WHITE = "|cffe6e6e6"
@@ -22,8 +12,6 @@ local CURSEFORGE_URL = "https://www.curseforge.com/wow/addons/everything-quests"
 local GITHUB_URL     = "https://github.com/wheelbarrel00/EverythingQuests"
 local BUG_URL        = "https://github.com/wheelbarrel00/EverythingQuests/issues"
 
--- User-facing commands only — diagnostics (/eqs scenario, dir, wqdebug,
--- questobj, autopopup, zonebar, profile) are deliberately omitted.
 local COMMANDS = {
     { cmd = "/eqs",          desc = L["Open or close the options window"] },
     { cmd = "/eqs chain",    desc = L["Open the Chain Guide"] },
@@ -48,7 +36,6 @@ local THANKS = "Spydawg2233, Zox, LightsBeacon, Fostot"
 ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     local Options = ns:GetSubsystem("Options")
 
-    -- ─── Scrollable area (the changelog is long) ────────────────────────
     local scroll = CreateFrame("ScrollFrame", nil, content, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 0, -4)
     scroll:SetPoint("BOTTOMRIGHT", -26, 4)
@@ -69,7 +56,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
 
     local Y = -6
 
-    -- A brand-red section header with a grey underline (matches other tabs).
     local function header(text)
         local fs = Options:CreateSectionHeader(sc, text)
         fs:SetPoint("TOPLEFT", sc, "TOPLEFT", LEFT, Y)
@@ -81,7 +67,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
         Y = Y - 28
     end
 
-    -- A wrapped body line. `indent` shifts x; advances Y by the measured height.
     local function body(text, indent, size)
         size = size or 12
         local fs = sc:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -98,8 +83,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
 
     local function gap(px) Y = Y - (px or 8) end
 
-    -- A clickable yellow text link (hover -> white), mirroring the Options
-    -- title-bar Discord link. Returns the button so callers can chain a row.
     local function makeLink(label, onClick)
         local b = CreateFrame("Button", nil, sc)
         b:SetHeight(16)
@@ -115,7 +98,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
         return b
     end
 
-    -- Lay a row of links at the current Y, separated by "  |  ".
     local function linkRow(links)
         local prev
         for i, lk in ipairs(links) do
@@ -133,7 +115,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
         Y = Y - 24
     end
 
-    -- ─── 1. Title ───────────────────────────────────────────────────────
     local ver = (C_AddOns and C_AddOns.GetAddOnMetadata
                  and C_AddOns.GetAddOnMetadata(ns.NAME, "Version"))
                  or ns.VERSION or "?"
@@ -155,7 +136,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     body(WHITE .. L["A unified replacement for the Blizzard quest experience: a custom tracker, world-map overlays, quest history, and a Midnight chain guide."] .. CLOSE)
     gap(10)
 
-    -- ─── 2. Links ───────────────────────────────────────────────────────
     linkRow({
         { label = L["Join our Discord"], onClick = function() ns:ShowDiscord() end },
         { label = L["CurseForge"],       onClick = function() ns:ShowURL(CURSEFORGE_URL) end },
@@ -167,7 +147,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     })
     gap(8)
 
-    -- ─── 3. Commands ────────────────────────────────────────────────────
     header(L["Commands"])
     for _, c in ipairs(COMMANDS) do
         local cmd = sc:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -182,12 +161,10 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     body(MUTED .. L["Tip: right-click the minimap button to open Options."] .. CLOSE, 0, 11)
     gap(10)
 
-    -- ─── 4. Tutorials ───────────────────────────────────────────────────
     header(L["Tutorials"])
     body(MUTED .. L["Video tutorials are coming soon."] .. CLOSE)
     gap(10)
 
-    -- ─── 5. More add-ons by this author ─────────────────────────────────
     header(L["More Add-ons by Wheelbarrel00"])
     for _, a in ipairs(OTHER_ADDONS) do
         local n = sc:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -204,7 +181,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     end
     gap(10)
 
-    -- ─── 6. Thanks ──────────────────────────────────────────────────────
     header(L["Thanks"])
     body(WHITE .. L["Built with feedback, reports, and ideas from the community — especially "]
         .. GOLD .. THANKS .. CLOSE .. WHITE .. L[". Thank you!"] .. CLOSE)
@@ -214,7 +190,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
         .. L[" for the many hours spent translating Everything Quests into Russian."] .. CLOSE)
     gap(10)
 
-    -- ─── 7. Changelog (newest first; older versions on CurseForge) ──────
     header(L["Changelog"])
     for _, entry in ipairs(ns.Changelog or {}) do
         local vh = sc:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -243,7 +218,6 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     older:SetPoint("TOPLEFT", sc, "TOPLEFT", LEFT, Y)
     Y = Y - 28
 
-    -- Finalize the scroll height so the bar knows the full content extent.
     sc:SetHeight(math_max(1, -Y + 10))
     if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
 end)

@@ -126,10 +126,6 @@ local function getTrackedRecipes()
                 end
                 if rid and not seen[rid] then
                     seen[rid] = true
-                    -- Normalize isRecraft to a real boolean here: GetRecipesTracked
-                    -- leaves it nil for normal recipes, and the C_TradeSkillUI APIs
-                    -- that consume it (SetRecipeTracked / GetRecipeSchematic) reject
-                    -- nil for that argument.
                     results[#results + 1] = { recipeID = rid, isRecraft = isRecraft and true or false }
                 end
             end
@@ -240,13 +236,6 @@ function P:Render(content, contentWidth, yStart, collapsed)
     return y - yStart, count
 end
 
--- Cached "does the player have any tracked recipes" flag. Updated when
--- the player toggles recipe tracking (TRACKED_RECIPE_UPDATE) or learns
--- new recipes (TRADE_SKILL_LIST_UPDATE). Used by BAG_UPDATE_DELAYED to
--- skip the tracker refresh entirely when there's nothing for Profession
--- to draw — bag events fire constantly during play (loot, sell, craft),
--- and refreshing the whole tracker for each one was a major source of
--- allocation churn for players who don't use recipe tracking at all.
 local function recomputeHasTrackedRecipes()
     if not (C_TradeSkillUI and C_TradeSkillUI.GetRecipesTracked) then
         P._hasTrackedRecipes = false
@@ -272,9 +261,6 @@ function P:OnEnable()
     Events:On("TRADE_SKILL_LIST_UPDATE", recipeChanged)
     Events:On("PLAYER_ENTERING_WORLD",   recipeChanged)
     Events:On("BAG_UPDATE_DELAYED", function()
-        -- Only refresh on bag updates if Profession actually has something
-        -- to show. Reagent counts in the tracker need to react to inventory
-        -- changes, but only when those changes affect a visible row.
         if P._hasTrackedRecipes then refresh() end
     end)
 end

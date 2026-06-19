@@ -1,15 +1,6 @@
--- Data/QuestChains/_Overlays_Voidstorm.lua
--- GENERATED DRAFT Voidstorm zone overlays - verify in-game, then graduate
--- the verified ones into _Overlays.lua and drop them from here. Topology is
--- from authored reference data; layout is auto-laid to the centred-tree
--- convention. Only chains whose draft positions every LIVE quest (coverage-
--- clean per the dump) are emitted, so these should render without
--- stragglers - the open question per chain is purely whether the layout reads
--- well. Regenerate: python docs/_check_coverage.py docs/_zonedump_voidstorm.txt --emit
 local _, ns = ...
 ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
 
-    -- The Nethersent  (questline 5933, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[5933] = {
         layout = {
             [90782] = { x = 1, y = 0  },
@@ -28,7 +19,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- A Dance with the Devil  (questline 5936, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[5936] = {
         layout = {
             [90914] = { x = 1, y = 0  },
@@ -55,8 +45,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Shadow Puppets  (questline 5943, Voidstorm)
-    -- (92641 is a Voidstorm "Other" quest, excluded in QuestLineSource — chain ends at 91149)
     ns.CHAINGUIDE_OVERLAYS[5943] = {
         layout = {
             [91145] = { x = 1, y = 0  },
@@ -73,7 +61,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- To Be Changed  (questline 5961, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[5961] = {
         layout = {
             [91533] = { x = 1, y = 0  },
@@ -102,7 +89,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Nightbreaker  (questline 5962, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[5962] = {
         layout = {
             [90910] = { x = 1, y = 0  },
@@ -119,7 +105,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Breaking the Triad  (questline 5964, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[5964] = {
         layout = {
             [91565] = { x = 1, y = 0  },
@@ -157,7 +142,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- A More Potent Foe  (questline 6001, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[6001] = {
         layout = {
             [92505] = { x = 1, y = 0  },
@@ -180,7 +164,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Void Peers Back  (questline 6010, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[6010] = {
         layout = {
             [88755] = { x = 1, y = 0  },
@@ -199,7 +182,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Oaths to Family  (questline 6014, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[6014] = {
         layout = {
             [90838] = { x = 1, y = 0  },
@@ -226,7 +208,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- A Gift Given Freely  (questline 6019, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[6019] = {
         layout = {
             [92603] = { x = 1, y = 0  },
@@ -243,7 +224,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Go Low, Go Loud  (questline 6022, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[6022] = {
         layout = {
             [92657] = { x = 1, y = 0  },
@@ -262,7 +242,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Pathogenic Problem  (questline 6028, Voidstorm)
     ns.CHAINGUIDE_OVERLAYS[6028] = {
         layout = {
             [91557] = { x = 1, y = 0  },

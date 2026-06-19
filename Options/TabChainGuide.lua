@@ -1,7 +1,3 @@
--- Options/TabChainGuide.lua
--- Chain Guide settings: scale, open-on-login, cache management, plus a button
--- to actually open the chain guide window from inside Options.
-
 local _, ns = ...
 local L = ns.L
 
@@ -22,15 +18,10 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
             end
     end
 
-    -- ─── LEFT COLUMN: behavior + window controls ────────────────────────
     local h = Options:CreateSectionHeader(content, L["Chain Guide (Storylines)"])
     h:SetPoint("TOPLEFT", 8, -8)
 
     local openBtn = Options:CreateYellowButton(content, L["Open Chain Guide"], function()
-        -- Hide Options first so the chain guide isn't visually buried
-        -- behind it. Both windows live at DIALOG strata; getting them out
-        -- of each other's way is cleaner than fighting frame-strata
-        -- arithmetic.
         if Options.frame and Options.frame:IsShown() then Options.frame:Hide() end
         local CG = ns:GetSubsystem("ChainGuide"); if CG then CG:Open() end
     end)
@@ -43,7 +34,6 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
         loginGet, loginSet)
     login:SetPoint("TOPLEFT", openBtn, "BOTTOMLEFT", 0, -16)
 
-    -- Toggling this re-runs API discovery so the list updates without /reload.
     local function unroutedGet()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.chainGuide.showUnroutedChains
@@ -64,8 +54,6 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
         L["API discoveries not in our routing table."])
     unrouted:SetPoint("TOPLEFT", login, "BOTTOMLEFT", 0, -2)
 
-    -- Phase 3: draw the TRACKED chain's quests as pins on the world map.
-    -- Custom setter repaints the pins immediately instead of CG:ApplySettings.
     local function mapPinsGet()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.chainGuide.showMapPins ~= false
@@ -88,7 +76,6 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
     scale:SetPoint("TOPLEFT", mapPins, "BOTTOMLEFT", 0, -10)
     scale:SetWidth(280)
 
-    -- ─── RIGHT COLUMN: cache + stats ────────────────────────────────────
     local cacheHeader = Options:CreateSectionHeader(content, L["Character cache"])
     cacheHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
@@ -112,16 +99,11 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
     clear:SetSize(180, 24)
     clear:SetPoint("TOPLEFT", cacheHeader, "BOTTOMLEFT", 0, -12)
 
-    -- Cache readout text. Created here, populated by refreshStats() below, and
-    -- positioned beneath the buttons once they exist.
     local stats = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     stats:SetWidth(380)
     stats:SetJustifyH("LEFT")
     stats:SetTextColor(0.92, 0.72, 0.02)
 
-    -- Read straight from the saved cache + chain database; called on tab show so
-    -- re-opening reflects current counts. Defined before the button below that
-    -- calls it (plain local function — no forward-decl needed).
     local function refreshStats()
         local cache = _G.EverythingQuestsChainCache or {}
         local nChars, nCoords = 0, 0
@@ -148,9 +130,6 @@ ns:GetSubsystem("Options"):AddTab("chainGuide", L["Chain Guide"], function(conte
         stats:SetText(text)
     end
 
-    -- Soft alternative to the wipe above: drop only stale entries (deleted-alt
-    -- records + waypoints unused past their TTL). Everything dropped is
-    -- re-derivable, so no reload is needed.
     local prune = Options:CreateYellowButton(content, L["Prune stale entries now"], function()
         local DB = ns:GetSubsystem("DB")
         if not (DB and DB.MaybePruneChainCache) then return end

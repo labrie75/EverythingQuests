@@ -1,15 +1,17 @@
--- Core/Changelog.lua
--- Embedded, condensed changelog rendered by the About tab (Options/TabAbout.lua).
--- Add-ons can't read CHANGELOG.md at runtime, so the recent history lives here
--- as a Lua table. Newest first; older versions are on CurseForge.
---
--- ⚠ MAINTENANCE: this is the SECOND home of the changelog. Every release, update
---   BOTH CHANGELOG.md and this table (add the new version at the TOP, trim the
---   tail to ~10 entries). This is part of the "git sequence" release routine.
-
 local _, ns = ...
 
 ns.Changelog = {
+    {
+        version = "1.22.1", date = "2026-06-18",
+        sections = {
+            { head = "Translations", items = {
+                "Russian (ruRU) updated by Malevi4 and French (frFR) updated by Zox — both languages are now fully up to date with the latest features.",
+            } },
+            { head = "Other", items = {
+                "Some code cleanup.",
+            } },
+        },
+    },
     {
         version = "1.22.0", date = "2026-06-18",
         sections = {

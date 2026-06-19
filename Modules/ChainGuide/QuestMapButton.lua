@@ -1,22 +1,7 @@
--- Modules/ChainGuide/QuestMapButton.lua
--- Tiny button on QuestMapFrame.DetailsFrame that opens EQ's Chain Guide
--- focused on the currently-viewed quest. If the quest isn't in EQ's chain
--- data (yet), falls back to a Wowhead URL in chat so the click is never
--- dead. Pure surface — no events, no allocation per render.
-
 local _, ns = ...
 local L = ns.L
 local QMB = ns:RegisterSubsystem("ChainGuideQuestMapButton", {})
 
--- Walk the chain database for an item (or item-variation) matching the
--- given questID; return its chainID, or nil if no chain owns this quest.
---
--- Chain definitions are populated LAZILY — questline-derived and campaign-
--- derived chains aren't in Database.chains until the user opens their
--- category in the Chain Guide. To find quests anywhere, we have to walk
--- the discovery + item-population pipeline ourselves before searching.
--- Both layers are guarded by per-key idempotency flags inside the source
--- modules, so the cost is paid once per session.
 local function findChainFor(questID)
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     if not (Database and Database.chains and questID) then return nil end
@@ -46,9 +31,6 @@ local function findChainFor(questID)
                     if it.type == "quest" and it.id == questID then
                         return chainID
                     end
-                    -- Variations are faction/race/class-specific swaps —
-                    -- the actual log entry for this character might be one
-                    -- of them rather than the base item id.
                     local vars = it.variations
                     if vars then
                         for j = 1, #vars do
@@ -62,11 +44,6 @@ local function findChainFor(questID)
     return nil
 end
 
--- Resolve the questID currently shown in the world-map details pane.
--- GetQuestID() (the global) is the *NPC* quest-frame helper and returns
--- 0 / nil for QuestMapFrame.DetailsFrame — try the frame-local paths
--- first, then global helpers, then the generic GetQuestID as a last
--- resort.
 local function currentDetailQuestID()
     if QuestMapFrame and QuestMapFrame.DetailsFrame then
         local df = QuestMapFrame.DetailsFrame
@@ -90,9 +67,6 @@ end
 local function onClick()
     local qid = currentDetailQuestID()
     if not qid then
-        -- Should be rare — DetailsFrame is visible (button is parented to
-        -- it) but no questID resolver returned a value. Tell the player
-        -- instead of failing silently so they can re-open the details.
         DEFAULT_CHAT_FRAME:AddMessage(
             "|cffEBB706EQ Chain:|r couldn't read the displayed quest. Try clicking the quest in the list again.")
         return
@@ -108,9 +82,6 @@ local function onClick()
         return
     end
 
-    -- No chain in EQ's data yet — show the Wowhead reference so the click
-    -- still gives the player something useful (cmnd-/ctrl-click to select
-    -- the URL in chat to copy).
     local title = ns.Util.QuestTitle(qid, true)
     local url = "https://www.wowhead.com/quest=" .. tostring(qid)
     DEFAULT_CHAT_FRAME:AddMessage(
@@ -118,7 +89,6 @@ local function onClick()
         :format(title, url))
 end
 
--- ── Button build ─────────────────────────────────────────────────────
 local _button
 local function ensureButton()
     if _button then return _button end
@@ -127,10 +97,6 @@ local function ensureButton()
     local parent = QuestMapFrame.DetailsFrame
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(54, 20)
-    -- Prefer to dock immediately left of the Abandon button (where it's
-    -- visually grouped with Blizzard's own quest actions). Fall back to
-    -- TOPRIGHT with an offset that clears the standard action-button row
-    -- if AbandonButton isn't where we expect it.
     local abandon = parent.AbandonButton
     if abandon then
         b:SetPoint("RIGHT", abandon, "LEFT", -4, 0)
@@ -146,7 +112,7 @@ local function ensureButton()
     local border = b:CreateTexture(nil, "BORDER")
     border:SetPoint("TOPLEFT", -1, 1)
     border:SetPoint("BOTTOMRIGHT", 1, -1)
-    border:SetColorTexture(0.635, 0.0, 0.039, 1)                            -- brand-red 1px outline
+    border:SetColorTexture(0.635, 0.0, 0.039, 1)
 
     local hl = b:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()
@@ -155,7 +121,7 @@ local function ensureButton()
     b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     b.text:SetPoint("CENTER")
     b.text:SetText(L["Chain"])
-    b.text:SetTextColor(0.92, 0.72, 0.02)                                   -- EQ yellow
+    b.text:SetTextColor(0.92, 0.72, 0.02)
 
     b:SetScript("OnClick", onClick)
     -- This button lives on the world map's DetailsFrame, so its hover is a
@@ -179,9 +145,6 @@ end
 
 function QMB:OnEnable()
     if ensureButton() then return end
-    -- DetailsFrame wasn't ready at PLAYER_LOGIN; retry once on the first
-    -- world-map open. One-shot — if it still fails we give up silently
-    -- (would mean a substantially refactored Blizzard quest UI).
     if WorldMapFrame and WorldMapFrame.HookScript then
         local tried
         WorldMapFrame:HookScript("OnShow", function()

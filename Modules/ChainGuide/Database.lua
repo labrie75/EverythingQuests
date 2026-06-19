@@ -1,24 +1,3 @@
--- Modules/ChainGuide/Database.lua
--- Resolves chain definitions from Data/QuestChains/* into runtime structures.
--- Owns: schema normalization, per-character variation/restriction resolution.
---
--- Chain shape (post-normalization):
---   { name, category, range = {min,max},
---     items = {
---       { type="quest"|"chain", id=int, x=int, y=int,
---         connections = { itemIndex, ... },         -- prereq edges (by items[] index)
---         variations  = { { id=..., type=..., restrictions={faction=,race=,class=} }, ... },
---         breadcrumb  = bool?,                       -- visual de-emphasis, excluded from progress
---         optional    = bool?,                       -- dashed connector to this node
---       },
---       ...
---     }
---   }
---
--- Legacy chains using `quests = { id1, id2, ... }` are auto-converted to a
--- linear items array on first access — old data keeps rendering, new data
--- can lay out arbitrary graphs.
-
 local _, ns = ...
 
 local DBmod = ns:RegisterSubsystem("ChainGuideDatabase", {})
@@ -34,10 +13,6 @@ function DBmod:RegisterChain(id, def)
     self.chains[id] = def
 end
 
--- ─── Character snapshot ────────────────────────────────────────────────
--- Used for restriction matching when picking item variations. Built lazily
--- and cached for the lifetime of the session; faction is the only field
--- that can change in-session (war-mode aside) and we accept that staleness.
 function DBmod:CurrentCharacter()
     if self._char then return self._char end
     local _, classFile = UnitClass and UnitClass("player")
@@ -50,9 +25,6 @@ function DBmod:CurrentCharacter()
     return self._char
 end
 
--- ─── Schema normalization ──────────────────────────────────────────────
--- Idempotent. Old chains with `quests = {...}` get an auto-built items array
--- so the renderer only ever has to deal with one shape.
 function DBmod:NormalizeChain(chain)
     if not chain or chain._normalized then return chain end
     chain._normalized = true
@@ -70,33 +42,18 @@ function DBmod:NormalizeChain(chain)
         end
         chain.items = items
     end
-    -- Lay any authored graph overlay on top of the (now-present) items. For an
-    -- API/campaign chain whose items are still empty here (questline data not
-    -- loaded yet) this is a no-op that leaves _overlayApplied unset, so it
-    -- re-runs once EnsureChainItems populates the real list (see ApplyOverlay).
     self:ApplyOverlay(chain)
     return chain
 end
 
--- ─── Authored overlay ──────────────────────────────────────────────────
--- Lay a hand-authored graph (Data/QuestChains/_Overlays.lua) over a chain's
--- live items[]: apply per-quest x/y/optional/breadcrumb, rewrite connections,
--- and splice in embedded chain-nav nodes. Authored data is keyed by STABLE
--- quest IDs (and embeds by chainID); connections reference quest IDs and are
--- translated here into the items[] INDICES the renderer expects. Idempotent
--- (guarded by chain._overlayApplied) and only ever runs once a chain actually
--- has items — so it allocates nothing per render and re-applies correctly when
--- an empty API chain finally streams in its quest list.
 function DBmod:ApplyOverlay(chain)
     if not chain or chain._overlayApplied then return end
     local items = chain.items
-    if not items or #items == 0 then return end          -- wait for real items; don't latch the flag
+    if not items or #items == 0 then return end          -- don't latch _overlayApplied; retry when items arrive
     local overlays = ns.CHAINGUIDE_OVERLAYS
     local overlay  = overlays and (overlays[chain.questlineID] or overlays[chain.id])
-    if not overlay then chain._overlayApplied = true; return end   -- nothing to overlay; stop scanning
+    if not overlay then chain._overlayApplied = true; return end
 
-    -- Map live items by quest ID so authored (id-keyed) data can find them
-    -- regardless of the order Blizzard returned the questline in.
     local idIndex = {}
     for i = 1, #items do
         local it = items[i]
@@ -125,11 +82,6 @@ function DBmod:ApplyOverlay(chain)
                     local pidx = idIndex[prereqs[j]]
                     if pidx then conn[#conn + 1] = pidx end
                 end
-                -- Only overwrite when at least one authored prereq resolved. If
-                -- NONE did (Blizzard dropped/renamed those quests), leave the
-                -- node's existing spine edge alone — that's what "degrades to the
-                -- API spine" means; nil-ing it here would orphan the node to the
-                -- root column. Matches the embed branch's guard below.
                 if #conn > 0 then items[idx].connections = conn end
             end
         end
@@ -156,9 +108,6 @@ function DBmod:ApplyOverlay(chain)
     chain._overlayApplied = true
 end
 
--- Walk `item.variations` and return the first variant whose restrictions match
--- the character. If none match (or no variations exist), the base item is
--- returned unchanged so the renderer always gets something to draw.
 function DBmod:GetVariation(item, character)
     if not item.variations then return item end
     character = character or self:CurrentCharacter()

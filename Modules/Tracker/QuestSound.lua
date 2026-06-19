@@ -9,12 +9,8 @@ local _issecret = _G.issecretvalue
 Q.lastComplete = {}
 Q.armed = false
 
--- ── Per-title dedup so a regular quest doesn't double-fire when both
--- the Cache-diff path AND the CHAT_MSG_SYSTEM parser see the same
--- completion. Window is short (2 s) because the two events fire within
--- the same frame burst; anything longer than that is a separate event.
 local DEDUP_WINDOW_S = 2
-local _recentTitles = {}                 -- [title] = expireTime
+local _recentTitles = {}
 
 local function isRecent(title)
     if not title or title == "" then return false end
@@ -49,8 +45,6 @@ local function playSound()
     if file then PlaySoundFile(file, "Master") end
 end
 
--- ── Cache-diff path (regular quests in the log) ───────────────────────
--- Reused scratch so detectTransitions never allocates on a batch.
 local _readyTitles = {}
 
 local function detectTransitions()
@@ -78,14 +72,10 @@ local function detectTransitions()
         end
         Q.lastComplete[id] = now
     end
-    -- Drop entries for quests no longer in the log.
     for id in pairs(Q.lastComplete) do
         if not quests[id] then Q.lastComplete[id] = nil end
     end
 
-    -- One sound for the batch (back-to-back fires would be unpleasant), but
-    -- record EVERY newly-ready title so the matching CHAT_MSG_SYSTEM lines
-    -- that arrive next frame are deduped away.
     if n > 0 then
         for i = 1, n do
             recordRecent(_readyTitles[i])
@@ -95,12 +85,6 @@ local function detectTransitions()
     end
 end
 
--- ── Chat-text path (catches "instant" completions that never enter the
--- quest log: some dailies, callings, scenario step turn-ins, etc.) ────
--- Build a Lua pattern from Blizzard's localized format string. The format
--- uses %s where the quest title goes; everything else is literal and must
--- have its Lua-pattern specials escaped. Sentinel-swap so the escape pass
--- doesn't touch the placeholder.
 local _completePattern
 local function getCompletePattern()
     if _completePattern then return _completePattern end
@@ -125,7 +109,7 @@ local function onSystemChat(_, msg)
     if not p then return end
     local title = msg:match(p)
     if not title or title == "" then return end
-    if isRecent(title) then return end          -- Cache-diff path already fired
+    if isRecent(title) then return end
     recordRecent(title)
     playSound()
 end

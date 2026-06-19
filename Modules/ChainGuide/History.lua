@@ -1,22 +1,14 @@
--- Modules/ChainGuide/History.lua
--- Back/Forward navigation stack for the Chain Guide. Each entry is a small
--- view-state table the Frame can re-render. New navigation truncates the
--- forward stack (standard browser semantics).
-
 local _, ns = ...
 
 local H = ns:RegisterSubsystem("ChainGuideHistory", {})
 
 H.stack  = {}
-H.cursor = 0          -- index into stack of the current view (0 = empty)
+H.cursor = 0
 
 function H:Push(state)
-    -- Replace duplicate-of-current with itself (no-op) so the user doesn't
-    -- end up with redundant entries when re-clicking the same item.
     local cur = self.stack[self.cursor]
     if cur and cur.type == state.type and cur.id == state.id then return end
 
-    -- Truncate forward history before appending — standard browser model.
     for i = self.cursor + 1, #self.stack do self.stack[i] = nil end
     self.stack[#self.stack + 1] = state
     self.cursor = #self.stack

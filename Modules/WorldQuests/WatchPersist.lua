@@ -1,12 +1,3 @@
--- Modules/WorldQuests/WatchPersist.lua
--- Persistent per-character watch state for world quests. Blizzard's manual
--- watches (Enum.QuestWatchType.Manual) survive zone changes and map closes
--- but NOT logout/reload — Blizzard tears down its watch list each session.
--- We keep our own questID list in saved vars and re-add the watches on
--- PLAYER_ENTERING_WORLD so the player's tracked WQs persist across sessions.
---
--- Scoped per-character (db.char) since WQ availability is character-specific.
-
 local _, ns = ...
 
 local W = ns:RegisterSubsystem("WQWatchPersist", {})

@@ -1,15 +1,6 @@
--- Data/QuestChains/_Overlays_Zulaman.lua
--- GENERATED DRAFT Zulaman zone overlays - verify in-game, then graduate
--- the verified ones into _Overlays.lua and drop them from here. Topology is
--- from authored reference data; layout is auto-laid to the centred-tree
--- convention. Only chains whose draft positions every LIVE quest (coverage-
--- clean per the dump) are emitted, so these should render without
--- stragglers - the open question per chain is purely whether the layout reads
--- well. Regenerate: python docs/_check_coverage.py docs/_zonedump_zulaman.txt --emit
 local _, ns = ...
 ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
 
-    -- Healing the Spirit  (questline 5778, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5778] = {
         layout = {
             [91206] = { x = 1, y = 0  },
@@ -30,7 +21,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Unlikely Friends  (questline 5905, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5905] = {
         layout = {
             [93667] = { x = 1, y = 0  },
@@ -53,7 +43,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Vengeance for Tolbani  (questline 5939, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5939] = {
         layout = {
             [94867] = { x = 1, y = 0  },
@@ -70,7 +59,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- A Venomous History  (questline 5950, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5950] = {
         layout = {
             [91406] = { x = 1, y = 0  },
@@ -101,7 +89,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Voice of Nalorakk  (questline 5971, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5971] = {
         layout = {
             [91813] = { x = 1, y = 0  },
@@ -120,7 +107,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Something Vile This Way Comes  (questline 5975, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5975] = {
         layout = {
             [91833] = { x = 1, y = 0  },
@@ -139,7 +125,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Between Two Trolls  (questline 5981, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5981] = {
         layout = {
             [89230] = { x = 0, y = 0  },
@@ -151,7 +136,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- The Loa of Murlocs  (questline 5988, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[5988] = {
         layout = {
             [92163] = { x = 1, y = 0  },
@@ -168,7 +152,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Reclaiming De Honor  (questline 6011, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[6011] = {
         layout = {
             [92492] = { x = 1, y = 0  },
@@ -187,7 +170,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Bitter Honor  (questline 6042, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[6042] = {
         layout = {
             [93093] = { x = 0, y = 0  },
@@ -201,7 +183,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- River Walkers of the Prowl  (questline 6045, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[6045] = {
         layout = {
             [93257] = { x = 1, y = 0  },
@@ -218,7 +199,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Sawdust to Sawdust  (questline 6048, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[6048] = {
         layout = {
             [88985] = { x = 1, y = 0  },
@@ -235,7 +215,6 @@ ns.CHAINGUIDE_OVERLAYS = ns.CHAINGUIDE_OVERLAYS or {}
         },
     }
 
-    -- Bloodstains  (questline 6052, Zul'Aman)
     ns.CHAINGUIDE_OVERLAYS[6052] = {
         layout = {
             [93440] = { x = 1, y = 0  },

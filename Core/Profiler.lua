@@ -1,32 +1,11 @@
--- Core/Profiler.lua
--- Opt-in CPU / memory profiler for hot-path investigation. Wrap any code
--- region with:
---     Profiler:Start("tag")  ... work ...  Profiler:Stop("tag")
--- Stats accumulate across many Start/Stop pairs on the same tag and are
--- printed via `/eqs profile show`.
---
--- CPU timing is always recorded (debugprofilestop, microsecond resolution,
--- effectively free). Memory delta is recorded only when memory mode is
--- enabled via `/eqs profile mem on`; it forces collectgarbage("collect")
--- at the boundaries so the delta reflects actual allocation rather than
--- pending-to-be-collected garbage. That forced collection is EXPENSIVE —
--- leave memory mode off during normal play; toggle it on only while
--- investigating a regression.
---
--- Caveat: collectgarbage("count") is process-global (all Lua memory, not
--- per-addon). Synchronous hot-path tags reflect EQ's own allocation
--- accurately; async / multi-frame tags can be polluted by other addons
--- allocating in the same window.
-
 local _, ns = ...
 
 local Profiler = ns:RegisterSubsystem("Profiler", {})
 
-Profiler.stats   = {}                -- [tag] = { cpuTotal, cpuCount, cpuMax, memTotal, memCount, memMax }
-Profiler.memMode = false             -- toggled by `/eqs profile mem on|off`
+Profiler.stats   = {}
+Profiler.memMode = false
 
--- Per-tag scratch for Start→Stop handoff. Allocated once per tag, reused.
-local _active = {}                   -- [tag] = { cpu = startMs, mem = startKB or nil }
+local _active = {}
 
 local function getActive(tag)
     local a = _active[tag]
@@ -89,20 +68,7 @@ function Profiler:Reset()
     -- be ignored by Stop (the `a.cpu` nil-check).
 end
 
--- ── Auto-instrument: wrap subsystem methods in place ──────────────────
--- `Profiler:Wrap("Tracker", "Render")` replaces Tracker.Render with a
--- function that does Start("Tracker:Render"), calls the original, then
--- Stop("Tracker:Render"). Idempotent — wrapping the same method twice is
--- a no-op. AutoInstrument(true) wraps everything in HOT_PATHS at once;
--- AutoInstrument(false) restores every original.
---
--- The `done(original(...))` trick passes through arbitrary return values
--- (including nils) intact, which `{ original(...) }` + `unpack` would
--- mangle. If the wrapped method errors, Stop is skipped and the error
--- bubbles unchanged; the next Start on that tag simply overwrites the
--- abandoned sample, so the profiler self-heals without try/catch noise.
-
-Profiler._wrapped = {}                   -- [key] = { tbl, method, original }
+Profiler._wrapped = {}
 
 local function tableHasMethod(tbl, name)
     return tbl and type(tbl[name]) == "function"
@@ -113,7 +79,7 @@ function Profiler:Wrap(subsystemName, methodName)
     if not tableHasMethod(tbl, methodName) then return false end
 
     local key = subsystemName .. "." .. methodName
-    if self._wrapped[key] then return true end                              -- already wrapped
+    if self._wrapped[key] then return true end
 
     local original = tbl[methodName]
     local tag      = subsystemName .. ":" .. methodName
@@ -136,11 +102,6 @@ function Profiler:Unwrap(subsystemName, methodName)
     return true
 end
 
--- Curated list of subsystem methods worth measuring. Picked for being
--- on a frequently-traveled rebuild path (Tracker render, WQ refresh,
--- Chain Guide render, History query/render). Refreshing this list is
--- the right knob to expose more or fewer measurements at once; manual
--- Profiler:Start/Stop pairs in code still work alongside this.
 Profiler.HOT_PATHS = {
     { "Tracker",         "Render"        },
     { "Tracker",         "Refresh"       },
@@ -166,7 +127,6 @@ function Profiler:AutoInstrument(on)
         return wrapped, missing
     else
         local unwrapped = 0
-        -- Snapshot keys first; Unwrap mutates _wrapped during iteration.
         local keys = {}
         for k in pairs(self._wrapped) do keys[#keys + 1] = k end
         for _, k in ipairs(keys) do
@@ -196,7 +156,6 @@ function Profiler:Show()
     local title = "|cffEBB706Everything Quests Profile|r"
     print(title .. (self.memMode and " (memory mode ON)" or ""))
 
-    -- Sort by total CPU descending so the biggest costs show first.
     local keys = {}
     for tag in pairs(self.stats) do keys[#keys + 1] = tag end
     if #keys == 0 then
@@ -220,30 +179,19 @@ function Profiler:Show()
     end
 end
 
--- ── In-game memory-hog meter ──────────────────────────────────────────
--- A small on-screen widget that reports EQ's addon memory + the rolling
--- kB/s allocation rate, sampled once per second. Catches allocation
--- spikes the moment they happen (open a map, accept a quest) so you can
--- correlate them with player actions. Off by default — toggle via
--- `/eqs profile memhog`.
---
--- UpdateAddOnMemoryUsage is documented as relatively expensive; sampling
--- once per second is fine, per-frame would not be. The frame is hidden
--- when off, so OnUpdate doesn't fire and the meter costs nothing.
-
-local MEMHOG_INTERVAL_S = 1.0          -- seconds between samples
-local MEMHOG_BUFFER_N   = 5            -- rolling samples for the kB/s average
+local MEMHOG_INTERVAL_S = 1.0
+local MEMHOG_BUFFER_N   = 5
 
 Profiler.memhog = {
     active      = false,
     frame       = nil,
     label       = nil,
-    lastMem     = 0,                   -- KB at last sample
-    lastTime    = 0,                   -- GetTime() at last sample
-    accumulated = 0,                   -- OnUpdate elapsed-sum accumulator
-    buf         = {},                  -- ring of recent kB/s samples
-    bufHead     = 1,                   -- next write index (1-based)
-    bufLen      = 0,                   -- entries valid in `buf` (until ring fills)
+    lastMem     = 0,
+    lastTime    = 0,
+    accumulated = 0,
+    buf         = {},
+    bufHead     = 1,
+    bufLen      = 0,
 }
 
 local _UpdateMem = (C_AddOns and C_AddOns.UpdateAddOnMemoryUsage) or UpdateAddOnMemoryUsage
@@ -269,9 +217,7 @@ local function memhogTick(_, elapsed)
         local sum = 0
         for i = 1, mh.bufLen do sum = sum + (mh.buf[i] or 0) end
         local avg = sum / mh.bufLen
-        -- IDE can't infer the deferred FontString assignment in
-        -- ensureMemHogFrame; the nil-guard above this loop already runs.
-        local label = mh.label                                                  ---@type any
+        local label = mh.label
         if mem >= 1024 then
             label:SetText(("EQ %+.1f kB/s | %.2f MB"):format(avg, mem / 1024))
         else
@@ -316,9 +262,7 @@ end
 function Profiler:StartMemHog()
     if self.memhog.active then return end
     local f = ensureMemHogFrame()
-    if not f then return end                                                -- defensive; ensureMemHogFrame always succeeds in practice
-    -- Reset state so the very first sample is "now" (no spurious huge
-    -- delta on the first tick).
+    if not f then return end
     if _UpdateMem and _GetMem then
         _UpdateMem()
         self.memhog.lastMem = _GetMem("EverythingQuests") or 0

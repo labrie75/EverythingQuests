@@ -1,21 +1,9 @@
--- Options/TabAppearance.lua
--- Visual customization for the in-world UI: font, font size, background
--- texture/alpha, color overrides. Pulls fonts/textures from LibSharedMedia.
-
 local _, ns = ...
 local L = ns.L
 
 ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(content)
     local Options = ns:GetSubsystem("Options")
 
-    -- Snap a colour picker's swatch into the same X column as `ref` (another
-    -- picker in this column), keeping its label flush-left of the swatch. Each
-    -- picker is laid out as [label][8px][swatch], so without this a swatch lands
-    -- at label.left + labelWidth + 8 — meaning swatches with different-width
-    -- labels (Shadow Color vs Background Color, Thumb Color vs Scroll Bar Color,
-    -- Section Header Color vs Quest Title Color Override) don't line up. This is
-    -- the same re-anchor the Border row already uses to sit under Background. The
-    -- picker keeps whatever vertical position its own anchor gave it.
     local function alignSwatchTo(picker, ref)
         picker.button:ClearAllPoints()
         picker.button:SetPoint("TOP",  picker, "TOP", 0, -1)
@@ -38,9 +26,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
             end
     end
 
-    -- Like trackerSetting, but the scenario-banner shadow only affects the
-    -- scenario surface, so it re-applies that banner's shadow directly instead
-    -- of refreshing (and re-laying-out) the whole tracker.
     local function scenarioSetting(key)
         return
             function()
@@ -61,9 +46,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local Media = ns:GetSubsystem("Media")
     local fontList = (Media and Media.GetFontList and Media:GetFontList()) or {}
     local fontGet, fontSet = trackerSetting("font")
-    -- Use the custom font dropdown so each row's label renders in its own
-    -- typeface. The generic dropdown's MenuUtil entries don't reliably
-    -- accept per-row font overrides.
     local fontDD = Options:CreateFontDropdown(content, L["Font"], fontList, fontGet, fontSet)
     fontDD:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -16)
     fontDD:SetWidth(280)
@@ -73,9 +55,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     sizeSlider:SetPoint("TOPLEFT", fontDD, "BOTTOMLEFT", 0, -16)
     sizeSlider:SetWidth(280)
 
-    -- Independent TITLE size: an offset added to the base Font Size for quest /
-    -- achievement / etc. titles only (objective text keeps the base size). 0 =
-    -- titles match the base font; raise for bigger titles, lower for smaller.
     local titleSizeGet, titleSizeSet = trackerSetting("titleSizeDelta")
     local titleSizeSlider = Options:CreateSlider(content, L["Title Size Offset"], -6, 12, 1, titleSizeGet, titleSizeSet)
     titleSizeSlider:SetPoint("TOPLEFT", sizeSlider, "BOTTOMLEFT", 0, -16)
@@ -100,8 +79,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     outlineDD:SetPoint("TOPLEFT", titleSizeSlider, "BOTTOMLEFT", 0, -16)
     outlineDD:SetWidth(280)
 
-    -- Drop-shadow behind tracker text for legibility over bright/busy
-    -- backdrops. Toggle + colour, matching the Background row's layout.
     local shadowGet, shadowSet = trackerSetting("textShadow")
     local shadowCheck = Options:CreateCheckbox(content, L["Text Shadow"], shadowGet, shadowSet,
         L["Draws a soft drop-shadow behind all tracker text so it stays readable over bright or busy backgrounds. Use Shadow Color to tint it and Shadow Size to set how far it's cast."])
@@ -120,11 +97,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local shadowPicker = Options:CreateColorPicker(content, L["Shadow Color"], shadowColorGet, shadowColorSet)
     shadowPicker:SetPoint("LEFT", shadowCheck, "RIGHT", 120, 0)
 
-    -- Shadow size (offset distance) slider, directly under the Text Shadow row.
-    -- "Less" keeps the shadow tight to the letters; "more" casts it further out
-    -- for a bigger, more pronounced drop-shadow. The Shadow Color picker above
-    -- controls its tint + opacity; this controls reach. Live-previews via the
-    -- trackerSetting setter's Tracker:Refresh (Render re-applies the font/shadow).
     local shStrengthGet, shStrengthSet = trackerSetting("textShadowStrength")
     local shadowSizeSlider = Options:CreateSlider(content, L["Shadow Size"], 1, 6, 1, shStrengthGet, shStrengthSet)
     shadowSizeSlider:SetPoint("TOPLEFT", shadowCheck, "BOTTOMLEFT", 0, -14)
@@ -132,11 +104,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(shadowSizeSlider, L["Shadow Size"],
         L["How far the text drop-shadow is cast behind the letters. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while Text Shadow is on."])
 
-    -- ─── Scenario banner shadow (SEPARATE from the main tracker text) ───────
-    -- The scenario / delve banner (the Stage + name lines) is distinct chrome
-    -- that mimics Blizzard's native scenario header, so it carries its OWN
-    -- drop-shadow controls instead of following the Text Shadow above. Same
-    -- toggle + colour + size trio; the tooltip spells out that it's separate.
     local scenarioHeader = Options:CreateSectionHeader(content, L["Scenario"])
     scenarioHeader:SetPoint("TOPLEFT", shadowSizeSlider, "BOTTOMLEFT", 0, -16)
 
@@ -165,10 +132,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(scShadowSizeSlider, L["Shadow Size"],
         L["How far the scenario banner's drop-shadow is cast. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while the Scenario Text Shadow above is on."])
 
-    -- "Tracker" section header over the main tracker's Background / Border
-    -- controls (distinguishing them from the Scenario block above and the Zone
-    -- Bar Appearance group in the right column). Same red CreateSectionHeader
-    -- style as every other header; L["Tracker"] is already a translated key.
     local trackerHeader = Options:CreateSectionHeader(content, L["Tracker"])
     trackerHeader:SetPoint("TOPLEFT", scShadowSizeSlider, "BOTTOMLEFT", 0, -16)
 
@@ -188,16 +151,9 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     end
     local bgPicker = Options:CreateColorPicker(content, L["Background Color"], bgColorGet, bgColorSet)
     bgPicker:SetPoint("LEFT", bgCheck, "RIGHT", 120, 0)
-    -- Shadow Color (main) and the Scenario Shadow Color both sit above this row;
-    -- snap their swatches into Background Color's column so the whole left-column
-    -- colour stack lines up cleanly.
     alignSwatchTo(shadowPicker, bgPicker)
     alignSwatchTo(scShadowPicker, bgPicker)
 
-    -- Optional border around the tracker (wraps the background region).
-    -- Off by default; the color picker carries the same Class/Default
-    -- options as every other EQ picker. Sits directly under Background so the
-    -- swatch stays in the shared colour column with Background Color.
     local borderGet, borderSet = trackerSetting("showBorder")
     local borderCheck = Options:CreateCheckbox(content, L["Border"], borderGet, borderSet)
     borderCheck:SetPoint("TOPLEFT", bgCheck, "BOTTOMLEFT", 0, -10)
@@ -221,18 +177,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
     borderThickSlider:SetWidth(280)
 
-    -- ─── Tracker Skins: scroll-bar styling ──────────────────────────────
-    -- All scroll-bar appearance in one place (requested by Fostot): the faint
-    -- background strip behind the bar (toggle + colour), an opt-in solid-colour
-    -- thumb block (colour + width), and hiding the up/down arrow buttons. The
-    -- thumb + arrow options drive the ScrollBar skin in Tracker/Frame.lua.
-    -- NOTE: this whole Tracker Skins block is created here but POSITIONED in the
-    -- RIGHT column, beneath Zone Bar Appearance. skinsHeader is anchored at the
-    -- END of this builder (once zbHeaderPicker exists); every control below
-    -- anchors to skinsHeader, so the whole block follows it into the right column.
     local skinsHeader = Options:CreateSectionHeader(content, L["Tracker Skins"])
 
-    -- Background strip behind the bar (toggle + colour).
     local sbGet, sbSet = trackerSetting("scrollBarBg")
     local sbCheck = Options:CreateCheckbox(content, L["Scroll Bar Background"], sbGet, sbSet)
     sbCheck:SetPoint("TOPLEFT", skinsHeader, "BOTTOMLEFT", 0, -10)
@@ -250,8 +196,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local sbPicker = Options:CreateColorPicker(content, L["Scroll Bar Color"], sbColorGet, sbColorSet)
     sbPicker:SetPoint("LEFT", sbCheck, "RIGHT", 170, 0)
 
-    -- Solid-colour thumb (the draggable block). Opt-in: off = the stock
-    -- textured Blizzard bar. Colour + width apply only while this is on.
     local thumbSkinGet, thumbSkinSet = trackerSetting("skinScrollBar")
     local thumbSkinCheck = Options:CreateCheckbox(content, L["Solid color thumb"],
         thumbSkinGet, thumbSkinSet,
@@ -270,8 +214,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     end
     local thumbColorPicker = Options:CreateColorPicker(content, L["Thumb Color"], thumbColorGet, thumbColorSet)
     thumbColorPicker:SetPoint("LEFT", thumbSkinCheck, "RIGHT", 170, 0)
-    -- "Thumb Color" is a shorter label than "Scroll Bar Color", so snap its
-    -- swatch into the Scroll Bar Color column above so the two line up.
     alignSwatchTo(thumbColorPicker, sbPicker)
 
     local twGet, twSet = trackerSetting("scrollBarThumbWidth")
@@ -285,11 +227,9 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         L["Hides the up and down arrow buttons at the ends of the tracker scroll bar. The bar still scrolls by dragging the thumb or using the mouse wheel."])
     hideArrowsCheck:SetPoint("TOPLEFT", thumbWidthSlider, "BOTTOMLEFT", 0, -14)
 
-    -- ─── RIGHT COLUMN: colors + dimensions ──────────────────────────────
     local colorsHeader = Options:CreateSectionHeader(content, L["Colors & Dimensions"])
     colorsHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
 
-    -- Quest title color override: when set, overrides difficulty / yellow.
     local function titleColorGet()
         local DB = ns:GetSubsystem("DB")
         local c = DB and DB.db.profile.tracker.titleColorOverride
@@ -317,11 +257,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(titlePicker, L["Quest Title Color Override"],
         L["When cleared, falls back to difficulty coloring or default yellow."])
 
-    -- Use the chosen title color for completed quests instead of the default
-    -- "ready to turn in" green (recolors the title + completed objective lines;
-    -- the checkmark still marks them done). On by default, but only takes
-    -- effect once a title color is set above — with no color chosen there's
-    -- nothing to override green with, so completed quests stay green.
     local recolorGet, recolorSet = trackerSetting("overrideCompleteGreen")
     local recolorCheck = Options:CreateCheckbox(content,
         L["Use title color for completed quests"],
@@ -329,7 +264,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         L["Instead of green."])
     recolorCheck:SetPoint("TOPLEFT", titlePicker, "BOTTOMLEFT", 0, -10)
 
-    -- Section header color — overrides the default orange-red.
     local function headerColorGet()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.tracker.headerColor or { r = 0.93, g = 0.32, b = 0.10, a = 1 }
@@ -342,11 +276,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     end
     local headerPicker = Options:CreateColorPicker(content, L["Section Header Color"], headerColorGet, headerColorSet)
     headerPicker:SetPoint("TOPLEFT", recolorCheck, "BOTTOMLEFT", 0, -16)
-    -- "Section Header Color" is a shorter label than "Quest Title Color
-    -- Override", so snap its swatch into the title-override column above.
     alignSwatchTo(headerPicker, titlePicker)
 
-    -- Tracker scale 0.7 - 1.5
     local function scaleGet()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.tracker.scale or 1.0
@@ -370,7 +301,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     scaleSlider:SetPoint("TOPLEFT", headerPicker, "BOTTOMLEFT", 0, -32)
     scaleSlider:SetWidth(280)
 
-    -- Block spacing 0 - 12
     local function spacingGet()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.tracker.blockSpacing or 4
@@ -385,8 +315,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     spacingSlider:SetPoint("TOPLEFT", scaleSlider, "BOTTOMLEFT", 0, -16)
     spacingSlider:SetWidth(280)
 
-    -- Zone progress bar scale (only the floating bar; the tracker-section
-    -- variant follows the tracker's own scale). 0.5 - 2.0.
     local function zbScaleGet()
         local DB = ns:GetSubsystem("DB")
         local st = DB and DB.db.profile.tracker.zoneProgressBar
@@ -406,12 +334,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     zbScaleSlider:SetPoint("TOPLEFT", spacingSlider, "BOTTOMLEFT", 0, -16)
     zbScaleSlider:SetWidth(280)
 
-    -- ─── Zone Bar appearance (floating bar only) ────────────────────────
-    -- Mirrors the floating frame's chrome: background + border toggles, a font
-    -- override (typeface only — size/outline follow the tracker), and the header
-    -- + count text colors. The tracker-docked variant is unaffected (it uses the
-    -- tracker's own section header + font). All writes go through ZoneProgress
-    -- setters so the change previews live on a visible bar.
     local function zbState()
         local DB = ns:GetSubsystem("DB")
         local p = DB and DB.db.profile.tracker
@@ -424,7 +346,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local zbHeader = Options:CreateSectionHeader(content, L["Zone Bar Appearance"])
     zbHeader:SetPoint("TOPLEFT", zbScaleSlider, "BOTTOMLEFT", 0, -20)
 
-    -- Background + Border toggles (checked = shown), side by side.
     local zbBgGet = function() local st = zbState(); return not (st and st.showBackground == false) end
     local zbBgSet = function(v)
         local st = zbState(); if st then st.showBackground = v end
@@ -441,7 +362,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local zbBorderCheck = Options:CreateCheckbox(content, L["Border"], zbBorderGet, zbBorderSet)
     zbBorderCheck:SetPoint("LEFT", zbBgCheck, "LEFT", 150, 0)
 
-    -- Border color sits right of the Border toggle (default brand red).
     local function zbBorderColorGet()
         local st = zbState()
         return (st and st.borderColor) or { r = 0.635, g = 0.000, b = 0.039, a = 1 }
@@ -453,7 +373,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local zbBorderColorPicker = Options:CreateColorPicker(content, L["Border Color"], zbBorderColorGet, zbBorderColorSet)
     zbBorderColorPicker:SetPoint("LEFT", zbBorderCheck, "LEFT", 90, 0)
 
-    -- Font typeface override. "" = follow the tracker font (the default row).
     local zbFontList = { { value = "", label = L["Same as tracker font"] } }
     do
         local base = (Media and Media.GetFontList and Media:GetFontList()) or {}
@@ -468,7 +387,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     zbFontDD:SetPoint("TOPLEFT", zbBgCheck, "BOTTOMLEFT", 0, -14)
     zbFontDD:SetWidth(280)
 
-    -- Header (zone name) + count (x/x) text colors, side by side.
     local function zbHeaderColorGet()
         local st = zbState()
         return (st and st.headerColor) or { r = 0.93, g = 0.32, b = 0.10, a = 1 }
@@ -491,8 +409,5 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local zbCountPicker = Options:CreateColorPicker(content, L["Count Color"], zbCountColorGet, zbCountColorSet)
     zbCountPicker:SetPoint("TOPLEFT", zbHeaderPicker, "TOPRIGHT", 40, 0)
 
-    -- Tracker Skins (built up in the left-column code) is positioned HERE, in the
-    -- right column beneath Zone Bar Appearance. Anchoring its header now — after
-    -- zbHeaderPicker exists — pulls the whole block (created earlier) into place.
     skinsHeader:SetPoint("TOPLEFT", zbHeaderPicker, "BOTTOMLEFT", 0, -20)
 end)

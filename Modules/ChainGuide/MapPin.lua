@@ -1,17 +1,3 @@
--- Modules/ChainGuide/MapPin.lua
--- Pin mixin for the EQChainPinTemplate map pin (Chain Guide Phase 3): one pin
--- per quest in the player's TRACKED chain, drawn on the world map. The ring is
--- status-coloured and the chain's next actionable step is highlighted gold, so
--- the whole chain reads at a glance. Extends Blizzard's MapCanvasPinMixin so the
--- canvas handles positioning, frame-level layering, and pooling for free.
---
--- Taint discipline (mirrors Modules/MapPOI/Pin.lua exactly): hover draws on the
--- PRIVATE ns.Util.PinTooltip (never the shared GameTooltip, which would seed EQ
--- taint that the next AreaPOI tooltip crashes on); the empty
--- CheckMouseButtonPassthrough stub is MANDATORY (newer MapCanvas calls it on
--- every pin; missing it asserts at Blizzard_MapCanvas.lua:280); the pin sits at
--- PIN_FRAME_LEVEL_QUEST_PING so it receives clicks above Blizzard's quest POIs.
-
 local _, ns = ...
 local L = ns.L
 
@@ -22,19 +8,12 @@ local ICON_QUEST  = "Interface\\GossipFrame\\AvailableQuestIcon"
 local ICON_TURNIN = "Interface\\GossipFrame\\ActiveQuestIcon"
 local ICON_DONE   = "Interface\\RaidFrame\\ReadyCheck-Ready"
 
--- Ring tint per status. "next" = the chain's current actionable step (gold, the
--- headline highlight); active = in your log (cyan, matching the tracker
--- "ON QUEST" tag); complete = turned in (green); pending = a future step.
 local RING = {
     next     = { 1.00, 0.82, 0.00 },
     active   = { 0.30, 0.72, 1.00 },
     complete = { 0.27, 0.85, 0.27 },
     pending  = { 0.55, 0.55, 0.58 },
 }
--- Tooltip status line, colour mirrors the ring. Keyed through L at definition:
--- Locales load before this file (.toc), so ns.L already holds the active
--- locale's translations, and literal L["..."] also lets the manifest generator
--- (docs/_gen_enus.py, literal-only regex) pick these strings up for translators.
 local STATUS_TEXT = {
     next     = L["Your next step"],
     active   = L["On this quest"],
@@ -48,7 +27,6 @@ function Pin:OnLoad()
     self:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 end
 
--- Trailing args come from the provider's map:AcquirePin(template, ...).
 function Pin:OnAcquired(questID, x, y, status, inLog)
     self.questID = questID
     self.status  = status
@@ -65,7 +43,6 @@ function Pin:OnAcquired(questID, x, y, status, inLog)
     else
         self.icon:SetTexture(status == "active" and ICON_TURNIN or ICON_QUEST)
     end
-    -- Dim future steps so the actionable ones (next/active) read forward.
     self.icon:SetVertexColor(1, 1, 1, status == "pending" and 0.7 or 1)
     self.numberText:SetText("")
     self:Show()
@@ -109,7 +86,6 @@ function Pin:OnClick(button)
             ToggleQuestLog()
         end
     elseif self.inLog and C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
-        -- Left-click an in-log step: hand it to Blizzard's super-track arrow.
         C_SuperTrack.SetSuperTrackedQuestID(self.questID)
     end
 end

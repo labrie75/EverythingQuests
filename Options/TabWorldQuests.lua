@@ -1,8 +1,3 @@
--- Options/TabWorldQuests.lua
--- World quest visibility toggles + per-reward-type filters + per-faction
--- filters. Two-column layout: visibility & reward filters on the left, a
--- scrollable expansion-grouped faction list on the right.
-
 local _, ns = ...
 local L = ns.L
 
@@ -51,9 +46,6 @@ local FILTER_ROWS = {
     { key = "other",      label = L["Other / Uncategorized"],  icon = "Interface\\Icons\\INV_Misc_QuestionMark" },
 }
 
--- Map LE_EXPANSION_* IDs to human names. Blizzard ships these as numeric
--- enums; the names here are the canonical marketing names so users
--- recognize them. Any expansionID we don't know about lands in "Other".
 local EXPANSION_NAMES = {
     [0]  = L["Classic"],
     [1]  = L["The Burning Crusade"],
@@ -94,9 +86,6 @@ local function factionSet(fid, value)
     refreshWQ()
 end
 
--- Walk all major factions, group by expansionID, sort each group
--- alphabetically. Returns { { expansionID, name, factions = {...} }, ... }
--- ordered with newest expansion first.
 local function listFactionsByExpansion()
     local groups = {}
     local groupByExp = {}
@@ -117,9 +106,7 @@ local function listFactionsByExpansion()
         end
     end
 
-    -- Newest expansion first.
     table.sort(groups, function(a, b) return (a.expansionID or 0) > (b.expansionID or 0) end)
-    -- Alphabetical within each group.
     for _, g in ipairs(groups) do
         table.sort(g.factions, function(a, b) return (a.name or "") < (b.name or "") end)
     end
@@ -128,15 +115,9 @@ local function listFactionsByExpansion()
 end
 
 Options:AddTab("worldQuests", L["World Quests"], function(content)
-    -- ─── LEFT COLUMN ────────────────────────────────────────────────────
     local header = Options:CreateSectionHeader(content, L["World Quests"])
     header:SetPoint("TOPLEFT", 8, -8)
 
-    -- Master switch for the World Quests MAP features (everything this
-    -- tab governs), first in the list. Off = no WQ world-map pins, no
-    -- summary box, no zone list. Refreshes only the WQ map surfaces —
-    -- the tracker's own World Quests section is intentionally NOT
-    -- affected (that lives on the Tracker tab).
     local function wqMasterGet()
         local DB = ns:GetSubsystem("DB")
         return not DB or DB.db.profile.worldQuests.enabled ~= false
@@ -206,7 +187,6 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
     allBtn:HookScript("OnClick",  syncCheckboxes)
     noneBtn:HookScript("OnClick", syncCheckboxes)
 
-    -- ─── RIGHT COLUMN: faction filter panel (scrollable) ────────────────
     local factionHeader = Options:CreateSectionHeader(content, L["Filter by faction"])
     factionHeader:SetPoint("TOPLEFT", header, "TOPLEFT", 460, 0)
 
@@ -215,20 +195,12 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
 
     local scroll = CreateFrame("ScrollFrame", nil, content, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", factionHeader, "BOTTOMLEFT", 0, -8)
-    -- 380x260 (was 440): the list scrolls, so a shorter viewport is
-    -- harmless and leaves room for the "Display" group (Sort + Pin
-    -- scale) below it — that group moved here from the left column,
-    -- which overflowed once the master toggle was added at the top.
     scroll:SetSize(380, 260)
 
     local list = CreateFrame("Frame", nil, scroll)
     list:SetSize(360, 1)
     scroll:SetScrollChild(list)
 
-    -- Background strip behind this list's scroll bar, matching the in-world
-    -- tracker treatment so the low-contrast bar reads here too. Honours the
-    -- shared Appearance toggle/colour; resolved at build time (the tab is
-    -- rebuilt when reopened, so a later toggle takes effect on next open).
     do
         local DB = ns:GetSubsystem("DB")
         local cfg = DB and DB.db.profile.tracker
@@ -279,11 +251,7 @@ Options:AddTab("worldQuests", L["World Quests"], function(content)
         list:SetHeight(y)
     end
 
-    -- ─── Display section (left column, below filters) ───────────────────
     local displayHeader = Options:CreateSectionHeader(content, L["Display"])
-    -- Right column, under the faction list (not the left column — that
-    -- stack overflowed the 510px tab once the master toggle was added).
-    -- sortRadio / pinSlider / hint are chained to this, so they follow.
     displayHeader:SetPoint("TOPLEFT", scroll, "BOTTOMLEFT", 0, -16)
 
     local SORT_OPTIONS = {

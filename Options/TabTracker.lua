@@ -1,16 +1,8 @@
--- Options/TabTracker.lua
--- On-screen tracker settings: simplify mode, sort order, and per-type filters.
--- Each control writes straight to db.profile.tracker[...] and triggers
--- Tracker:Refresh so the on-screen tracker repaints immediately. No Apply
--- button by design — instant feedback while the user is tweaking.
-
 local _, ns = ...
 local L = ns.L
 
 local Options = ns:GetSubsystem("Options")
 
--- Build a get/set pair backed by db.profile.tracker[key]. Setter pokes
--- Tracker:Refresh so the tracker repaints the moment a setting changes.
 local function trackerSetting(key)
     return
         function()
@@ -25,7 +17,6 @@ local function trackerSetting(key)
         end
 end
 
--- Same shape but for filters (one level deeper inside db.profile.tracker.filters).
 local function filterSetting(key)
     return
         function()
@@ -60,13 +51,9 @@ local FILTER_ROWS = {
 }
 
 Options:AddTab("tracker", L["Tracker"], function(content)
-    -- ─── On-Screen Tracker section ──────────────────────────────────────
     local header = Options:CreateSectionHeader(content, L["On-Screen Tracker"])
     header:SetPoint("TOPLEFT", 8, -8)
 
-    -- Show only watched quests (Blizzard-parity). When ON (default), only
-    -- quests in Blizzard's watch list show in the on-screen tracker. When
-    -- OFF, every quest in the player's log shows ("firehose mode").
     local watchedGet, watchedSet = trackerSetting("showOnlyWatched")
     local watched = Options:CreateCheckbox(
         content,
@@ -92,11 +79,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
     achSimplify:SetPoint("TOPLEFT", simplify, "BOTTOMLEFT", 0, -2)
 
     local sortGet, sortSet = trackerSetting("sortMode")
-    -- Forward-declared so syncManualHint can re-anchor the Filters section. The
-    -- manual-mode hint is width-capped to the left column, so it may wrap to two
-    -- lines — when it's visible the Filters header anchors to the hint's bottom
-    -- (adapting to its actual height); when hidden it tucks back under the sort
-    -- row. Keeps the hint from ever crowding the header or bleeding into Options.
     local manualHint, filtersHeader, sort
     local function syncManualHint(value)
         local manual = (value == "manual")
@@ -116,22 +98,18 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         content, L["Sort Order"],
         SORT_OPTIONS, sortGet,
         function(v) sortSet(v); syncManualHint(v) end,
-        440, 14)   -- maxWidth 440 = wrap before the right "Options" column (starts at
-                   -- header+460). pad 14 (vs default 18) + the short "Recent" label keep
-                   -- all 7 sort modes on ONE row even at the wider stock UI font, instead
-                   -- of orphaning "Manual" onto a lonely second row.
+        440, 14)
     sort:SetPoint("TOPLEFT", achSimplify, "BOTTOMLEFT", 0, -12)
 
     manualHint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     manualHint:SetPoint("TOPLEFT", sort, "BOTTOMLEFT", 0, -2)
-    manualHint:SetWidth(440)        -- bound to the left column so it can't bleed into Options
+    manualHint:SetWidth(440)
     manualHint:SetJustifyH("LEFT")
     manualHint:SetTextColor(0.92, 0.72, 0.02)
     manualHint:SetText(L["|cffaaaaaaDrag and drop the quests in the tracker to reorder them however you like.|r"])
 
-    -- ─── Filters section ────────────────────────────────────────────────
     filtersHeader = Options:CreateSectionHeader(content, L["Filters"])
-    syncManualHint(sortGet())   -- positions filtersHeader for the current sort mode
+    syncManualHint(sortGet())
 
     local prev = filtersHeader
     local filterCheckboxes = {}
@@ -143,9 +121,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         prev = cb
     end
 
-    -- Reset button: restores every type filter + showOnlyWatched to defaults.
-    -- Offered because "I unchecked something and now quests are missing" is a
-    -- common confused-user state that's annoying to recover from manually.
     local resetFilters = Options:CreateYellowButton(content, L["Reset filters to defaults"], function()
         local DB = ns:GetSubsystem("DB")
         if not DB then return end
@@ -168,7 +143,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
     resetFilters:SetSize(180, 24)
     resetFilters:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -10)
 
-    -- ─── Options section (right column, parallel to On-Screen Tracker) ──
     local optionsHeader = Options:CreateSectionHeader(content, L["Options"])
     optionsHeader:SetPoint("TOPLEFT", header, "TOPLEFT", 460, 0)
 
@@ -219,9 +193,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Click to use the quest's item."])
     itemBtnCheck:SetPoint("TOPLEFT", qtotalCheck, "BOTTOMLEFT", 0, -2)
 
-    -- Quick-access launcher icons at the tracker's top-right — one toggle per
-    -- icon so either (or both) can be hidden. Custom setters call
-    -- Tracker:ApplyHeaderIcons (show/hide directly) rather than a full Refresh.
     local function headerIconGet(key)
         return function()
             local DB = ns:GetSubsystem("DB")
@@ -300,13 +271,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
     soundDD:SetPoint("TOPLEFT", soundCheck, "BOTTOMLEFT", 0, -8)
     soundDD:SetWidth(280)
 
-    -- ─── Tracker Visibility section ─────────────────────────────────────
-    -- Per-section show/hide toggles for the on-screen tracker. Separate
-    -- from Filters (which hide individual quests by type) because these
-    -- hide whole tracker sections, which is a different mental model.
-    -- Lives in the LEFT column beneath the Filters/Reset block: the right
-    -- "Options" column is already full-height, so a 5th toggle here would
-    -- overflow the panel. The left column has ample room below Reset.
     local visHeader = Options:CreateSectionHeader(content, L["Tracker Visibility"])
     visHeader:SetPoint("TOPLEFT", resetFilters, "BOTTOMLEFT", 0, -10)
 
@@ -323,10 +287,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
     local wqCheck = Options:CreateCheckbox(content, L["World Quests section"], wqGet, wqSet)
     wqCheck:SetPoint("TOPLEFT", achCheck, "BOTTOMLEFT", 0, -2)
 
-    -- Auto-list current-zone WQs. Custom setter: besides the usual save +
-    -- Tracker:Refresh, it marks the World Quests section's active list dirty
-    -- so toggling it repopulates immediately instead of waiting for a zone
-    -- change (the active list is cached and only rebuilds on dirty).
     local autoWQGet = function()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.tracker.autoListZoneWorldQuests
@@ -345,17 +305,9 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Lists every WQ in your zone without tracking each."])
     autoWQCheck:SetPoint("TOPLEFT", wqCheck, "BOTTOMLEFT", 0, -2)
 
-    -- ─── Zone Progress Bar section ──────────────────────────────────────
-    -- Lives in the RIGHT column beneath the sound dropdown (which is now the
-    -- bottom of the Options column). Its own group because it can render as a
-    -- tracker section OR a standalone movable frame — see ZoneProgress.lua.
     local zpHeader = Options:CreateSectionHeader(content, L["Zone Progress Bar"])
     zpHeader:SetPoint("TOPLEFT", soundDD, "BOTTOMLEFT", 0, -16)
 
-    -- Master enable. Custom setter calls ZoneProgress:SetEnabled so toggling
-    -- ON discovers + paints the current zone immediately (and OFF clears the
-    -- cache + hides the frame). Off by default — questline-based (approximate)
-    -- and slightly heavier.
     local zpEnableGet = function()
         local DB = ns:GetSubsystem("DB")
         return DB and DB.db.profile.tracker.showZoneProgressBar
@@ -377,7 +329,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Approximate questline progress."])
     zpEnable:SetPoint("TOPLEFT", zpHeader, "BOTTOMLEFT", 0, -8)
 
-    -- Placement: floating standalone frame vs a section on the tracker.
     local zpFloatGet = function()
         local DB = ns:GetSubsystem("DB")
         return DB and (DB.db.profile.tracker.zoneProgressLocation or "floating") == "floating"
@@ -392,10 +343,6 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Drag to move; right-click to lock or reset."])
     zpFloat:SetPoint("TOPLEFT", zpEnable, "BOTTOMLEFT", 0, -2)
 
-    -- Helper hint — no Apply button by design, so call out the live-update
-    -- behavior. Pinned to the bottom-RIGHT: the Tracker Visibility toggles now
-    -- fill the bottom-left column, and the right "Options" column ends higher
-    -- up (at the sound dropdown), leaving the bottom-right corner clear.
     Options:AttachTooltip(header, L["On-Screen Tracker"],
         L["Changes apply immediately to the on-screen tracker."])
 end)

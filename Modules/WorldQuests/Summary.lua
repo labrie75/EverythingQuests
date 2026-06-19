@@ -1,14 +1,3 @@
--- Modules/WorldQuests/Summary.lua
--- Aggregated reward-summary widget anchored to WorldMapFrame. Reads the
--- active EQ world-quest pins (via the shadow canvas's pin enumerator),
--- bins them by reward category, and lists "icon · count · label" rows for
--- whichever categories have at least one quest visible.
---
--- Read-only in v0.1 — clicking a row could toggle the corresponding filter
--- but that creates a confusing UX (toggle off → row disappears). We'll
--- revisit interactivity once we have a "show all categories with on/off
--- state" rendering option.
-
 local _, ns = ...
 local L = ns.L
 
@@ -24,10 +13,6 @@ local PIN_TEMPLATE = "EQWorldQuestPinTemplate"
 S.rowPool   = {}
 S.activeRows = {}
 
--- Per-category icon + label. Icons chosen from stock Blizzard textures so we
--- don't need to ship art. Categories the classifier hasn't taught us yet
--- (pet/pvp/profession) still get an entry so they render correctly when the
--- classifier is extended later.
 local CATEGORY_DISPLAY = {
     gold       = { label = "Gold",            icon = "Interface\\MoneyFrame\\UI-MoneyIcons", iconCoords = { 0, 0.25, 0, 1 } },
     gear       = { label = "Gear",            icon = "Interface\\Icons\\INV_Helmet_06" },
@@ -40,14 +25,10 @@ local CATEGORY_DISPLAY = {
     other      = { label = "Other",           icon = "Interface\\Icons\\INV_Misc_Gift_01" },
 }
 
--- Display order — most "actionable" first. Within categories that share an
--- order rank we'd fall back to count-descending, but the order list is
--- explicit enough that a simple sort isn't needed.
 local CATEGORY_ORDER = {
     "gear", "gold", "rep", "ap", "resource", "profession", "pvp", "pet", "other",
 }
 
--- ─── Row pool ──────────────────────────────────────────────────────────
 local function buildRow(parent)
     local r = CreateFrame("Frame", nil, parent)
     r:SetHeight(ROW_H)
@@ -60,7 +41,7 @@ local function buildRow(parent)
     r.count:SetPoint("LEFT", r.icon, "RIGHT", 4, 0)
     r.count:SetWidth(22)
     r.count:SetJustifyH("LEFT")
-    r.count:SetTextColor(0.92, 0.72, 0.02)        -- yellow
+    r.count:SetTextColor(0.92, 0.72, 0.02)
 
     r.label = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     r.label:SetPoint("LEFT",  r.count, "RIGHT", 4, 0)
@@ -85,16 +66,12 @@ local function releaseAllRows()
     end
 end
 
--- ─── Build ─────────────────────────────────────────────────────────────
 function S:Build()
     if self.frame then return end
     if not WorldMapFrame then return end
 
     local f = CreateFrame("Frame", "EQWorldQuestSummary", WorldMapFrame, "BackdropTemplate")
     f:SetSize(WIDGET_W, 60)
-    -- Anchored OUTSIDE the world map's right edge, below the side tabs.
-    -- Stays attached (parent = WorldMapFrame) so it follows when the map
-    -- moves, but doesn't overlap the search bar / map content.
     f:SetPoint("TOPLEFT", WorldMapFrame, "TOPRIGHT", 8, -200)
     f:SetFrameStrata("HIGH")
     if WorldMapFrame.GetFrameLevel then
@@ -105,10 +82,9 @@ function S:Build()
     bg:SetAllPoints()
     bg:SetColorTexture(0, 0, 0, 0.65)
 
-    -- Subtle 1px outline so the panel reads against varied map art.
     local function edge()
         local t = f:CreateTexture(nil, "BORDER")
-        t:SetColorTexture(0.635, 0.0, 0.039, 0.9)             -- EQ red
+        t:SetColorTexture(0.635, 0.0, 0.039, 0.9)
         return t
     end
     local top = edge(); top:SetHeight(1); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT")
@@ -124,10 +100,6 @@ function S:Build()
     self.frame = f
 end
 
--- ─── Counting ──────────────────────────────────────────────────────────
--- Walk the active EQ pins on the world map and bin by reward.category. We
--- read from the SHADOW canvas's pin pool (LibMapPinHandler) rather than
--- WorldMapFrame directly — that's where our pins live.
 function S:GetCounts()
     local WQ = ns:GetSubsystem("WQWorldMap")
     if not (WQ and WQ.shadow and WQ.shadow.EnumeratePinsByTemplate) then return nil end
@@ -140,13 +112,11 @@ function S:GetCounts()
     return counts
 end
 
--- ─── Refresh / render ──────────────────────────────────────────────────
 function S:Refresh()
     self:Build()
     if not self.frame then return end
 
     local DB = ns:GetSubsystem("DB")
-    -- Master WQ switch off, or the world-map toggle off → no summary box.
     if not (DB and DB.db.profile.worldQuests.enabled ~= false
             and DB.db.profile.worldQuests.showOnWorldMap) then
         self.frame:Hide()
@@ -159,9 +129,6 @@ function S:Refresh()
     local total = 0
     for _, c in pairs(counts) do total = total + c end
     if total == 0 then
-        -- Map is open but no WQs match the current filters. Hide the widget
-        -- rather than show an empty panel — the empty panel is more visual
-        -- noise than information.
         self.frame:Hide()
         return
     end
@@ -195,7 +162,6 @@ function S:Refresh()
         end
     end
 
-    -- Auto-size to content: header + (rows × row+gap) + bottom pad.
     local h = PAD + 14 + HEADER_GAP + (rowsShown * (ROW_H + 2)) + PAD
     self.frame:SetHeight(math.max(40, h))
 end

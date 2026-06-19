@@ -1,14 +1,3 @@
--- Modules/History/Frame.lua
--- Standalone Quest History window. Three tabs across the top:
---   1. Quests — searchable, character-filterable list of completed quests
---   2. Streak — daily-streak summary (current / best / total)
---   3. Chain Timeline — chains the player has completed quests in, with
---      per-quest dates from history
---
--- Built lazily on first Toggle()/Open(); subsequent calls just show/hide.
--- Modeled on Modules/ChainGuide/Frame.lua's structure (same row-pool
--- pattern, same brand-yellow accent).
-
 local _, ns = ...
 local L = ns.L
 
@@ -17,25 +6,19 @@ local HF = ns:RegisterSubsystem("HistoryFrame", {})
 local TITLE_BAR_H = 22
 local TAB_BAR_H   = 28
 local TOOLBAR_H   = 30
-local ROW_H       = 36                  -- title (~15) + 2px gap + meta (~11) + padding
+local ROW_H       = 36
 
--- Activity heatmap layout (7 rows × 13 cols = 91 days). Most-recent day
--- lands at the bottom-right; render walks oldest → newest along columns.
 local HEATMAP_DAYS = 91
 local HEATMAP_ROWS = 7
 local HEATMAP_COLS = 13
 local CELL_SIZE    = 16
 local CELL_GAP     = 3
 
-local YELLOW      = ns.Util.color.buttonYellow   -- #EBB706
-local HEADER_RED  = ns.Util.color.brandRed        -- #6D0501 (was drifted to {0.42,0.02,0.02})
+local YELLOW      = ns.Util.color.buttonYellow
+local HEADER_RED  = ns.Util.color.brandRed
 local MUTED       = ns.Util.color.muted
 local DIM         = ns.Util.color.dim
 
--- Arial Narrow is a Blizzard-bundled font noticeably thinner than the
--- default Friz Quadrata used by GameFont* objects. We keep each
--- FontString's inherited size + outline flags and just swap the font
--- file, so colors / sizes / shadow flags stay consistent.
 local FONT_FILE = "Fonts\\ARIALN.TTF"
 local function thin(fs)
     if not (fs and fs.GetFont and fs.SetFont) then return end
@@ -43,35 +26,16 @@ local function thin(fs)
     fs:SetFont(FONT_FILE, sz or 12, fl or "")
 end
 
--- ─── Date formatting ──────────────────────────────────────────────────
--- A backfilled entry has t=0 — Blizzard tells us the player has done the
--- quest but not when, so we surface that honestly rather than guess.
 local function fmtTime(t)
     if not t or t == 0 then return "(before tracking)" end
     return date("%Y-%m-%d %H:%M", t)
 end
 
--- ─── Row pool ──────────────────────────────────────────────────────────
 HF._rowPool   = {}
 HF._rowActive = {}
 
--- Forward declaration: the static row handlers below reference this, but its
--- real definition (which needs helpers declared later in the file) lives
--- further down. Declaring the local up here lets the handlers capture it as an
--- upvalue that's filled in before any handler can fire.
 local findChainForQuest
 
--- Static row scripts. The History list and Chain Timeline panes share ONE row
--- pool (HF._rowPool). Setting fresh capturing closures per row per render
--- allocated garbage and — because releaseAllRows didn't clear scripts — let a
--- pooled row carry a previous pane's handler (e.g. a quest sub-row, which sets
--- no script of its own, inheriting a stale click/hover from whatever row it
--- was last used as). Both problems vanish with data-driven static handlers:
--- behavior keys off frame fields set at render time —
---   row._kind     = "history" | "timeline" | "sub"
---   history  rows: row._questID, row._fullName
---   timeline rows: row._chainID, row._chainName
--- Wired ONCE in buildRow; dispatch on _kind here.
 local function rowOnMouseUp(self, button)
     local kind = self._kind
     if kind == "history" then
@@ -126,10 +90,6 @@ local function buildRow(parent)
     hl:SetAllPoints()
     hl:SetColorTexture(1, 1, 1, 0.05)
 
-    -- Title pinned to the top half of the row with explicit height so it
-    -- never grows into the meta area; meta then anchors BELOW the title
-    -- with a small gap. This is the stacked layout that prevents the two
-    -- text lines from colliding regardless of font size.
     r.title = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     r.title:SetHeight(15)
     r.title:SetPoint("TOPLEFT",  6, -5)
@@ -151,7 +111,6 @@ local function buildRow(parent)
 
     thin(r.title); thin(r.meta); thin(r.right)
 
-    -- Static scripts wired once; per-row behavior keys off _kind + data fields.
     r:SetScript("OnMouseUp", rowOnMouseUp)
     r:SetScript("OnEnter",   rowOnEnter)
     r:SetScript("OnLeave",   rowOnLeave)
@@ -170,9 +129,6 @@ local function releaseAllRows()
         r.title:SetText("")
         r.meta:SetText("")
         r.right:SetText("")
-        -- Scripts stay attached (static, set in buildRow). Disable mouse and
-        -- clear the per-row data so a pooled row can't fire a stale handler or
-        -- carry another pane's click/tooltip state.
         r:EnableMouse(false)
         r._kind = nil
         r._questID, r._fullName = nil, nil
@@ -182,7 +138,6 @@ local function releaseAllRows()
     end
 end
 
--- ─── Window build ──────────────────────────────────────────────────────
 function HF:Build()
     if self.frame then return end
 
@@ -202,10 +157,6 @@ function HF:Build()
     f:SetClampedToScreen(true)
     f:Hide()
 
-    -- Match the Main UI (Options) chrome exactly: flat near-black fill at the
-    -- same opacity + a 1px #a2000a red border, instead of the lighter tiled
-    -- tooltip backdrop (which read as more transparent than the Main UI).
-    -- Reuses ns.Util.color.optionsBg so the windows can't drift apart.
     f:SetBackdrop({
         bgFile   = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -214,7 +165,6 @@ function HF:Build()
     f:SetBackdropColor(unpack(ns.Util.color.optionsBg))
     f:SetBackdropBorderColor(HEADER_RED[1], HEADER_RED[2], HEADER_RED[3], 1)
 
-    -- Title bar
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("TOPLEFT", 12, -10)
     f.title:SetText(L["Quest History"])
@@ -225,8 +175,6 @@ function HF:Build()
     f.close:SetPoint("TOPRIGHT", -4, -4)
     f.close:SetScript("OnClick", function() f:Hide() end)
 
-    -- Title-bar action buttons (right-aligned, growing left from the X).
-    -- One helper so they share size + visual style.
     local function makeTitleButton(label, width, onClick)
         local b = CreateFrame("Button", nil, f, "BackdropTemplate")
         b:SetSize(width, 20)
@@ -245,10 +193,6 @@ function HF:Build()
     f.export = makeTitleButton(L["Export"], 70, function() HF:_openExportPopup() end)
     f.export:SetPoint("RIGHT", f.close, "LEFT", -2, 0)
 
-    -- "Re-scan names" right next to Export. Same call the Options-tab button
-    -- makes — placed here too because the user is most likely to notice
-    -- nil-name entries while looking at the History window, not while
-    -- digging through Options.
     f.rescan = makeTitleButton(L["Re-scan names"], 110, function()
         local R = ns:GetSubsystem("History")
         if not R then return end
@@ -269,7 +213,6 @@ function HF:Build()
     end)
     f.rescan:SetScript("OnLeave", GameTooltip_Hide)
 
-    -- Tab bar
     local tabRow = CreateFrame("Frame", nil, f)
     tabRow:SetPoint("TOPLEFT",  10, -(TITLE_BAR_H + 14))
     tabRow:SetPoint("TOPRIGHT", -10, -(TITLE_BAR_H + 14))
@@ -279,7 +222,7 @@ function HF:Build()
     self._tabs = {}
     local function makeTab(id, label)
         local b = CreateFrame("Button", nil, tabRow)
-        b:SetSize(110, TAB_BAR_H - 4)                                          -- 110px × 6 tabs + gaps fits 700px window
+        b:SetSize(110, TAB_BAR_H - 4)
         b.bg = b:CreateTexture(nil, "BACKGROUND")
         b.bg:SetAllPoints()
         b.bg:SetColorTexture(0, 0, 0, 0.5)
@@ -298,9 +241,6 @@ function HF:Build()
     self._tabs.streak   = makeTab("streak",   L["Streak"])
     self._tabs.timeline = makeTab("timeline", L["Chain Timeline"])
     self._tabs.activity = makeTab("activity", L["Activity"])
-    -- Tab id stays "totals" (used throughout); the user-facing label is
-    -- "Stats" because this tab now holds both the lifetime Totals view and
-    -- the XP/gold/quests Trends view (toggled inside the pane).
     self._tabs.totals   = makeTab("totals",   L["Stats"])
     self._tabs.session  = makeTab("session",  L["This Session"])
     self._tabs.quests:SetPoint("LEFT", tabRow, "LEFT", 0, 0)
@@ -310,7 +250,6 @@ function HF:Build()
     self._tabs.totals:SetPoint("LEFT", self._tabs.activity, "RIGHT", 4, 0)
     self._tabs.session:SetPoint("LEFT", self._tabs.totals, "RIGHT", 4, 0)
 
-    -- Content area shared by all tabs
     local content = CreateFrame("Frame", nil, f)
     content:SetPoint("TOPLEFT",     10, -(TITLE_BAR_H + 14 + TAB_BAR_H + 4))
     content:SetPoint("BOTTOMRIGHT", -10, 10)
@@ -321,7 +260,6 @@ function HF:Build()
     self:SwitchTab("quests")
 end
 
--- Each pane is a child frame of `content`; SwitchTab toggles visibility.
 function HF:_buildPanes(content)
     self._panes = {
         quests   = self:_buildQuestsPane(content),
@@ -338,7 +276,6 @@ function HF:SwitchTab(id)
     for k, pane in pairs(self._panes) do
         if k == id then pane:Show() else pane:Hide() end
     end
-    -- Tab visual highlight
     for k, b in pairs(self._tabs) do
         if k == id then
             b.bg:SetColorTexture(HEADER_RED[1], HEADER_RED[2], HEADER_RED[3], 0.85)
@@ -352,7 +289,6 @@ function HF:SwitchTab(id)
     self:Render()
 end
 
--- ─── Pane: Quests ──────────────────────────────────────────────────────
 function HF:_buildQuestsPane(parent)
     local pane = CreateFrame("Frame", nil, parent)
     pane:SetAllPoints()
@@ -360,7 +296,6 @@ function HF:_buildQuestsPane(parent)
 
     local Options = ns:GetSubsystem("Options")
 
-    -- ── Toolbar row 1: search + character dropdown + result count.
     local row1 = CreateFrame("Frame", nil, pane)
     row1:SetPoint("TOPLEFT", 0, 0)
     row1:SetPoint("TOPRIGHT", 0, 0)
@@ -407,7 +342,6 @@ function HF:_buildQuestsPane(parent)
     pane._count:SetText("")
     thin(pane._count)
 
-    -- ── Toolbar row 2: date range + classification + hide-undated.
     local row2 = CreateFrame("Frame", nil, pane)
     row2:SetPoint("TOPLEFT",  row1, "BOTTOMLEFT",  0, -2)
     row2:SetPoint("TOPRIGHT", row1, "BOTTOMRIGHT", 0, -2)
@@ -460,8 +394,6 @@ function HF:_buildQuestsPane(parent)
     end
     pane._classDD = classDD
 
-    -- Sort: field dropdown (Date / Type) + a direction caret to its right that
-    -- flips ascending/descending for the chosen field.
     local sortLabel = row2:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     sortLabel:SetPoint("LEFT", classDD or typeLabel, "RIGHT", 14, 0)
     sortLabel:SetText(L["Sort:"])
@@ -483,8 +415,6 @@ function HF:_buildQuestsPane(parent)
     end
     pane._sortDD = sortDD
 
-    -- Direction caret. UI-SortArrow points up natively; flip it vertically to
-    -- point down for descending (the default: newest first / largest first).
     local dirBtn = CreateFrame("Button", nil, row2)
     dirBtn:SetSize(22, 20)
     dirBtn:SetPoint("LEFT", sortDD or sortLabel, "RIGHT", 2, 0)
@@ -497,9 +427,9 @@ function HF:_buildQuestsPane(parent)
     arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
     local function syncArrow()
         if (HF._sortDir or "desc") == "asc" then
-            arrow:SetTexCoord(0, 1, 0, 1)      -- point up = ascending
+            arrow:SetTexCoord(0, 1, 0, 1)
         else
-            arrow:SetTexCoord(0, 1, 1, 0)      -- point down = descending
+            arrow:SetTexCoord(0, 1, 1, 0)
         end
     end
     syncArrow()
@@ -523,8 +453,6 @@ function HF:_buildQuestsPane(parent)
         local hideCB = Options:CreateCheckbox(row2,
             L["Hide undated  |cffaaaaaa(backfilled)|r"],
             get, set)
-        -- Far-right of the row: anchor the label's right edge to row2 and tuck
-        -- the checkbox just left of the label (its text extends leftward).
         hideCB:ClearAllPoints()
         hideCB.label:ClearAllPoints()
         hideCB.label:SetPoint("RIGHT", row2, "RIGHT", -6, 1)
@@ -532,7 +460,6 @@ function HF:_buildQuestsPane(parent)
         pane._hideCB = hideCB
     end
 
-    -- ── Scroll list of entries (starts below both toolbar rows).
     local listTop = TOOLBAR_H * 2 + 4
     local scroll = CreateFrame("ScrollFrame", nil, pane, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT",     0, -listTop)
@@ -554,12 +481,7 @@ function HF:_buildQuestsPane(parent)
     return pane
 end
 
--- Reverse lookup: which chain contains this questID? Walks the live chain
--- database after warming it up so questline + campaign chains are present
--- (mirrors the warmup the Chain Timeline tab and the "Find in Chain Guide"
--- button on the tracker already do). Returns chainID or nil.
--- (Assigns the forward-declared upvalue near the row pool so the static row
--- handlers can call it; do NOT re-`local` it here.)
+-- Assigns the forward-declared upvalue; do NOT re-`local` this function.
 function findChainForQuest(questID)
     local Database = ns:GetSubsystem("ChainGuideDatabase")
     local QLS      = ns:GetSubsystem("ChainGuideQuestLineSource")
@@ -597,8 +519,7 @@ function HF:_renderQuests()
     if not R then return end
 
     local searchText = pane._search and pane._search:GetText() or ""
-    -- Blizzard's SearchBoxTemplate stores its placeholder in the text when
-    -- unfocused; strip the "Search" placeholder so we don't filter on it.
+    -- SearchBoxTemplate stores its placeholder as the text when unfocused.
     if searchText == SEARCH then searchText = "" end
 
     local entries = R:Query({
@@ -621,8 +542,6 @@ function HF:_renderQuests()
     end
     pane._empty:Hide()
 
-    -- Cap visible rows for huge result sets to keep the scroll child sane.
-    -- Real product would virtualize; cap is enough for v1.
     local MAX = 500
     local shown = math.min(n, MAX)
     local canvasW = pane._scroll:GetWidth() or 600
@@ -646,11 +565,6 @@ function HF:_renderQuests()
         row.meta:SetText(meta)
         row.right:SetText(fmtTime(e.t))
 
-        -- Right-click → open this quest's chain in the Chain Guide. Mirrors
-        -- the Chain Timeline tab's affordance so users can jump in either
-        -- direction. Tooltip surfaces the affordance + the quest's full
-        -- name (which is otherwise truncated for wide-name rows). Behavior is
-        -- handled by the static rowOnMouseUp/rowOnEnter (dispatch on _kind).
         row:EnableMouse(true)
         row._kind     = "history"
         row._questID  = e.q
@@ -658,8 +572,6 @@ function HF:_renderQuests()
     end
 
     if n > MAX then
-        -- Which MAX are visible depends on the active sort: newest/oldest for a
-        -- date sort, just "first" for a type sort (newest/oldest isn't the key).
         local which = L["first"]
         if (HF._sortBy or "date") == "date" then
             which = (HF._sortDir == "asc") and L["oldest"] or L["newest"]
@@ -668,7 +580,6 @@ function HF:_renderQuests()
     end
 end
 
--- ─── Pane: Streak ──────────────────────────────────────────────────────
 function HF:_buildStreakPane(parent)
     local pane = CreateFrame("Frame", nil, parent)
     pane:SetAllPoints()
@@ -718,7 +629,6 @@ function HF:_renderStreak()
     pane._totalValue:SetText(("%d"):format(s.total))
 end
 
--- ─── Pane: Chain Timeline ──────────────────────────────────────────────
 function HF:_buildTimelinePane(parent)
     local pane = CreateFrame("Frame", nil, parent)
     pane:SetAllPoints()
@@ -749,22 +659,14 @@ function HF:_buildTimelinePane(parent)
     pane._empty:Hide()
     thin(pane._empty)
 
-    -- Persistent expansion state across re-renders within a session.
     HF._timelineOpen = HF._timelineOpen or {}
     return pane
 end
 
--- Expand/collapse + completion markers used in the Chain Timeline rows.
--- These render via texture escapes (|T...|t / |A...|a) so they work in
--- any font — the row title FontString uses Arial Narrow, which is
--- missing the ▶/▼ Unicode glyphs the previous version relied on and
--- showed empty squares instead.
 local MARKER_COLLAPSED = "|TInterface\\Buttons\\UI-PlusButton-Up:14:14|t "
 local MARKER_EXPANDED  = "|TInterface\\Buttons\\UI-MinusButton-Up:14:14|t "
 local MARKER_COMPLETE  = "|A:common-icon-checkmark:14:14|a "
 
--- A timeline row renders either a chain header or a quest under that header.
--- We use the same row pool as Quests pane — fields adapt by usage.
 function HF:_renderTimeline()
     local pane = self._panes.timeline
     local R         = ns:GetSubsystem("History")
@@ -774,8 +676,6 @@ function HF:_renderTimeline()
     releaseAllRows()
     if not (R and Database) then return end
 
-    -- Trigger discovery of all chains so campaign + questline chains are
-    -- in Database.chains. Same warmup the "Find in Chain Guide" button uses.
     if Database.categories then
         for catID in pairs(Database.categories) do
             if QLS and QLS.EnsureZoneChains    then QLS:EnsureZoneChains(catID)    end
@@ -788,8 +688,6 @@ function HF:_renderTimeline()
 
     local completion = R:CompletionMap()
 
-    -- Score each chain: number of completed quests in it + the latest date
-    -- among them (for sorting "most recently progressed first").
     local sorted = {}
     for chainID, chain in pairs(Database.chains) do
         local items = chain.items
@@ -818,7 +716,6 @@ function HF:_renderTimeline()
     end
     pane._empty:Hide()
 
-    -- Most recently progressed chain first; ties broken by name.
     table.sort(sorted, function(a, b)
         if a.latest ~= b.latest then return a.latest > b.latest end
         return (a.chain.name or "") < (b.chain.name or "")
@@ -838,9 +735,6 @@ function HF:_renderTimeline()
         row.title:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
         row.meta:SetText((L["%d of %d quests recorded"]):format(rec.doneN, rec.total))
         row.right:SetText(fmtTime(rec.latest))
-        -- Left-click expands; right-click opens the chain. Hover hint makes the
-        -- affordance discoverable. Handled by the static rowOnMouseUp/rowOnEnter
-        -- (dispatch on _kind).
         row:EnableMouse(true)
         row._kind      = "timeline"
         row._chainID   = rec.id
@@ -852,8 +746,6 @@ function HF:_renderTimeline()
                 local it = chain.items[j]
                 if it and it.type == "quest" then
                     local sub = acquireRow(pane._canvas)
-                    -- Inert quest sub-row: no click/hover. _kind="sub" makes the
-                    -- shared static handlers no-op; mouse off so no highlight.
                     sub._kind = "sub"
                     sub:EnableMouse(false)
                     sub:SetPoint("TOPLEFT",  pane._canvas, "TOPLEFT",  24, -y)
@@ -878,7 +770,6 @@ function HF:_renderTimeline()
     pane._canvas:SetSize(canvasW, math.max(y, 1))
 end
 
--- ─── Pane: Activity heatmap ────────────────────────────────────────────
 function HF:_buildHeatmapPane(parent)
     local pane = CreateFrame("Frame", nil, parent)
     pane:SetAllPoints()
@@ -924,7 +815,6 @@ function HF:_buildHeatmapPane(parent)
         pane._cells[i] = cell
     end
 
-    -- Color-scale legend below the grid.
     local legend = CreateFrame("Frame", nil, pane)
     legend:SetSize(180, CELL_SIZE)
     legend:SetPoint("TOP", pane._grid, "BOTTOM", 0, -18)
@@ -953,7 +843,6 @@ function HF:_buildHeatmapPane(parent)
     moreLabel:SetPoint("LEFT", swatches[5], "RIGHT", 4, 0)
     thin(moreLabel)
 
-    -- Summary stats below the legend: total + busiest day.
     pane._totalValue = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     pane._totalValue:SetPoint("TOP", legend, "BOTTOM", 0, -28)
     pane._totalValue:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
@@ -995,10 +884,8 @@ function HF:_renderHeatmap()
 
         local intensity
         if count == 0 then
-            intensity = 0                                                     -- dark grey baseline
+            intensity = 0
         else
-            -- Scale against the busiest day; floor non-zero so even one
-            -- quest is visibly brighter than an empty day.
             intensity = math.max(0.25, math.min(1.0, count / math.max(maxCount, 1)))
         end
         cell.bg:SetColorTexture(
@@ -1017,11 +904,6 @@ function HF:_renderHeatmap()
     end
 end
 
--- ─── Pane: Totals ──────────────────────────────────────────────────────
--- Format copper into a "Ng Xs Yc" string using Blizzard's icon-bearing
--- helper when available so the gold/silver/copper icons render inline.
--- Even 0 is routed through GetCoinTextureString so the slot reads as a
--- coin icon rather than a bare unlabeled "0".
 local function fmtMoney(copper)
     copper = copper or 0
     if GetCoinTextureString then return GetCoinTextureString(copper) end
@@ -1037,12 +919,10 @@ local function fmtBigNumber(n)
     return tostring(n)
 end
 
--- ─── Stats: shared helpers for the Trends view + sub-view toggle ────────
-local STATS_MAX_BARS = 30                       -- daily view shows 30; weekly 12
+local STATS_MAX_BARS = 30
 local CARD_W, CARD_H, CARD_GAP = 210, 70, 12
 local BAR_GAP = 3
 
--- Format one metric value for cards / tooltips.
 local function formatMetric(key, v)
     v = v or 0
     if key == "gold" then return fmtMoney(v) end
@@ -1050,7 +930,6 @@ local function formatMetric(key, v)
     return fmtBigNumber(v) .. (v == 1 and " quest" or " quests")
 end
 
--- Signed, colored period-over-period delta (green up / red down / grey flat).
 local function fmtDelta(key, d)
     if d == 0 then return "|cff888888no change|r" end
     local mag = (key == "gold") and fmtMoney(math.abs(d)) or fmtBigNumber(math.abs(d))
@@ -1059,9 +938,6 @@ local function fmtDelta(key, d)
     return "|cffdd5555-" .. mag .. "|r"
 end
 
--- A small two-state toggle button reused for the Totals/Trends sub-view
--- switch, the Daily/Weekly granularity switch, and the metric switch. The
--- active visual mirrors the top-level tab styling (red fill, yellow text).
 local function makeToggleButton(parent, label, w)
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w, 22)
@@ -1087,7 +963,6 @@ local function makeToggleButton(parent, label, w)
     return b
 end
 
--- A comparison "card": metric label + big current value + colored delta line.
 local function makeCard(parent)
     local c = CreateFrame("Frame", nil, parent)
     c:SetSize(CARD_W, CARD_H)
@@ -1107,7 +982,6 @@ local function makeCard(parent)
     return c
 end
 
--- Bar hover: period range + exact value for the selected metric.
 local function barOnEnter(self)
     if not self._rangeText then return end
     GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
@@ -1121,9 +995,6 @@ function HF:_buildTotalsPane(parent)
     pane:SetAllPoints()
     pane:Hide()
 
-    -- Sub-view segmented control. This "Stats" tab holds two views: the
-    -- lifetime Totals (default) and the XP/gold/quests Trends view. A two-
-    -- button toggle keeps both under one top-level tab (the tab bar is full).
     pane._segTotals = makeToggleButton(pane, L["Totals"], 80)
     pane._segTotals:SetPoint("TOPLEFT", 12, -8)
     pane._segTrends = makeToggleButton(pane, L["Trends"], 80)
@@ -1131,12 +1002,6 @@ function HF:_buildTotalsPane(parent)
     pane._segTotals:SetScript("OnClick", function() HF:_switchStatsView("totals") end)
     pane._segTrends:SetScript("OnClick", function() HF:_switchStatsView("trends") end)
 
-    -- ── Totals view: lifetime aggregates ──────────────────────────────
-    -- Wrapped in its own frame (anchored below the toggle) so the whole view
-    -- shows/hides as a unit. Field handles still live on `pane` so the
-    -- existing _renderTotals keeps working unchanged; only the widget PARENT
-    -- moved to this container. Offsets are tightened versus the old full-pane
-    -- layout to reclaim the ~34px the toggle row consumes.
     local tvw = CreateFrame("Frame", nil, pane)
     tvw:SetPoint("TOPLEFT",     0, -34)
     tvw:SetPoint("BOTTOMRIGHT", 0, 0)
@@ -1150,7 +1015,6 @@ function HF:_buildTotalsPane(parent)
     pane._intro:SetText(L["Account-wide quest rewards. Totals count only quests turned in while reward tracking was on; older entries didn't capture XP or gold."])
     thin(pane._intro)
 
-    -- Helper to make a "Label \n Value" pair stacked vertically.
     local function pairBlock(yOffset, labelText, big)
         local label = tvw:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         label:SetPoint("TOPLEFT", 30, yOffset)
@@ -1170,7 +1034,6 @@ function HF:_buildTotalsPane(parent)
     pane._totalGold   = pairBlock(-78,  L["Total gold earned"],             true)
     pane._totalXP     = pairBlock(-126, L["Total XP earned"],               true)
 
-    -- Per-character section header.
     local h2 = tvw:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     h2:SetPoint("TOPLEFT", 30, -180)
     h2:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
@@ -1178,15 +1041,8 @@ function HF:_buildTotalsPane(parent)
     thin(h2)
     pane._charHeader = h2
 
-    -- Per-character rows — created on demand and reused across renders.
-    -- Cap at 8 visible rows so the Top-rewards section pinned to the bottom
-    -- of the view never collides with the char list above it.
     pane._charRows = {}
 
-    -- Top rewards section pinned to the BOTTOM of the view. Anchoring from
-    -- BOTTOMLEFT (rather than absolute TOPLEFT offsets) keeps the section
-    -- visible regardless of view height, so a smaller window or future
-    -- layout tweak doesn't push it off the bottom edge again.
     pane._topXP = tvw:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     pane._topXP:SetPoint("BOTTOMLEFT",  30,   8)
     pane._topXP:SetPoint("BOTTOMRIGHT", -30,  8)
@@ -1208,14 +1064,12 @@ function HF:_buildTotalsPane(parent)
     thin(h3)
     pane._topHeader = h3
 
-    -- ── Trends view: XP/gold/quests over time (built lazily-ish here) ──
     pane._trendsView = self:_buildTrendsView(pane)
 
-    -- Default to the Totals view; Trends shows on demand.
     self._statsView      = "totals"
     self._trendGran      = "daily"
     self._trendMetric    = "gold"
-    self._trendCharFilter = "all"          -- account-wide by default
+    self._trendCharFilter = "all"
     pane._segTotals:SetActive(true)
     pane._trendsView:Hide()
 
@@ -1246,7 +1100,6 @@ function HF:_renderTotals()
     pane._totalGold:SetText(fmtMoney(t.totalMoney))
     pane._totalXP:SetText(fmtBigNumber(t.totalXP) .. " XP")
 
-    -- Per-character list, sorted by turn-in count desc.
     local chars = {}
     for k, v in pairs(t.byChar) do
         chars[#chars + 1] = { key = k, rec = v }
@@ -1265,7 +1118,6 @@ function HF:_renderTotals()
             fmtBigNumber(c.rec.xp)))
         row:Show()
     end
-    -- Hide any leftover rows from a prior render with more characters.
     for i = shown + 1, #pane._charRows do
         pane._charRows[i]:Hide()
     end
@@ -1286,12 +1138,6 @@ function HF:_renderTotals()
     end
 end
 
--- ─── Stats → Trends sub-view ──────────────────────────────────────────
--- XP / gold / quest-count over time, sourced from History:Trends(). Layout:
--- a Daily/Weekly granularity toggle + a metric toggle on top, three
--- comparison cards (current period vs previous), and a bar chart of the
--- selected metric across periods. Data depth for XP/gold is bounded by when
--- reward tracking began — surfaced in the caveat line at the bottom.
 function HF:_buildTrendsView(pane)
     local Options = ns:GetSubsystem("Options")
     local tv = CreateFrame("Frame", nil, pane)
@@ -1299,7 +1145,6 @@ function HF:_buildTrendsView(pane)
     tv:SetPoint("BOTTOMRIGHT", 0, 0)
     tv:Hide()
 
-    -- Top row: granularity (left), character scope (middle), metric (right).
     tv._granDaily  = makeToggleButton(tv, L["Daily"], 60)
     tv._granDaily:SetPoint("TOPLEFT", 12, -4)
     tv._granWeekly = makeToggleButton(tv, L["Weekly"], 60)
@@ -1307,9 +1152,6 @@ function HF:_buildTrendsView(pane)
     tv._granDaily:SetScript("OnClick",  function() HF:_switchTrendGran("daily")  end)
     tv._granWeekly:SetScript("OnClick", function() HF:_switchTrendGran("weekly") end)
 
-    -- Character scope: account-wide (all characters) or one character. Mirrors
-    -- the Quests tab's character dropdown; kept on its own filter so toggling
-    -- scope here doesn't disturb the Quests list (and vice-versa).
     local charLabel = tv:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     charLabel:SetPoint("LEFT", tv._granWeekly, "RIGHT", 16, 0)
     charLabel:SetText(L["Show:"])
@@ -1343,7 +1185,6 @@ function HF:_buildTrendsView(pane)
     tv._mXP:SetScript("OnClick",    function() HF:_switchTrendMetric("xp")    end)
     tv._mCount:SetScript("OnClick", function() HF:_switchTrendMetric("count") end)
 
-    -- Comparison cards (current period vs previous): Quests / XP / Gold.
     tv._cards = {}
     for i = 1, 3 do
         local card = makeCard(tv)
@@ -1355,8 +1196,6 @@ function HF:_buildTrendsView(pane)
         tv._cards[i] = card
     end
 
-    -- Bar chart of the selected metric. Bottom inset leaves room for the
-    -- axis labels (just under the chart) and the two-line caveat.
     local chart = CreateFrame("Frame", nil, tv)
     chart:SetPoint("TOPLEFT",     12, -(34 + CARD_H + 14))
     chart:SetPoint("BOTTOMRIGHT", -12, 46)
@@ -1396,7 +1235,6 @@ function HF:_buildTrendsView(pane)
     return tv
 end
 
--- Switch between the Totals and Trends sub-views of the Stats tab.
 function HF:_switchStatsView(view)
     local pane = self._panes and self._panes.totals
     if not pane then return end
@@ -1423,7 +1261,6 @@ function HF:_switchTrendMetric(metric)
     self:_renderTrends()
 end
 
--- Dispatch the active Stats sub-view (called from Render / SwitchTab).
 function HF:_renderStats()
     if self._statsView == "trends" then
         self:_renderTrends()
@@ -1445,7 +1282,6 @@ function HF:_renderTrends()
     local n = #periods
     if n == 0 then return end
 
-    -- Comparison cards: current (last) period vs the previous one.
     local cur  = periods[n]
     local prev = periods[n - 1] or { xp = 0, gold = 0, count = 0 }
     local curLabel  = (gran == "weekly") and L["This week"] or L["Today"]
@@ -1464,7 +1300,6 @@ function HF:_renderTrends()
         card.delta:SetText((L["%s vs %s"]):format(fmtDelta(d.key, delta), prevLabel))
     end
 
-    -- Bar chart of the selected metric.
     local maxV = (metric == "xp" and data.maxXP)
               or (metric == "gold" and data.maxGold)
               or data.maxCount
@@ -1506,9 +1341,6 @@ function HF:_renderTrends()
     tv._mGold:SetActive(metric == "gold")
 end
 
--- ─── Pane: This Session ────────────────────────────────────────────────
--- Quest activity for the current play session, read from the Session
--- subsystem (Modules/History/Session.lua). Mirrors the Totals pane layout.
 function HF:_buildSessionPane(parent)
     local pane = CreateFrame("Frame", nil, parent)
     pane:SetAllPoints()
@@ -1566,7 +1398,6 @@ function HF:_renderSession()
     end
 end
 
--- ─── Dispatch ──────────────────────────────────────────────────────────
 function HF:Render()
     if not self.frame or not self.frame:IsShown() then return end
     local t = self._activeTab
@@ -1586,18 +1417,10 @@ end
 function HF:Open()
     self:Build()
     self.frame:Show()
-    -- Kick off async title fetches for any entries we still don't have
-    -- names for (returning users, recent backfills). Results trickle in
-    -- via QUEST_DATA_LOAD_RESULT and re-render the window automatically.
     local R = ns:GetSubsystem("History")
     if R and R.RequestMissingTitles then R:RequestMissingTitles() end
     self:Render()
 end
-
--- ─── Export to clipboard ──────────────────────────────────────────────
--- Per-tab text builders. Each returns a plain-text block suitable for
--- pasting into Discord, a spreadsheet, etc. Output is built once on
--- click; not a hot path so allocating fresh tables is fine.
 
 local function fmtMoneyText(copper)
     copper = copper or 0
@@ -1727,8 +1550,6 @@ function HF:_exportTotals()
     return table.concat(lines, "\n")
 end
 
--- Trends export: a plain-text table of the current granularity's periods
--- with quests / XP / gold per period.
 function HF:_exportTrends()
     local R = ns:GetSubsystem("History")
     if not (R and R.Trends) then return "(history unavailable)" end
@@ -1778,7 +1599,6 @@ function HF:_exportForTab(tabId)
     if tabId == "timeline" then return self:_exportTimeline() end
     if tabId == "activity" then return self:_exportActivity() end
     if tabId == "totals"   then
-        -- The "Stats" tab exports whichever sub-view is active.
         if self._statsView == "trends" then return self:_exportTrends() end
         return self:_exportTotals()
     end
@@ -1786,9 +1606,6 @@ function HF:_exportForTab(tabId)
     return "(nothing to export)"
 end
 
--- Lazy-built popup containing a multi-line edit box with the export text
--- pre-selected so the user can hit Ctrl+C immediately. Same popup reused
--- across tabs — opening it again just replaces the text.
 function HF:_buildExportPopup()
     if self._exportPopup then return self._exportPopup end
 
@@ -1849,7 +1666,7 @@ function HF:_openExportPopup()
     local p = self:_buildExportPopup()
     local text = self:_exportForTab(self._activeTab) or ""
     p._edit:SetText(text)
-    p._edit:HighlightText()                                                  -- pre-select so a single Ctrl+C copies everything
+    p._edit:HighlightText()
     p._edit:SetFocus()
     p:Show()
 end

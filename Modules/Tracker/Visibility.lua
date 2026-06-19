@@ -1,18 +1,3 @@
--- Modules/Tracker/Visibility.lua
--- Implements General-tab visibility toggles for the on-screen tracker:
---   • lockTracker      → block drag-to-move and resize (hides the resize grip;
---                         the Tracker module owns the grip, this is just a note)
---   • hideInCombat     → hide while PLAYER_REGEN_DISABLED, show on _ENABLED
---   • hideInInstances  → hide whenever IsInInstance() is true
---   • hideOnMapOpen    → hide when WorldMapFrame:IsShown()
---   • autoTrackAccepted → on QUEST_ACCEPTED, force the watch state to match
---                         the setting. ON (default): explicitly add the
---                         watch (Blizzard never auto-watches campaign
---                         quests — its default tracker shows them via a
---                         separate campaign module, so GetQuestWatchType
---                         stays nil and EQ's showOnlyWatched filter would
---                         hide them). OFF: strip the watch Blizzard added.
-
 local _, ns = ...
 
 local V = ns:RegisterSubsystem("TrackerVisibility", {})
@@ -22,7 +7,6 @@ local function getCfg()
     return DB and DB.db.profile.general or nil
 end
 
--- Hide rules combine with OR: any active rule hides the frame.
 local function shouldHide()
     local cfg = getCfg()
     if not cfg then return false end
@@ -66,29 +50,19 @@ function V:OnEnable()
     local Events = ns:GetSubsystem("Events")
     local function apply() self:Apply() end
 
-    Events:On("PLAYER_REGEN_DISABLED", apply)   -- entered combat
-    Events:On("PLAYER_REGEN_ENABLED",  apply)   -- left combat
-    Events:On("PLAYER_ENTERING_WORLD", apply)   -- entered/left instance
+    Events:On("PLAYER_REGEN_DISABLED", apply)
+    Events:On("PLAYER_REGEN_ENABLED",  apply)
+    Events:On("PLAYER_ENTERING_WORLD", apply)
 
-    -- Auto-track-accepted hook. Force the watch state to match the setting
-    -- rather than trusting Blizzard's auto-watch (which does NOT add a
-    -- watch entry for campaign quests — its default tracker surfaces those
-    -- through a dedicated campaign module, leaving GetQuestWatchType nil,
-    -- so EQ's showOnlyWatched filter hid freshly accepted campaign quests
-    -- until the user re-ticked them in the quest log).
     Events:On("QUEST_ACCEPTED", function(_, questID)
         local cfg = getCfg()
         if not (cfg and questID and C_QuestLog) then return end
 
-        -- World/task quests have their own watch channel
-        -- (AddWorldQuestWatch, owned by WorldQuests/WatchPersist.lua).
-        -- Don't touch them with the normal-quest watch API.
         if C_QuestLog.IsWorldQuest and C_QuestLog.IsWorldQuest(questID) then
             return
         end
 
         if cfg.autoTrackAccepted == false then
-            -- Opted out: strip any watch so it never reaches the tracker.
             local watched = C_QuestLog.GetQuestWatchType
                              and C_QuestLog.GetQuestWatchType(questID) ~= nil
             if watched and C_QuestLog.RemoveQuestWatch then
@@ -114,8 +88,6 @@ function V:OnEnable()
         end
     end)
 
-    -- Watch WorldMapFrame for hide-on-map-open. Hooked once after frame
-    -- exists; PLAYER_ENTERING_WORLD guarantees that.
     Events:On("PLAYER_ENTERING_WORLD", function()
         if WorldMapFrame and not V._mapHooked then
             V._mapHooked = true
