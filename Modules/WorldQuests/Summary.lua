@@ -72,7 +72,17 @@ function S:Build()
 
     local f = CreateFrame("Frame", "EQWorldQuestSummary", WorldMapFrame, "BackdropTemplate")
     f:SetSize(WIDGET_W, 60)
-    f:SetPoint("TOPLEFT", WorldMapFrame, "TOPRIGHT", 8, -200)
+
+    -- The popout opens to the right of the WQ pull-tab; anchor to it so the tab,
+    -- summary and zone list read as one column. Fall back to the map edge if the
+    -- tab isn't up yet.
+    local Tab = ns:GetSubsystem("WQTab")
+    if Tab and Tab.Build then Tab:Build() end
+    if Tab and Tab.tab then
+        f:SetPoint("TOPLEFT", Tab.tab, "TOPRIGHT", 4, 0)
+    else
+        f:SetPoint("TOPLEFT", WorldMapFrame, "TOPRIGHT", 8, -200)
+    end
     f:SetFrameStrata("HIGH")
     if WorldMapFrame.GetFrameLevel then
         f:SetFrameLevel(WorldMapFrame:GetFrameLevel() + 100)
@@ -118,7 +128,8 @@ function S:Refresh()
 
     local DB = ns:GetSubsystem("DB")
     if not (DB and DB.db.profile.worldQuests.enabled ~= false
-            and DB.db.profile.worldQuests.showOnWorldMap) then
+            and DB.db.profile.worldQuests.showOnWorldMap
+            and DB.db.profile.worldQuests.popoutOpen) then
         self.frame:Hide()
         return
     end

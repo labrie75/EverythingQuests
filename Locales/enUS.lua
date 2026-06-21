@@ -43,9 +43,21 @@ L["Auto-turn-in quests"] = true
 L["Skips reward-choice screens."] = true
 L["Keep focused quest after relog"] = true
 L["Restores the waypoint arrow."] = true
+L["Nameplate Quest Icons"] = true
 L["Quest icons on nameplates"] = true
 L["Shows the \"!\" + count on objective mobs."] = true
-L["Show minimap button"] = true
+L["Left"] = true
+L["Right"] = true
+L["Above"] = true
+L["Below"] = true
+L["Position"] = true
+L["Where the quest icon + count sits relative to the enemy nameplate. Move it closer to the health bar to taste."] = true
+L["Icon size"] = true
+L["Count text size"] = true
+L["X offset"] = true
+L["Nudges the icon and count together left or right from the Position above, so you can slide them right up against the health bar."] = true
+L["Y offset"] = true
+L["Nudges the icon and count together up or down from the Position above (positive moves them up)."] = true
 L["Reset all settings"] = true
 L["Reset every Everything Quests setting to defaults?"] = true
 L["Reset"] = true
@@ -58,6 +70,7 @@ L["Create"] = true
 L["Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot."] = true
 L["Slash commands"] = true
 L["/eqs\n/everythingquests\n\n|cff999999Both open this options window.|r\n\n/eqs whatsnew\n\n|cff999999Show what's new in the latest update.|r\n\n/eqs session\n\n|cff999999Show a recap of your current play session.|r"] = true
+L["Show minimap button"] = true
 
 -- ─── Options/TabTracker.lua ───
 L["Zone"] = true
@@ -216,6 +229,11 @@ L["How far the text drop-shadow is cast behind the letters. Higher values give a
 L["Scenario"] = true
 L["Draws a drop-shadow behind the scenario / delve banner text (the Stage and name lines). This is SEPARATE from the Text Shadow above, which affects only the quest and objective text — the banner is styled on its own."] = true
 L["How far the scenario banner's drop-shadow is cast. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while the Scenario Text Shadow above is on."] = true
+L["Center"] = true
+L["Banner Alignment"] = true
+L["Positions the scenario / delve banner within the tracker. Left lines it up with the quest text, Center keeps it centered (the default), and Right pushes it to the tracker's right edge."] = true
+L["Banner Text Size"] = true
+L["Grows or shrinks the scenario / delve banner's Stage and name text. 0 is the default size. The banner artwork is a fixed size, so large values may overflow it."] = true
 L["Background"] = true
 L["Background Color"] = true
 L["Border"] = true
@@ -456,6 +474,10 @@ L["Quest Discovered!"] = true
 -- ─── Modules/Tracker/Events.lua ───
 L["Find Group"] = true
 L["Open the Premade Group Finder for this quest."] = true
+L["Untrack Quest"] = true
+L["Track Quest"] = true
+L["Super-track (follow arrow)"] = true
+L["Search on Wowhead"] = true
 
 -- ─── Modules/Tracker/Frame.lua ───
 L["Tracker locked"] = true
@@ -467,7 +489,19 @@ L["Open the Chain Guide"] = true
 L["Profession"] = true
 L["Endeavors"] = true
 L["Achievements"] = true
+L["Unpin from tracker"] = true
+L["Pin to tracker"] = true
+L["Unfocus"] = true
+L["Focus"] = true
+L["Get Directions"] = true
+L["Show in Quest Log"] = true
+L["Open Quest Details"] = true
+L["Abandon Quest"] = true
 L["Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options."] = true
+
+-- ─── Modules/Tracker/Profession.lua ───
+L["Open in Profession"] = true
+L["Untrack Recipe"] = true
 
 -- ─── Modules/Tracker/Scenario.lua ───
 L["Final Stage"] = true
@@ -482,6 +516,10 @@ L["Reset position"] = true
 L["Open Options"] = true
 L["Got it"] = true
 L["(This message shows once and won't appear again.)"] = true
+
+-- ─── Modules/WorldQuests/Tab.lua ───
+L["Click to hide the World Quests list."] = true
+L["Click to show the World Quests list."] = true
 
 -- ─── Modules/WorldQuests/ZoneMap.lua ───
 L["%s — %d quests"] = true

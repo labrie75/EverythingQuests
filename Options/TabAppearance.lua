@@ -40,6 +40,23 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
             end
     end
 
+    -- Alignment + size re-anchor/re-font the banner, which happens in
+    -- TrackerScenario:Refresh (not Tracker:Refresh, which never drives it), so
+    -- these setters run a full scenario refresh for live preview.
+    local function scenarioRenderSetting(key)
+        return
+            function()
+                local DB = ns:GetSubsystem("DB")
+                return DB and DB.db.profile.tracker[key]
+            end,
+            function(value)
+                local DB = ns:GetSubsystem("DB")
+                if DB then DB.db.profile.tracker[key] = value end
+                local S = ns:GetSubsystem("TrackerScenario")
+                if S and S.Refresh then S:Refresh() end
+            end
+    end
+
     local h = Options:CreateSectionHeader(content, L["Appearance"])
     h:SetPoint("TOPLEFT", 8, -8)
 
@@ -132,8 +149,28 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(scShadowSizeSlider, L["Shadow Size"],
         L["How far the scenario banner's drop-shadow is cast. Higher values give a larger, more pronounced shadow; lower values keep it tight. Only applies while the Scenario Text Shadow above is on."])
 
+    local SCENARIO_ALIGN_OPTIONS = {
+        { value = "LEFT",   label = L["Left"] },
+        { value = "CENTER", label = L["Center"] },
+        { value = "RIGHT",  label = L["Right"] },
+    }
+    local scAlignGet, scAlignSet = scenarioRenderSetting("scenarioTextAlign")
+    local scAlignDD = Options:CreateDropdown(content, L["Banner Alignment"],
+        SCENARIO_ALIGN_OPTIONS, scAlignGet, scAlignSet)
+    scAlignDD:SetPoint("TOPLEFT", scShadowSizeSlider, "BOTTOMLEFT", 0, -16)
+    scAlignDD:SetWidth(280)
+    Options:AttachTooltip(scAlignDD, L["Banner Alignment"],
+        L["Positions the scenario / delve banner within the tracker. Left lines it up with the quest text, Center keeps it centered (the default), and Right pushes it to the tracker's right edge."])
+
+    local scSizeGet, scSizeSet = scenarioRenderSetting("scenarioTextSizeDelta")
+    local scSizeSlider = Options:CreateSlider(content, L["Banner Text Size"], -4, 6, 1, scSizeGet, scSizeSet)
+    scSizeSlider:SetPoint("TOPLEFT", scAlignDD, "BOTTOMLEFT", 0, -16)
+    scSizeSlider:SetWidth(280)
+    Options:AttachTooltip(scSizeSlider, L["Banner Text Size"],
+        L["Grows or shrinks the scenario / delve banner's Stage and name text. 0 is the default size. The banner artwork is a fixed size, so large values may overflow it."])
+
     local trackerHeader = Options:CreateSectionHeader(content, L["Tracker"])
-    trackerHeader:SetPoint("TOPLEFT", scShadowSizeSlider, "BOTTOMLEFT", 0, -16)
+    trackerHeader:SetPoint("TOPLEFT", scSizeSlider, "BOTTOMLEFT", 0, -16)
 
     local bgGet, bgSet = trackerSetting("showBackground")
     local bgCheck = Options:CreateCheckbox(content, L["Background"], bgGet, bgSet)

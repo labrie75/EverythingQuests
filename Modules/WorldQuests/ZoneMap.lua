@@ -68,18 +68,21 @@ local function buildRow(parent)
                 MenuUtil.CreateContextMenu(self, function(_, root)
                     root:CreateTitle(questTitle(self.questID))
                     if tracked then
-                        root:CreateButton("Untrack Quest", function()
+                        root:CreateButton(L["Untrack Quest"], function()
                             if Watch and Watch.Untrack then Watch:Untrack(self.questID) end
                         end)
                     else
-                        root:CreateButton("Track Quest", function()
+                        root:CreateButton(L["Track Quest"], function()
                             if Watch and Watch.Track then Watch:Track(self.questID) end
                         end)
                     end
-                    root:CreateButton("Super-track (follow arrow)", function()
+                    root:CreateButton(L["Super-track (follow arrow)"], function()
                         if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                             C_SuperTrack.SetSuperTrackedQuestID(self.questID)
                         end
+                    end)
+                    root:CreateButton(L["Search on Wowhead"], function()
+                        ns:ShowURL("https://www.wowhead.com/quest=" .. tostring(self.questID))
                     end)
                 end)
             end
@@ -178,7 +181,8 @@ function Z:Refresh()
 
     local DB = ns:GetSubsystem("DB")
     if not (DB and DB.db.profile.worldQuests.enabled ~= false
-            and DB.db.profile.worldQuests.showOnZoneMap) then
+            and DB.db.profile.worldQuests.showOnZoneMap
+            and DB.db.profile.worldQuests.popoutOpen) then
         self.frame:Hide()
         return
     end

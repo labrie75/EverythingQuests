@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local P = ns:RegisterSubsystem("TrackerProfession", {})
 
@@ -42,12 +43,12 @@ local function buildHeader(parent)
             local recipeID, isRecraft = self.recipeID, self.isRecraft
             MenuUtil.CreateContextMenu(self, function(_, root)
                 root:CreateTitle(self.recipeName or "Recipe")
-                root:CreateButton("Open in Profession", function()
+                root:CreateButton(L["Open in Profession"], function()
                     if C_TradeSkillUI.OpenRecipe then
                         C_TradeSkillUI.OpenRecipe(recipeID)
                     end
                 end)
-                root:CreateButton("Untrack Recipe", function()
+                root:CreateButton(L["Untrack Recipe"], function()
                     if C_TradeSkillUI.SetRecipeTracked then
                         -- arg #3 (isRecraft) is a REQUIRED boolean — the API
                         -- raises "bad argument #3" on nil, which is exactly

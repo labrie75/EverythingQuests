@@ -1165,45 +1165,45 @@ function Tracker:ShowBlockMenu(block, questID)
         root:CreateTitle(title)
 
         if pinned then
-            root:CreateButton("Unpin from tracker", function()
+            root:CreateButton(L["Unpin from tracker"], function()
                 setPinned(DB, questID, false)
             end)
         else
-            root:CreateButton("Pin to tracker", function()
+            root:CreateButton(L["Pin to tracker"], function()
                 setPinned(DB, questID, true)
             end)
         end
 
         if watched then
-            root:CreateButton("Untrack Quest", function()
+            root:CreateButton(L["Untrack Quest"], function()
                 setWatched(questID, false)
             end)
         else
-            root:CreateButton("Track Quest", function()
+            root:CreateButton(L["Track Quest"], function()
                 setWatched(questID, true)
             end)
         end
 
         if focused then
-            root:CreateButton("Unfocus", function()
+            root:CreateButton(L["Unfocus"], function()
                 if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                     C_SuperTrack.SetSuperTrackedQuestID(0)
                 end
             end)
         else
-            root:CreateButton("Focus", function()
+            root:CreateButton(L["Focus"], function()
                 if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                     C_SuperTrack.SetSuperTrackedQuestID(questID)
                 end
             end)
         end
 
-        root:CreateButton("Get Directions", function()
+        root:CreateButton(L["Get Directions"], function()
             local WP = ns:GetSubsystem("ChainGuideWaypoint")
             if WP and WP.GoTo then WP:GoTo(questID) end
         end)
 
-        root:CreateButton("Show in Quest Log", function()
+        root:CreateButton(L["Show in Quest Log"], function()
             if C_AddOns and C_AddOns.LoadAddOn then
                 C_AddOns.LoadAddOn("Blizzard_QuestLog")
             end
@@ -1214,18 +1214,22 @@ function Tracker:ShowBlockMenu(block, questID)
             end
         end)
 
-        root:CreateButton("Open Quest Details", function()
+        root:CreateButton(L["Open Quest Details"], function()
             openQuestDetailsPopup(questID)
+        end)
+
+        root:CreateButton(L["Search on Wowhead"], function()
+            ns:ShowURL("https://www.wowhead.com/quest=" .. tostring(questID))
         end)
 
         root:CreateDivider()
 
-        root:CreateButton("|cffff5050Abandon Quest|r", function()
+        root:CreateButton("|cffff5050" .. L["Abandon Quest"] .. "|r", function()
             abandonQuest(questID)
         end)
 
         root:CreateDivider()
-        root:CreateButton("Cancel", function() end)
+        root:CreateButton(L["Cancel"], function() end)
     end)
 end
 

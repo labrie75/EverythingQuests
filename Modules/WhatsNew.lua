@@ -3,30 +3,30 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.22.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.22.0"
+local FEATURE_POPUP_VERSION = "1.23.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.23.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706Fixes|r
-|cffffffff-|r Fixed your regular quests sometimes |cffffffffnot loading on login|r until you reloaded (only world quests would show). The tracker now fills in as soon as your quest data arrives.
-|cffffffff-|r Fixed an error when |cffffffffuntracking a profession recipe|r from the tracker.
-|cffffffff-|r Tracked achievements with a |cffffffffprogress bar|r (like "61/100") now show their count — before, only simple "X of Y" achievements did.
-|cffffffff-|r The |cffffffffOptions and Chain Guide windows no longer overlap|r — opening one now closes the other.
+|cffEBB706New: scenario banner alignment & size|r
+The Appearance tab's |cffffffffScenario|r group adds |cffffffffBanner Alignment|r (Left / Center / Right) and a |cffffffffBanner Text Size|r slider, so you can move the delve / scenario banner within the tracker and resize its text.
 
-|cffEBB706New: more text-shadow control|r
-The Appearance tab adds a |cffffffffShadow Size|r slider — how far the shadow is cast — plus a separate |cffffffffScenario|r shadow group, so the delve / scenario banner can be styled on its own, apart from the main tracker text.
+|cffEBB706New: search quests on Wowhead|r
+Right-click a quest (or a world quest) and pick |cffffffffSearch on Wowhead|r for a copy-ready link to that quest's Wowhead page.
 
-|cffEBB706New: a tidier world-quest list|r
-In zones with lots of world quests (older expansions especially), the world map's quest list now |cffffffffscrolls|r inside a compact panel instead of stretching down the screen. Nothing's lost — just scroll, or use the reward / faction filters in the World Quests options to trim it.
+|cffEBB706New: nameplate quest-icon position & size|r
+The quest icon + count on enemy nameplates can now sit |cffffffffLeft, Right, Above, or Below|r the nameplate, with separate sliders for the |cfffffffficon size|r and the |cffffffffcount text size|r (General tab).
 
-|cffEBB706Polish|r
-The Appearance tab reads cleaner — the colour boxes line up, and the background, border, and scroll-bar options now sit under clear section headers.
+|cffEBB706New: a cleaner world-quest map|r
+On the world map, the world-quest summary and list now tuck behind a small |cffffffffworld-quest tab|r on the map's right edge. Click it to show or hide them — the map stays clean by default, and your quest pins are unaffected.
 
-|cffEBB706Translations|r
-Russian and French updates for all the recent new text are on the way — thank you, |cffffffffMalevi4|r and |cffffffffZox|r.
+|cffEBB706Also|r
+The quest right-click menu is now fully translatable, so it shows in your language instead of English.
+
+|cffEBB706Thanks|r
+These were community requests — thank you, |cffffffffMalevi4|r. Russian and French translations for the new text are on the way.
 
 |cffEBB706Found a bug? Please tell me|r
 If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.

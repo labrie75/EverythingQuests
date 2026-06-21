@@ -27,7 +27,7 @@ end
 function Options:Build()
     if self.frame then return end
     local f = CreateFrame("Frame", "EQOptionsFrame", UIParent, "BackdropTemplate")
-    f:SetSize(1020, 810)
+    f:SetSize(1020, 880)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.22.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.23.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)

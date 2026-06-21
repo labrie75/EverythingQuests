@@ -194,6 +194,9 @@ function S:Build()
     banner.Name:SetTextColor(1, 0.831, 0.380)
     banner.Name:SetPoint("TOP", banner.Stage, "BOTTOM", 0, -4)
 
+    banner.Stage._baseFont = { banner.Stage:GetFont() }
+    banner.Name._baseFont  = { banner.Name:GetFont() }
+
     banner.WidgetContainer = CreateFrame("Frame", nil, banner, "UIWidgetContainerTemplate")
     banner.WidgetContainer.verticalAnchorPoint     = "TOP"
     banner.WidgetContainer.verticalRelativePoint   = "TOP"
@@ -257,6 +260,16 @@ function S:ApplyBannerShadow()
     end
 end
 
+function S:ApplyBannerFont()
+    local banner = self.banner
+    if not banner then return end
+    local M = ns:GetSubsystem("Media")
+    if M and M.ApplyScenarioFont then
+        M:ApplyScenarioFont(banner.Stage, banner.Stage._baseFont)
+        M:ApplyScenarioFont(banner.Name,  banner.Name._baseFont)
+    end
+end
+
 function S:Refresh()
     self:Build()
     local container = self.frame
@@ -296,6 +309,17 @@ function S:Refresh()
 
     local bw, bh = 201, 83
     banner:SetSize(bw, bh)
+
+    local DB = ns:GetSubsystem("DB")
+    local align = (DB and DB.db.profile.tracker.scenarioTextAlign) or "CENTER"
+    banner:ClearAllPoints()
+    if align == "LEFT" then
+        banner:SetPoint("TOPLEFT", subHeader, "BOTTOMLEFT", 0, -BANNER_GAP)
+    elseif align == "RIGHT" then
+        banner:SetPoint("TOPRIGHT", subHeader, "BOTTOMRIGHT", 0, -BANNER_GAP)
+    else
+        banner:SetPoint("TOP", subHeader, "BOTTOM", 0, -BANNER_GAP)
+    end
 
     banner.NormalBG:SetAtlas(normalAtlas, true)
     banner.NormalBG:ClearAllPoints()
@@ -349,12 +373,18 @@ function S:Refresh()
         banner.Stage:Show()
         banner.Name:SetText(stageName or "")
         banner.Name:Show()
+        self:ApplyBannerFont()
         self:ApplyBannerShadow()
     end
 
     releaseAllCriteria()
     local Media = ns:GetSubsystem("Media")
-    local prev, prevAnchor = banner, "BOTTOM"
+    -- Criteria rows stay centered in the container regardless of the banner's
+    -- alignment (the box may be left/right-anchored); anchoring the first row to
+    -- the banner's bottom-centre would drag the rows off-centre and overflow the
+    -- tracker edge. Vertical position still tracks the banner's fixed height.
+    local prev = nil
+    local firstRowY = (self.subHeaderH or SUBHEADER_H) + BANNER_GAP + bh + CRITERIA_LINE_GAP
     local barWidth = math.floor(container:GetWidth() * BAR_W_RATIO)
     local rowWidth = container:GetWidth() - 16
     for i = 1, (numCriteria or 0) do
@@ -362,7 +392,11 @@ function S:Refresh()
         if info then
             local row = acquireCriteria(container)
             row:ClearAllPoints()
-            row:SetPoint("TOP", prev, prevAnchor, 0, -CRITERIA_LINE_GAP)
+            if prev then
+                row:SetPoint("TOP", prev, "BOTTOM", 0, -CRITERIA_LINE_GAP)
+            else
+                row:SetPoint("TOP", container, "TOP", 0, -firstRowY)
+            end
 
             if info.isWeightedProgress and not info.completed then
                 row:SetWidth(barWidth)
@@ -433,7 +467,6 @@ function S:Refresh()
             end
 
             prev = row
-            prevAnchor = "BOTTOM"
         end
     end
 

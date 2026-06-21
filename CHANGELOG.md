@@ -5,6 +5,25 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] - 2026-06-21
+
+A batch of community-requested features (thanks, Malevi4). The scenario / delve banner can be aligned and resized, the quest right-click menu is now fully translatable and can open quests on Wowhead, the nameplate quest icons can be repositioned and resized, and the world map's world-quest list now tucks away behind a tab for a cleaner map. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Scenario banner alignment & size** — A new "Banner Alignment" (Left / Center / Right) and "Banner Text Size" control in the Appearance tab's Scenario group move the delve / scenario banner within the tracker and resize its Stage and name text.
+- **"Search on Wowhead" in the right-click menu** — Right-clicking a quest (or a world quest) now offers "Search on Wowhead," which opens a copy-ready link to that quest's Wowhead page.
+- **Nameplate quest-icon position & size** — The quest icon + count on enemy nameplates can now be placed Left, Right, Above, or Below the nameplate, with separate sliders for the icon size and the count text size (General tab).
+- **World-quest map list behind a tab** — On the world map, the world-quest summary and list now tuck behind a small world-quest tab on the map's right edge. Click it to show or hide them — the map stays clean by default, and the quest pins are unaffected.
+
+### Improvements
+
+- **Translatable right-click menu** — Every entry in the tracker's quest right-click menu (and the world-quest menus) is now translatable, so it shows in your language instead of English.
+
+### Translations
+
+- The new text is in English for now; Russian and French updates are on the way — thanks again to Malevi4 and Zox.
+
 ## [1.22.1] - 2026-06-18
 
 Localization update — the Russian and French translations are now fully up to date with the latest features. Thanks to Malevi4 (Russian) and Zox (French) for the continued translation work.

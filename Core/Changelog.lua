@@ -2,6 +2,20 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.23.0", date = "2026-06-21",
+        sections = {
+            { head = "New Features", items = {
+                "Scenario banner alignment & size (Appearance > Scenario) — move the delve / scenario banner Left, Center, or Right within the tracker, and resize its Stage and name text.",
+                "'Search on Wowhead' in the quest right-click menu — opens a copy-ready link to the quest's Wowhead page (also on the world-quest menus).",
+                "Nameplate quest-icon position & size (General tab) — place the icon + count Left, Right, Above, or Below the nameplate, with separate icon-size and count-text-size sliders.",
+                "World map world-quest list behind a tab — the summary + list tuck behind a world-quest tab on the map's right edge; click to show or hide. The quest pins are unaffected.",
+            } },
+            { head = "Improvements", items = {
+                "The tracker's quest right-click menu (and the world-quest menus) are now fully translatable.",
+            } },
+        },
+    },
+    {
         version = "1.22.1", date = "2026-06-18",
         sections = {
             { head = "Translations", items = {

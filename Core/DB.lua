@@ -13,6 +13,11 @@ DB.defaults = {
             autoAcceptQuests = false,
             autoTurnInQuests = false,
             restoreSuperTrackOnLogin = true,
+            npIconPlacement = "RIGHT",
+            npIconSize      = 24,
+            npIconTextSize  = 13,
+            npIconOffsetX   = 0,
+            npIconOffsetY   = 0,
         },
         tracker = {
             anchor = "TOPRIGHT",
@@ -41,6 +46,8 @@ DB.defaults = {
             scenarioTextShadow      = true,
             scenarioTextShadowColor = { r = 0, g = 0, b = 0, a = 1 },
             scenarioTextShadowStrength = 1,
+            scenarioTextAlign     = "CENTER",
+            scenarioTextSizeDelta = 0,
             colorByDifficulty = true,
             showItemButtons = true,
             showOptionsIcon    = true,
@@ -93,6 +100,7 @@ DB.defaults = {
             enabled = true,
             showOnWorldMap = true,
             showOnZoneMap = true,
+            popoutOpen = false,
             filters = {
                 gold = true, gear = true, rep = true, resource = true,
                 ap = true, profession = true, pvp = true, pet = true, other = true,

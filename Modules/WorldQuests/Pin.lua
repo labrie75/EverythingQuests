@@ -1,4 +1,5 @@
 local _, _ns = ...
+local L = _ns.L
 
 EQWorldQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
 local Pin = EQWorldQuestPinMixin
@@ -113,23 +114,27 @@ local function pinContextMenu(pin)
         root:CreateTitle(title)
 
         if tracked then
-            root:CreateButton("Untrack Quest", function()
+            root:CreateButton(L["Untrack Quest"], function()
                 if Watch and Watch.Untrack then Watch:Untrack(questID) end
             end)
         else
-            root:CreateButton("Track Quest", function()
+            root:CreateButton(L["Track Quest"], function()
                 if Watch and Watch.Track then Watch:Track(questID) end
             end)
         end
 
-        root:CreateButton("Super-track (follow arrow)", function()
+        root:CreateButton(L["Super-track (follow arrow)"], function()
             if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
                 C_SuperTrack.SetSuperTrackedQuestID(questID)
             end
         end)
 
+        root:CreateButton(L["Search on Wowhead"], function()
+            _ns:ShowURL("https://www.wowhead.com/quest=" .. tostring(questID))
+        end)
+
         root:CreateDivider()
-        root:CreateButton("Cancel", function() end)
+        root:CreateButton(L["Cancel"], function() end)
     end)
 end
 

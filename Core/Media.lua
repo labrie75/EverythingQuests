@@ -194,3 +194,14 @@ function Media:ApplyScenarioShadow(fontstring)
     setShadow(fontstring, cfg and cfg.scenarioTextShadow, cfg and cfg.scenarioTextShadowColor,
               (cfg and cfg.scenarioTextShadowStrength) or 1)
 end
+
+-- Resizes the scenario banner Stage/Name lines while preserving Blizzard's
+-- banner typeface. base = the font's original {file, height, flags} captured
+-- before the first SetFont (reading GetFont() after a resize would feed the
+-- already-scaled size back in), so the delta always applies to the native size.
+function Media:ApplyScenarioFont(fontstring, base)
+    if not (fontstring and base and base[1] and base[2]) then return end
+    local DB = ns:GetSubsystem("DB")
+    local delta = (DB and DB.db.profile.tracker.scenarioTextSizeDelta) or 0
+    fontstring:SetFont(base[1], math.max(6, base[2] + delta), base[3] or "")
+end

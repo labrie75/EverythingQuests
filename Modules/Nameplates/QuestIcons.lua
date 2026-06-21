@@ -2,8 +2,32 @@ local _, ns = ...
 
 local QI = ns:RegisterSubsystem("NameplateQuestIcons", {})
 
-local ICON_SIZE = 24
-local SPACING   = 3
+local ICON_SIZE    = 24   -- default icon px  (DB: general.npIconSize)
+local DEFAULT_TEXT = 13   -- default count px (DB: general.npIconTextSize)
+local SPACING      = 3
+
+local function cfg()
+    local DB = ns:GetSubsystem("DB")
+    local g = (DB and DB.db.profile.general) or {}
+    return (g.npIconSize or ICON_SIZE), (g.npIconTextSize or DEFAULT_TEXT), (g.npIconPlacement or "RIGHT"),
+           (g.npIconOffsetX or 0), (g.npIconOffsetY or 0)
+end
+
+local PLACEMENT = {
+    RIGHT  = { point = "LEFT",   rel = "RIGHT",  x = 4,  y = 0 },
+    LEFT   = { point = "RIGHT",  rel = "LEFT",   x = -4, y = 0 },
+    TOP    = { point = "BOTTOM", rel = "TOP",    x = 0,  y = 4 },
+    BOTTOM = { point = "TOP",    rel = "BOTTOM", x = 0,  y = -4 },
+}
+
+-- offX/offY are the user's fine-tune offsets, added on top of the placement's
+-- base gap so the whole icon+count container (and thus both children) shift
+-- together. WoW SetPoint y is positive-up.
+local function anchorFrame(f, plate, placement, offX, offY)
+    local p = PLACEMENT[placement] or PLACEMENT.RIGHT
+    f:ClearAllPoints()
+    f:SetPoint(p.point, plate, p.rel, p.x + (offX or 0), p.y + (offY or 0))
+end
 
 -- Numeric fallbacks: 17 = QuestTitle, 8 = QuestObjective, 18 = QuestPlayer (probed from live client).
 local LT = Enum and Enum.TooltipDataLineType
@@ -122,12 +146,12 @@ local TEX = {
     ITEM    = { item  = true },
 }
 
-local function buildSlot(frame)
+local function buildSlot(frame, iconSize, textSize)
     local ic = frame:CreateTexture(nil, "OVERLAY")
-    ic:SetSize(ICON_SIZE, ICON_SIZE)
+    ic:SetSize(iconSize, iconSize)
     ic:Hide()
     ic.text = frame:CreateFontString(nil, "OVERLAY")
-    ic.text:SetFont(STANDARD_TEXT_FONT, 13, "OUTLINE")
+    ic.text:SetFont(STANDARD_TEXT_FONT, textSize, "OUTLINE")
     ic.text:SetTextColor(1, 0.94, 0.6)
     ic.text:SetPoint("LEFT", ic, "RIGHT", 2, 0)
     ic.text:Hide()
@@ -137,11 +161,13 @@ end
 local function getIconFrame(plate)
     local f = plate.EQQuestIcons
     if f then return f end
+    local iconSize, textSize, placement, offX, offY = cfg()
     f = CreateFrame("Frame", nil, plate)
     f:SetFrameStrata("HIGH")
-    f:SetSize(ICON_SIZE, ICON_SIZE)
-    f:SetPoint("LEFT", plate, "RIGHT", 4, 0)
-    f.slots = { buildSlot(f), buildSlot(f), buildSlot(f), buildSlot(f) }
+    f:SetSize(iconSize, iconSize)
+    anchorFrame(f, plate, placement, offX, offY)
+    f.slots = { buildSlot(f, iconSize, textSize), buildSlot(f, iconSize, textSize),
+                buildSlot(f, iconSize, textSize), buildSlot(f, iconSize, textSize) }
     plate.EQQuestIcons = f
     return f
 end
@@ -156,6 +182,12 @@ end
 
 local function render(plate, list, count)
     local f = getIconFrame(plate)
+    -- render() is the single source of truth for size/placement so recycled
+    -- nameplate frames (pooled by Blizzard, EQQuestIcons persists) always pick up
+    -- the current option values, even if they were off-screen during a change.
+    local iconSize, textSize, placement, offX, offY = cfg()
+    anchorFrame(f, plate, placement, offX, offY)
+    f:SetHeight(iconSize)
     for i = 1, #f.slots do
         f.slots[i]:Hide()
         f.slots[i].text:SetText("")
@@ -170,6 +202,9 @@ local function render(plate, list, count)
             local ic = f.slots[shown + 1]
             if not ic then break end
             shown = shown + 1
+
+            ic:SetSize(iconSize, iconSize)
+            ic.text:SetFont(STANDARD_TEXT_FONT, textSize, "OUTLINE")
 
             local def = TEX[q.type] or TEX.DEFAULT
             if def.atlas then
@@ -187,7 +222,7 @@ local function render(plate, list, count)
             ic:SetPoint("LEFT", f, "LEFT", x, 0)
             ic:Show()
 
-            local advance = ICON_SIZE
+            local advance = iconSize
             if q.type ~= "CHAT" and (q.isPercent or (q.value and q.value > 1)) then
                 ic.text:SetText(q.isPercent and (q.value .. "%") or q.value)
                 ic.text:Show()
@@ -301,6 +336,16 @@ function QI:ApplyEnabled()
         end
         wipe(activePlates)
     end
+end
+
+-- Live-applies placement / icon size / count-text size to every visible
+-- nameplate. render() reads the current option values on every pass and is the
+-- single source of truth for size/placement (so pooled frames recycled while
+-- off-screen self-correct), so a plain refresh is all this needs. Only EQ's own
+-- child frame is touched, never the protected nameplate, so it is taint-safe.
+function QI:ApplyLayout()
+    if not self.enabled then return end
+    refreshAllPlates("LAYOUT")
 end
 
 function QI:OnEnable()

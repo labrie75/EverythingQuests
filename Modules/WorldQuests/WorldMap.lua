@@ -53,6 +53,20 @@ function providerMixin:_DoRefresh()
 
     if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
 
+    self:_AcquirePins()
+
+    -- Always refresh the popout panels + tab while the map is open so they
+    -- reflect the current pin set and self-hide when the pins were cleared
+    -- (e.g. the player turned world-quest pins off) instead of lingering.
+    local Summary = ns:GetSubsystem("WQSummary")
+    if Summary and Summary.Refresh then Summary:Refresh() end
+    local ZoneList = ns:GetSubsystem("WQZoneMap")
+    if ZoneList and ZoneList.Refresh then ZoneList:Refresh() end
+    local Tab = ns:GetSubsystem("WQTab")
+    if Tab and Tab.Refresh then Tab:Refresh() end
+end
+
+function providerMixin:_AcquirePins()
     local map = self:GetMap()
     if not map then return end
     local mapID = map:GetMapID()
@@ -125,11 +139,6 @@ function providerMixin:_DoRefresh()
             end
         end
     end
-
-    local Summary = ns:GetSubsystem("WQSummary")
-    if Summary and Summary.Refresh then Summary:Refresh() end
-    local ZoneList = ns:GetSubsystem("WQZoneMap")
-    if ZoneList and ZoneList.Refresh then ZoneList:Refresh() end
 end
 
 function providerMixin:RefreshAllData()
