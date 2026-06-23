@@ -28,6 +28,7 @@ Core\Init.lua
 Locales\enUS.lua
 Locales\frFR.lua
 Locales\ruRU.lua
+Locales\koKR.lua
 
 Core\DB.lua
 Core\Events.lua
