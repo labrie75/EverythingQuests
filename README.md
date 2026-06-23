@@ -247,7 +247,13 @@ Modules register into Core subsystems at load time and listen for events through
 
 ## Localization
 
-Currently shipping enUS with comprehensive strings and stub files for deDE, esES, esMX, frFR, itIT, koKR, ptBR, ruRU, zhCN, and zhTW. Translation contributions welcome — see [Contributing](#contributing).
+Everything Quests ships full, bundled translations — on a matching game client the interface displays in that language automatically, and anything untranslated falls back to English:
+
+- **French (frFR)** — complete, by **Zox**
+- **Russian (ruRU)** — complete, by **Malevi4**
+- **Korean (koKR)** — by **labrie75**
+
+Stub files also exist for deDE, esES, esMX, itIT, ptBR, zhCN, and zhTW. Further translation contributions are welcome — see [Contributing](#contributing).
 
 ---
 
