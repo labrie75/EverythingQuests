@@ -57,6 +57,22 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
             end
     end
 
+    -- Header-bar settings re-tint the section-header bars directly (no full
+    -- Tracker:Refresh needed — the bars are children of the headers).
+    local function headerBarSetting(key)
+        return
+            function()
+                local DB = ns:GetSubsystem("DB")
+                return DB and DB.db.profile.tracker[key]
+            end,
+            function(value)
+                local DB = ns:GetSubsystem("DB")
+                if DB then DB.db.profile.tracker[key] = value end
+                local Tracker = ns:GetSubsystem("Tracker")
+                if Tracker and Tracker.ApplyHeaderBars then Tracker:ApplyHeaderBars() end
+            end
+    end
+
     local h = Options:CreateSectionHeader(content, L["Appearance"])
     h:SetPoint("TOPLEFT", 8, -8)
 
@@ -170,7 +186,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         L["Grows or shrinks the scenario / delve banner's Stage and name text. 0 is the default size. The banner artwork is a fixed size, so large values may overflow it."])
 
     local trackerHeader = Options:CreateSectionHeader(content, L["Tracker"])
-    trackerHeader:SetPoint("TOPLEFT", scSizeSlider, "BOTTOMLEFT", 0, -16)
+    -- Anchored at the end of the builder to the RIGHT column (under Zone Bar), swapped with
+    -- Tracker Skins so the taller Tracker section (now with the Header bar) fits on-screen.
 
     local bgGet, bgSet = trackerSetting("showBackground")
     local bgCheck = Options:CreateCheckbox(content, L["Background"], bgGet, bgSet)
@@ -188,8 +205,6 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     end
     local bgPicker = Options:CreateColorPicker(content, L["Background Color"], bgColorGet, bgColorSet)
     bgPicker:SetPoint("LEFT", bgCheck, "RIGHT", 120, 0)
-    alignSwatchTo(shadowPicker, bgPicker)
-    alignSwatchTo(scShadowPicker, bgPicker)
 
     local borderGet, borderSet = trackerSetting("showBorder")
     local borderCheck = Options:CreateCheckbox(content, L["Border"], borderGet, borderSet)
@@ -214,7 +229,34 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
     borderThickSlider:SetWidth(280)
 
+    local hbGet, hbSet = headerBarSetting("headerBar")
+    local hbCheck = Options:CreateCheckbox(content, L["Header bar"], hbGet, hbSet,
+        L["Draws a coloured gradient bar behind each section header (Quests, Campaign, World Quests, and so on), for a look closer to the default Blizzard tracker. Off by default."])
+    hbCheck:SetPoint("TOPLEFT", borderThickSlider, "BOTTOMLEFT", 0, -16)
+
+    local function hbColorGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.headerBarColor or { r = 0.80, g = 0.60, b = 0.20, a = 0.85 }
+    end
+    local function hbColorSet(c)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.headerBarColor = c end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker and Tracker.ApplyHeaderBars then Tracker:ApplyHeaderBars() end
+    end
+    local hbPicker = Options:CreateColorPicker(content, L["Bar Color"], hbColorGet, hbColorSet)
+    hbPicker:SetPoint("LEFT", hbCheck, "RIGHT", 120, 0)
+    alignSwatchTo(hbPicker, bgPicker)
+
+    local hbHeightGet, hbHeightSet = headerBarSetting("headerBarHeight")
+    local hbHeightSlider = Options:CreateSlider(content, L["Bar Height"], 6, 26, 1, hbHeightGet, hbHeightSet)
+    hbHeightSlider:SetPoint("TOPLEFT", hbCheck, "BOTTOMLEFT", 0, -14)
+    hbHeightSlider:SetWidth(280)
+    Options:AttachTooltip(hbHeightSlider, L["Bar Height"],
+        L["How tall the section-header bar is. The bar is centred on the header row, so larger values fill more of it."])
+
     local skinsHeader = Options:CreateSectionHeader(content, L["Tracker Skins"])
+    skinsHeader:SetPoint("TOPLEFT", scSizeSlider, "BOTTOMLEFT", 0, -16)
 
     local sbGet, sbSet = trackerSetting("scrollBarBg")
     local sbCheck = Options:CreateCheckbox(content, L["Scroll Bar Background"], sbGet, sbSet)
@@ -446,5 +488,5 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local zbCountPicker = Options:CreateColorPicker(content, L["Count Color"], zbCountColorGet, zbCountColorSet)
     zbCountPicker:SetPoint("TOPLEFT", zbHeaderPicker, "TOPRIGHT", 40, 0)
 
-    skinsHeader:SetPoint("TOPLEFT", zbHeaderPicker, "BOTTOMLEFT", 0, -20)
+    trackerHeader:SetPoint("TOPLEFT", zbHeaderPicker, "BOTTOMLEFT", 0, -20)
 end)

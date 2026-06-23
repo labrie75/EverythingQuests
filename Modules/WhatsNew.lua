@@ -3,30 +3,21 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.23.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.23.0"
+local FEATURE_POPUP_VERSION = "1.24.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.24.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706New: scenario banner alignment & size|r
-The Appearance tab's |cffffffffScenario|r group adds |cffffffffBanner Alignment|r (Left / Center / Right) and a |cffffffffBanner Text Size|r slider, so you can move the delve / scenario banner within the tracker and resize its text.
+|cffEBB706Quest-item buttons moved left|r
+The clickable quest-item button (the one you press to use a quest item) now sits on the |cffffffffleft|r, right next to the quest icon where it's easier to reach — and it's a little bigger. The red border is gone too; it's just the icon now.
 
-|cffEBB706New: search quests on Wowhead|r
-Right-click a quest (or a world quest) and pick |cffffffffSearch on Wowhead|r for a copy-ready link to that quest's Wowhead page.
+|cffEBB706New: header bars|r
+A new |cffffffffHeader bar|r option in the Appearance tab draws a coloured gradient bar behind each section header — Quests, Campaign, World Quests, and so on — for a look closer to Blizzard's default tracker. It's |cffffffffoff by default|r; turn it on and set the |cffffffffBar Color|r and |cffffffffBar Height|r to taste.
 
-|cffEBB706New: nameplate quest-icon position & size|r
-The quest icon + count on enemy nameplates can now sit |cffffffffLeft, Right, Above, or Below|r the nameplate, with separate sliders for the |cfffffffficon size|r and the |cffffffffcount text size|r (General tab).
-
-|cffEBB706New: a cleaner world-quest map|r
-On the world map, the world-quest summary and list now tuck behind a small |cffffffffworld-quest tab|r on the map's right edge. Click it to show or hide them — the map stays clean by default, and your quest pins are unaffected.
-
-|cffEBB706Also|r
-The quest right-click menu is now fully translatable, so it shows in your language instead of English.
-
-|cffEBB706Thanks|r
-These were community requests — thank you, |cffffffffMalevi4|r. Russian and French translations for the new text are on the way.
+|cffEBB706Translations caught up|r
+French and Russian are fully up to date again — thank you, |cffffffffZox|r and |cffffffffMalevi4|r.
 
 |cffEBB706Found a bug? Please tell me|r
 If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.

@@ -347,6 +347,15 @@ local function makeSectionHeader(parent, id, title, onToggle)
     h:SetHeight(SECTION_H)
     h:RegisterForClicks("LeftButtonUp")
 
+    -- Optional "stock look" gradient bar behind the header text. White base so
+    -- ApplyHeaderBar can tint it with a horizontal gradient; BACKGROUND keeps it
+    -- below the hairline (ARTWORK) and the label/count (OVERLAY). Hidden by default.
+    h.bar = h:CreateTexture(nil, "BACKGROUND")
+    h.bar:SetColorTexture(1, 1, 1, 1)
+    h.bar:SetPoint("LEFT",  h, "LEFT",  0, 0)
+    h.bar:SetPoint("RIGHT", h, "RIGHT", 0, 0)
+    h.bar:Hide()
+
     buildHairline(h)
 
     h.text = h:CreateFontString(nil, "OVERLAY", "ObjectiveTrackerHeaderFont")
@@ -396,6 +405,41 @@ function Tracker:BuildSectionHeaders(content)
         eh:ClearAllPoints()
         eh:SetPoint("TOPLEFT",  self.frame.eventsRegion, "TOPLEFT",  0, 0)
         eh:SetPoint("TOPRIGHT", self.frame.eventsRegion, "TOPRIGHT", 0, 0)
+    end
+
+    self:ApplyHeaderBars()
+end
+
+-- Optional gradient bar behind each section header (a "stock" look). The bar is a
+-- child of the header, so it shows/hides and tracks width with the header itself;
+-- this only needs to run on build and when the options change, never per-render.
+function Tracker:ApplyHeaderBar(h)
+    if not (h and h.bar) then return end
+    local DB  = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db.profile.tracker
+    if not (cfg and cfg.headerBar) then
+        h.bar:Hide()
+        return
+    end
+    local c = cfg.headerBarColor or { r = 0.80, g = 0.60, b = 0.20, a = 0.85 }
+    local r, g, b, a = c.r or 0.80, c.g or 0.60, c.b or 0.20, c.a or 0.85
+    h.bar:SetHeight(cfg.headerBarHeight or 22)
+    if h.bar.SetGradient then
+        -- Solid gradient: full colour on the left to a darker shade of the same colour on
+        -- the right (both at the picked alpha), not a fade to transparent. Reuse cached
+        -- ColorMixins so dragging the colour/height sliders doesn't churn GC.
+        local k = 0.4
+        if h._barC1 then h._barC1:SetRGBA(r, g, b, a) else h._barC1 = CreateColor(r, g, b, a) end
+        if h._barC2 then h._barC2:SetRGBA(r * k, g * k, b * k, a) else h._barC2 = CreateColor(r * k, g * k, b * k, a) end
+        h.bar:SetGradient("HORIZONTAL", h._barC1, h._barC2)
+    end
+    h.bar:Show()
+end
+
+function Tracker:ApplyHeaderBars()
+    if not self.sectionFrames then return end
+    for _, h in pairs(self.sectionFrames) do
+        self:ApplyHeaderBar(h)
     end
 end
 

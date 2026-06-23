@@ -2,7 +2,9 @@ local _, ns = ...
 
 local IB = ns:RegisterSubsystem("TrackerItemButtons", {})
 
-local BTN = 20
+local BTN = 26
+local ITEM_GAP = 6              -- visual gap between the item button and the quest-type icon it sits left of
+local PAD_X, PAD_Y = 6, 2       -- mirror Blocks.lua block padding so the button lands in the gutter Blocks reserves
 local RANGE_THROTTLE = 0.25
 
 IB.buttons   = {}
@@ -58,11 +60,6 @@ local function buildButton()
     b:RegisterForClicks("AnyDown", "AnyUp")
     b:SetAttribute("type", "item")
 
-    b.bg = b:CreateTexture(nil, "BACKGROUND")
-    b.bg:SetPoint("TOPLEFT", -1, 1)
-    b.bg:SetPoint("BOTTOMRIGHT", 1, -1)
-    b.bg:SetColorTexture(0.635, 0.0, 0.039, 1)
-
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()
     b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -111,10 +108,11 @@ function IB:_applySecure(questID)
     -- the block into the secure anchor-family, making Tracker:Render's Show/Hide/SetPoint
     -- on that block ADDON_ACTION_BLOCKED in combat. The container is never mutated in
     -- combat, so it safely absorbs the protection without tainting the block.
+    -- Lands in the left gutter Blocks reserves (IB:Gutter), directly left of the type icon.
     local cl, ct = container:GetLeft(), container:GetTop()
-    local br, bt = block:GetRight(), block:GetTop()
-    if cl and ct and br and bt then
-        b:SetPoint("TOPRIGHT", container, "TOPLEFT", (br - cl) - 4, (bt - ct) - 2)
+    local bl, bt = block:GetLeft(), block:GetTop()
+    if cl and ct and bl and bt then
+        b:SetPoint("TOPLEFT", container, "TOPLEFT", (bl - cl) + PAD_X, (bt - ct) - PAD_Y)
         b:Show()
     else
         b:Hide()
@@ -159,6 +157,20 @@ end
 -- Retiring a button only hides it (still parented), so this is one-way per session.
 function IB:HasSecureButtons()
     return next(self.buttons) ~= nil or #pool > 0
+end
+
+-- Horizontal space Blocks must reserve on the left of a quest with a usable item,
+-- so the item button sits directly left of the quest-type icon (button + gap).
+function IB:Gutter()
+    return BTN + ITEM_GAP
+end
+
+-- True when a quest will show an item button (feature enabled + the quest has a
+-- usable special item). Blocks queries this to decide whether to indent the icon.
+function IB:WantsButton(questID)
+    local DB = ns:GetSubsystem("DB")
+    local on = not DB or DB.db.profile.tracker.showItemButtons ~= false
+    return (on and itemInfo(questID)) and true or false
 end
 
 function IB:Reposition()

@@ -5,6 +5,22 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-06-22
+
+The clickable quest-item button on a tracked quest moved to the left of the quest icon — easier to reach and a little bigger — and there's a new optional gradient "header bar" behind each section header for a look closer to the default Blizzard tracker. French and Russian are fully up to date again. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Header bars** — A new "Header bar" option in the Appearance tab draws a coloured gradient bar behind each section header (Quests, Campaign, World Quests, and so on), for a look closer to Blizzard's default tracker. Off by default, with Bar Color and Bar Height controls.
+
+### Improvements
+
+- **Quest-item button moved left** — The clickable quest-item button (the one you press to use a quest's item) now sits to the left of the quest icon, where it's easier to click, and is slightly bigger. Its red border was removed, so it shows just the icon.
+
+### Translations
+
+- French (frFR) and Russian (ruRU) are fully up to date with the new strings — thanks to Zox and Malevi4.
+
 ## [1.23.0] - 2026-06-21
 
 A batch of community-requested features (thanks, Malevi4). The scenario / delve banner can be aligned and resized, the quest right-click menu is now fully translatable and can open quests on Wowhead, the nameplate quest icons can be repositioned and resized, and the world map's world-quest list now tucks away behind a tab for a cleaner map. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

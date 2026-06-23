@@ -435,6 +435,10 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     local isNew = (cfg.showRecentlyAddedTag and questData.firstSeen and questData.firstSeen > 0
                    and self._nowTs and (self._nowTs - questData.firstSeen) < NEW_WINDOW) and true or false
 
+    local IB      = ns:GetSubsystem("TrackerItemButtons")
+    local hasItem = (IB and IB.WantsButton and IB:WantsButton(qid)) and true or false
+    local gutter  = (hasItem and IB.Gutter) and IB:Gutter() or 0
+
     local objs = questData.objectives
     local nObj = objs and #objs or 0
     local curW = block:GetWidth()
@@ -452,6 +456,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
         or block._rSimp  ~= (simplifyMode and true or false)
         or block._rWidth ~= curW
         or block._rObjN  ~= nObj
+        or block._rItem  ~= hasItem
     if not changed and nObj > 0 then
         local pt, pf = block._rObjT, block._rObjF
         for i = 1, nObj do
@@ -465,6 +470,11 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     if not changed then return end
 
     applyQuestIcon(block.iconGlow, block.icon, block.iconBang, questData, focused)
+
+    -- Quests with a usable item reserve a left gutter so the item button sits directly
+    -- left of the type icon; the icon (and the title anchored to it) shift right by gutter.
+    block.iconHolder:ClearAllPoints()
+    block.iconHolder:SetPoint("TOPLEFT", block, "TOPLEFT", PAD_X + gutter, -PAD_Y)
 
     local titleText = questData.title or ("Quest #" .. tostring(qid))
     if cfg.showLevelInTracker and questData.level and questData.level > 0 then
@@ -538,7 +548,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     -- on the first render after width changes, causing blocks to overlap.
     local blockW = curW
     if blockW and blockW > 0 then
-        local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2)
+        local titleW   = blockW - (ICON_SIZE + ICON_TITLE_GAP + PAD_X * 2 + gutter)
         local subTextW = titleW
         if titleW > 0 then
             block.title:SetWidth(titleW)
@@ -569,6 +579,7 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     block._rSimp  = simplifyMode and true or false
     block._rWidth = curW
     block._rObjN  = nObj
+    block._rItem  = hasItem
     local pt = block._rObjT; if not pt then pt = {}; block._rObjT = pt end
     local pf = block._rObjF; if not pf then pf = {}; block._rObjF = pf end
     for i = 1, nObj do

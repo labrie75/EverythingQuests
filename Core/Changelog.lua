@@ -2,6 +2,20 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.24.0", date = "2026-06-22",
+        sections = {
+            { head = "New Features", items = {
+                "Header bars (Appearance tab) — an optional coloured gradient bar behind each section header (Quests, Campaign, World Quests, and so on) for a look closer to Blizzard's default tracker. Off by default, with Bar Color and Bar Height controls.",
+            } },
+            { head = "Improvements", items = {
+                "The clickable quest-item button moved to the left of the quest icon, where it's easier to reach, and is slightly bigger; its red border was removed so it's just the icon.",
+            } },
+            { head = "Translations", items = {
+                "French (frFR) and Russian (ruRU) are fully up to date again — thanks to Zox and Malevi4.",
+            } },
+        },
+    },
+    {
         version = "1.23.0", date = "2026-06-21",
         sections = {
             { head = "New Features", items = {
