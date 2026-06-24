@@ -56,6 +56,19 @@ L["Create"] = "만들기"
 L["Switching profiles reloads the UI. Profiles are shared across characters; use them to keep different setups (e.g. raid vs solo). |cffEBB706New Profile|r prompts for a name and creates it on the spot."] = "프로필을 전환하면 UI가 리로드됩니다. 프로필은 캐릭터 간 공유되며, 서로 다른 설정(예: 공격대 vs 솔로)을 유지하는 데 씁니다. |cffEBB706새 프로필|r은 이름을 입력받아 즉시 만듭니다."
 L["Slash commands"] = "슬래시 명령어"
 L["/eqs\n/everythingquests\n\n|cff999999Both open this options window.|r\n\n/eqs whatsnew\n\n|cff999999Show what's new in the latest update.|r\n\n/eqs session\n\n|cff999999Show a recap of your current play session.|r"] = "/eqs\n/everythingquests\n\n|cff999999둘 다 이 옵션 창을 엽니다.|r\n\n/eqs whatsnew\n\n|cff999999최신 업데이트의 새 소식을 표시합니다.|r\n\n/eqs session\n\n|cff999999현재 플레이 세션 요약을 표시합니다.|r"
+L["Nameplate Quest Icons"] = "이름표 퀘스트 아이콘"
+L["Left"] = "왼쪽"
+L["Right"] = "오른쪽"
+L["Above"] = "위쪽"
+L["Below"] = "아래쪽"
+L["Position"] = "위치"
+L["Where the quest icon + count sits relative to the enemy nameplate. Move it closer to the health bar to taste."] = "퀘스트 아이콘과 처치 수가 적 이름표를 기준으로 표시되는 위치입니다. 취향에 따라 생명력 막대에 더 가깝게 옮기세요."
+L["Icon size"] = "아이콘 크기"
+L["Count text size"] = "처치 수 글자 크기"
+L["X offset"] = "가로 위치 조정"
+L["Nudges the icon and count together left or right from the Position above, so you can slide them right up against the health bar."] = "위의 위치를 기준으로 아이콘과 처치 수를 좌우로 함께 밀어 생명력 막대에 바짝 붙일 수 있습니다."
+L["Y offset"] = "세로 위치 조정"
+L["Nudges the icon and count together up or down from the Position above (positive moves them up)."] = "위의 위치를 기준으로 아이콘과 처치 수를 위아래로 함께 밉니다 (양수면 위로 이동)."
 
 -- ─── Options/TabTracker.lua ───
 L["Zone"] = "지역"
@@ -255,6 +268,13 @@ L["Zone Bar Appearance"] = "지역 막대 외형"
 L["Same as tracker font"] = "추적기 글꼴과 동일"
 L["Header Color"] = "헤더 색상"
 L["Count Color"] = "개수 색상"
+L["Center"] = "중앙"
+L["Banner Alignment"] = "배너 정렬"
+L["Positions the scenario / delve banner within the tracker. Left lines it up with the quest text, Center keeps it centered (the default), and Right pushes it to the tracker's right edge."] = "시나리오/구렁 배너를 추적기 안에서 정렬합니다. 왼쪽은 퀘스트 글자에 맞추고, 중앙은 가운데 정렬(기본값), 오른쪽은 추적기의 오른쪽 끝으로 붙입니다."
+L["Banner Text Size"] = "배너 글자 크기"
+L["Grows or shrinks the scenario / delve banner's Stage and name text. 0 is the default size. The banner artwork is a fixed size, so large values may overflow it."] = "시나리오/구렁 배너의 단계 및 이름 글자를 키우거나 줄입니다. 0이 기본 크기입니다. 배너 그림은 크기가 고정이라 값이 크면 넘칠 수 있습니다."
+L["Draws a coloured gradient bar behind each section header (Quests, Campaign, World Quests, and so on), for a look closer to the default Blizzard tracker. Off by default."] = "각 섹션 머리글(퀘스트, 전역, 세계 퀘스트 등) 뒤에 색상 그라데이션 막대를 그려 기본 블리자드 추적기에 가까운 모습으로 만듭니다. 기본은 꺼짐."
+L["How tall the section-header bar is. The bar is centred on the header row, so larger values fill more of it."] = "섹션 머리글 막대의 높이입니다. 막대는 머리글 줄에 가운데 정렬되므로 값이 클수록 더 많이 채웁니다."
 
 -- ─── Options/TabHistory.lua ───
 L["History"] = "기록"
@@ -468,6 +488,10 @@ L["Quest Discovered!"] = "퀘스트 발견!"
 -- ─── Modules/Tracker/Events.lua ───
 L["Find Group"] = "그룹 찾기"
 L["Open the Premade Group Finder for this quest."] = "이 퀘스트의 사전 구성 그룹 찾기를 엽니다."
+L["Untrack Quest"] = "퀘스트 추적 해제"
+L["Track Quest"] = "퀘스트 추적"
+L["Super-track (follow arrow)"] = "주요 추적 (화살표 따라가기)"
+L["Search on Wowhead"] = "Wowhead에서 검색"
 
 -- ─── Modules/Tracker/Frame.lua ───
 L["Tracker locked"] = "추적기 잠김"
@@ -480,6 +504,18 @@ L["Profession"] = "전문기술"
 L["Endeavors"] = "과업"
 L["Achievements"] = "업적"
 L["Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options."] = "추적기의 위쪽 가장자리를 드래그하여 이동하세요.\n\n옵션은 |cffEBB706/eqs|r 를 입력하세요."
+L["Unpin from tracker"] = "추적기에서 고정 해제"
+L["Pin to tracker"] = "추적기에 고정"
+L["Unfocus"] = "추적 해제"
+L["Focus"] = "추적"
+L["Get Directions"] = "경로 안내"
+L["Show in Quest Log"] = "퀘스트 일지에서 보기"
+L["Open Quest Details"] = "퀘스트 상세 정보 열기"
+L["Abandon Quest"] = "퀘스트 포기"
+
+-- ─── Modules/Tracker/Profession.lua ───
+L["Open in Profession"] = "전문기술에서 열기"
+L["Untrack Recipe"] = "제조법 추적 해제"
 
 -- ─── Modules/Tracker/Scenario.lua ───
 L["Final Stage"] = "마지막 단계"
@@ -494,6 +530,10 @@ L["Reset position"] = "위치 초기화"
 L["Open Options"] = "옵션 열기"
 L["Got it"] = "확인"
 L["(This message shows once and won't appear again.)"] = "(이 메시지는 한 번만 표시되며 다시 나타나지 않습니다.)"
+
+-- ─── Modules/WorldQuests/Tab.lua ───
+L["Click to hide the World Quests list."] = "클릭하여 세계 퀘스트 목록을 숨깁니다."
+L["Click to show the World Quests list."] = "클릭하여 세계 퀘스트 목록을 표시합니다."
 
 -- ─── Modules/WorldQuests/ZoneMap.lua ───
 L["%s — %d quests"] = "%s - %d개 퀘스트"
