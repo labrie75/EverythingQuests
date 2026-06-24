@@ -229,10 +229,13 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
     borderThickSlider:SetWidth(280)
 
+    local hbBarHeader = Options:CreateSectionHeader(content, L["Header Bar"])
+    hbBarHeader:SetPoint("TOPLEFT", borderThickSlider, "BOTTOMLEFT", 0, -20)
+
     local hbGet, hbSet = headerBarSetting("headerBar")
     local hbCheck = Options:CreateCheckbox(content, L["Header bar"], hbGet, hbSet,
         L["Draws a coloured gradient bar behind each section header (Quests, Campaign, World Quests, and so on), for a look closer to the default Blizzard tracker. Off by default."])
-    hbCheck:SetPoint("TOPLEFT", borderThickSlider, "BOTTOMLEFT", 0, -16)
+    hbCheck:SetPoint("TOPLEFT", hbBarHeader, "BOTTOMLEFT", 0, -10)
 
     local function hbColorGet()
         local DB = ns:GetSubsystem("DB")
@@ -248,12 +251,37 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     hbPicker:SetPoint("LEFT", hbCheck, "RIGHT", 120, 0)
     alignSwatchTo(hbPicker, bgPicker)
 
+    local HB_STYLE_OPTIONS = {
+        { value = 1, label = L["Header Bar 1"] },
+        { value = 2, label = L["Header Bar 2"] },
+    }
+    local hbStyleGet, hbStyleSet = headerBarSetting("headerBarStyle")
+    local hbStyleDD = Options:CreateDropdown(content, L["Bar Style"], HB_STYLE_OPTIONS, hbStyleGet, hbStyleSet)
+    hbStyleDD:SetWidth(150)
+    hbStyleDD:SetPoint("TOPLEFT", hbCheck, "BOTTOMLEFT", 0, -14)
+    Options:AttachTooltip(hbStyleDD, L["Bar Style"],
+        L["Header Bar 1 is a horizontal gradient (bright on the left, dark on the right). Header Bar 2 is a vertical gradient (bright at the top, dark at the bottom). Bar Color, Bar Height, and Soft edges all apply to whichever style you pick."])
+
+    local hbSoftGet, hbSoftSet = headerBarSetting("headerBarSoftEdges")
+    local hbSoftCheck = Options:CreateCheckbox(content, L["Soft edges"], hbSoftGet, hbSoftSet,
+        L["Feathers the top, left, and right edges of the header bar so it blends into the UI instead of sitting in a hard box. The gradient colour is unchanged. Only applies while Header bar is on; off by default."])
+    hbSoftCheck.label:ClearAllPoints()
+    hbSoftCheck.label:SetPoint("RIGHT", hbSoftCheck, "LEFT", -4, 1)
+    hbSoftCheck:SetPoint("LEFT", hbStyleDD.button, "RIGHT", 24 + (hbSoftCheck.label:GetStringWidth() or 70), 1)
+
     local hbHeightGet, hbHeightSet = headerBarSetting("headerBarHeight")
     local hbHeightSlider = Options:CreateSlider(content, L["Bar Height"], 6, 26, 1, hbHeightGet, hbHeightSet)
-    hbHeightSlider:SetPoint("TOPLEFT", hbCheck, "BOTTOMLEFT", 0, -14)
+    hbHeightSlider:SetPoint("TOPLEFT", hbStyleDD, "BOTTOMLEFT", 0, -14)
     hbHeightSlider:SetWidth(280)
     Options:AttachTooltip(hbHeightSlider, L["Bar Height"],
         L["How tall the section-header bar is. The bar is centred on the header row, so larger values fill more of it."])
+
+    local hbSoftStrGet, hbSoftStrSet = headerBarSetting("headerBarSoftEdgeStrength")
+    local hbSoftSlider = Options:CreateSlider(content, L["Edge Softness"], 1, 10, 1, hbSoftStrGet, hbSoftStrSet)
+    hbSoftSlider:SetPoint("TOPLEFT", hbHeightSlider, "BOTTOMLEFT", 0, -14)
+    hbSoftSlider:SetWidth(280)
+    Options:AttachTooltip(hbSoftSlider, L["Edge Softness"],
+        L["How soft the header bar's feathered edges are when Soft edges is on. Higher is softer; lower tightens toward a hard edge."])
 
     local skinsHeader = Options:CreateSectionHeader(content, L["Tracker Skins"])
     skinsHeader:SetPoint("TOPLEFT", scSizeSlider, "BOTTOMLEFT", 0, -16)
@@ -308,6 +336,24 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
 
     local colorsHeader = Options:CreateSectionHeader(content, L["Colors & Dimensions"])
     colorsHeader:SetPoint("TOPLEFT", h, "TOPLEFT", 460, 0)
+
+    local resetBtn = Options:CreateYellowButton(content, L["Reset to Defaults"], function()
+        local Dialog = ns:GetSubsystem("Dialog")
+        if not Dialog then return end
+        Dialog:Show({
+            title   = "Everything Quests",
+            text    = L["Reset all Appearance settings to defaults?"],
+            button1 = L["Reset"],
+            button2 = L["Cancel"],
+            onAccept = function()
+                local DB = ns:GetSubsystem("DB")
+                if DB and DB.ResetTrackerAppearance then DB:ResetTrackerAppearance() end
+                ReloadUI()
+            end,
+        })
+    end)
+    resetBtn:SetSize(160, 24)
+    resetBtn:SetPoint("LEFT", colorsHeader, "LEFT", 320, 0)
 
     local function titleColorGet()
         local DB = ns:GetSubsystem("DB")
@@ -439,7 +485,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         local ZP = zbZP(); if ZP and ZP.SetShowBorder then ZP:SetShowBorder(v) end
     end
     local zbBorderCheck = Options:CreateCheckbox(content, L["Border"], zbBorderGet, zbBorderSet)
-    zbBorderCheck:SetPoint("LEFT", zbBgCheck, "LEFT", 150, 0)
+    zbBorderCheck:SetPoint("TOPLEFT", zbBgCheck, "BOTTOMLEFT", 0, -12)
 
     local function zbBorderColorGet()
         local st = zbState()
@@ -463,7 +509,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         local ZP = zbZP(); if ZP and ZP.SetBarFont then ZP:SetBarFont(v) end
     end
     local zbFontDD = Options:CreateFontDropdown(content, L["Font"], zbFontList, zbFontGet, zbFontSet)
-    zbFontDD:SetPoint("TOPLEFT", zbBgCheck, "BOTTOMLEFT", 0, -14)
+    zbFontDD:SetPoint("TOPLEFT", zbBorderCheck, "BOTTOMLEFT", 0, -14)
     zbFontDD:SetWidth(280)
 
     local function zbHeaderColorGet()
@@ -486,7 +532,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         local ZP = zbZP(); if ZP and ZP.SetCountColor then ZP:SetCountColor(c) end
     end
     local zbCountPicker = Options:CreateColorPicker(content, L["Count Color"], zbCountColorGet, zbCountColorSet)
-    zbCountPicker:SetPoint("TOPLEFT", zbHeaderPicker, "TOPRIGHT", 40, 0)
+    zbCountPicker:SetPoint("TOPLEFT", zbHeaderPicker, "BOTTOMLEFT", 0, -12)
+    alignSwatchTo(zbCountPicker, zbHeaderPicker)
 
-    trackerHeader:SetPoint("TOPLEFT", zbHeaderPicker, "BOTTOMLEFT", 0, -20)
+    trackerHeader:SetPoint("TOPLEFT", zbCountPicker, "BOTTOMLEFT", 0, -20)
 end)

@@ -27,7 +27,7 @@ end
 function Options:Build()
     if self.frame then return end
     local f = CreateFrame("Frame", "EQOptionsFrame", UIParent, "BackdropTemplate")
-    f:SetSize(1020, 880)
+    f:SetSize(1020, 720)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.24.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.25.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)
@@ -148,13 +148,39 @@ function Options:SelectTab(id)
     if self.activeContent then self.activeContent:Hide() end
     local tab = self.tabs[id]
     if tab and tab.builder then
-        if not tab.contentFrame then
-            tab.contentFrame = CreateFrame("Frame", nil, f.tabContent)
-            tab.contentFrame:SetAllPoints()
-            tab.builder(tab.contentFrame)
+        if not tab.scrollFrame then
+            local scroll = CreateFrame("ScrollFrame", nil, f.tabContent, "UIPanelScrollFrameTemplate")
+            scroll:SetPoint("TOPLEFT", 0, 0)
+            scroll:SetPoint("BOTTOMRIGHT", -24, 0)
+            scroll:EnableMouseWheel(true)
+            scroll:SetScript("OnMouseWheel", function(sf, delta)
+                local range = sf:GetVerticalScrollRange()
+                local v = math.min(range, math.max(0, sf:GetVerticalScroll() - delta * 40))
+                sf:SetVerticalScroll(v)
+            end)
+            local child = CreateFrame("Frame", nil, scroll)
+            child:SetSize(1, 1500)
+            scroll:SetScrollChild(child)
+            scroll:SetScript("OnSizeChanged", function(_, w) if w and w > 0 then child:SetWidth(w) end end)
+            if scroll:GetWidth() > 0 then child:SetWidth(scroll:GetWidth()) end
+            tab.scrollFrame  = scroll
+            tab.contentFrame = child
+            tab.builder(child)
+            -- Shrink the scroll child to wrap its controls so the scrollbar reflects the
+            -- real content height (measured next frame, once the layout has resolved).
+            C_Timer.After(0, function()
+                local top = child:GetTop()
+                if not top then return end
+                local lowest = top
+                for _, c in ipairs({ child:GetChildren() }) do
+                    local b = c:GetBottom()
+                    if b and b < lowest then lowest = b end
+                end
+                child:SetHeight((top - lowest) + 28)
+            end)
         end
-        tab.contentFrame:Show()
-        self.activeContent = tab.contentFrame
+        tab.scrollFrame:Show()
+        self.activeContent = tab.scrollFrame
     end
     local DB = ns:GetSubsystem("DB")
     if DB then DB.char.lastOptionsTab = id end

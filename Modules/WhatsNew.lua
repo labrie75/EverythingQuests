@@ -3,21 +3,27 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.24.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.24.0"
+local FEATURE_POPUP_VERSION = "1.25.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.25.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706Quest-item buttons moved left|r
-The clickable quest-item button (the one you press to use a quest item) now sits on the |cffffffffleft|r, right next to the quest icon where it's easier to reach — and it's a little bigger. The red border is gone too; it's just the icon now.
+|cffEBB706New: header bar styles and soft edges|r
+The Appearance tab's |cffffffffHeader bar|r gets more control. Choose |cffffffffHeader Bar 1|r (a horizontal gradient) or |cffffffffHeader Bar 2|r (a vertical one), and turn on |cffffffffSoft edges|r to feather the bar so it blends into the UI instead of sitting in a hard box. An |cffffffffEdge Softness|r slider tunes how soft those edges are. Thanks to Malevi4 for the requests.
 
-|cffEBB706New: header bars|r
-A new |cffffffffHeader bar|r option in the Appearance tab draws a coloured gradient bar behind each section header — Quests, Campaign, World Quests, and so on — for a look closer to Blizzard's default tracker. It's |cffffffffoff by default|r; turn it on and set the |cffffffffBar Color|r and |cffffffffBar Height|r to taste.
+|cffEBB706New: Reset to Defaults for Appearance|r
+A |cffffffffReset to Defaults|r button at the top of the Appearance tab restores just the look — fonts, colours, shadows, header bar, scroll-bar skin, and zone bar — to defaults, leaving your filters, sections, and sounds untouched.
 
-|cffEBB706Translations caught up|r
-French and Russian are fully up to date again — thank you, |cffffffffZox|r and |cffffffffMalevi4|r.
+|cffEBB706Appearance tab now scrolls|r
+The Appearance tab scrolls inside the Options window, so it's shorter and nothing crowds the bottom of the screen.
+
+|cffEBB706Fixed: duplicate "quest ready" popup|r
+A campaign quest that was ready to turn in could show up twice — once under Campaign and once under Quests. It now appears once, in the right place.
+
+|cffEBB706Korean is here|r
+Everything Quests is now available in |cffffffffKorean|r, thanks to |cfffffffflabrie75|r — most of the addon is translated, with more on the way. French and Russian are up to date too, with thanks to |cffffffffZox|r and |cffffffffMalevi4|r.
 
 |cffEBB706Found a bug? Please tell me|r
 If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.

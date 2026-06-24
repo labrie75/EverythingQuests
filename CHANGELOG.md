@@ -5,6 +5,29 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.25.0] - 2026-06-23
+
+Header bars get more style — a vertical-gradient option and soft, feathered edges — plus a one-click Reset to Defaults for the Appearance tab, which now scrolls. A duplicate "quest ready" popup is fixed, and Korean joins the translations. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Header bar styles & soft edges** — The Appearance tab's header bar now offers two styles — Header Bar 1 (a horizontal gradient) and Header Bar 2 (a vertical gradient) — plus a Soft edges option that feathers the bar's top, left, and right edges so it blends into the UI instead of sitting in a hard box. An Edge Softness slider tunes how soft those edges are. Thanks to Malevi4 for the requests.
+- **Reset to Defaults (Appearance)** — A new button at the top of the Appearance tab restores only the appearance settings (fonts, colours, shadows, header bar, scroll-bar skin, zone-bar look) to their defaults, leaving filters, sections, sounds, and the zone bar's saved position untouched.
+
+### Improvements
+
+- **Scrollable Appearance tab** — The Appearance tab now scrolls inside the Options window, so it no longer runs off the bottom of the screen, and the header-bar controls sit in their own tidy section.
+
+### Bug Fixes
+
+- **Duplicate "quest ready" popup** — A campaign quest with a ready-to-turn-in popup could appear twice — once under the Campaign header and once under Quests. It now renders once, in the correct section.
+
+### Translations
+
+- **Korean (koKR)** — Everything Quests is now available in Korean, thanks to labrie75. Most of the addon is translated, with more on the way.
+- **Russian (ruRU)** — A round of wording refinements from Malevi4, plus translations for the new strings.
+- **French (frFR)** — Updated by Zox; all current strings are translated.
+
 ## [1.24.0] - 2026-06-22
 
 The clickable quest-item button on a tracked quest moved to the left of the quest icon — easier to reach and a little bigger — and there's a new optional gradient "header bar" behind each section header for a look closer to the default Blizzard tracker. French and Russian are fully up to date again. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

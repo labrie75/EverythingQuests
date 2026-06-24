@@ -7,8 +7,8 @@ local PAD        = 7
 local LINE_GAP   = 2
 local BOX_GAP    = 6
 local ICON_SIZE  = 34
-local RED_BORDER = { 0.635, 0.000, 0.039, 1 }     -- #a2000a (suite border)
-local HILITE     = { 0.92, 0.72, 0.02, 1 }
+local BORDER = { 0.82, 0.65, 0.13, 0.55 }     -- soft amber quest accent; neutral so it sits over any tracker style
+local HILITE = { 0.95, 0.78, 0.20, 0.95 }
 
 S.pool   = {}
 S.active = {}
@@ -44,11 +44,11 @@ local function buildBox()
         edgeSize = 1,
     })
     box:SetBackdropColor(0, 0, 0, 0.85)
-    box:SetBackdropBorderColor(RED_BORDER[1], RED_BORDER[2], RED_BORDER[3], RED_BORDER[4])
+    box:SetBackdropBorderColor(BORDER[1], BORDER[2], BORDER[3], BORDER[4])
     box:RegisterForClicks("LeftButtonUp")
     box:SetScript("OnClick", onBoxClick)
     box:SetScript("OnEnter", function(b) b:SetBackdropBorderColor(HILITE[1], HILITE[2], HILITE[3], HILITE[4]) end)
-    box:SetScript("OnLeave", function(b) b:SetBackdropBorderColor(RED_BORDER[1], RED_BORDER[2], RED_BORDER[3], RED_BORDER[4]) end)
+    box:SetScript("OnLeave", function(b) b:SetBackdropBorderColor(BORDER[1], BORDER[2], BORDER[3], BORDER[4]) end)
 
     box.iconHolder = CreateFrame("Frame", nil, box)
     box.iconHolder:SetSize(ICON_SIZE, ICON_SIZE)
@@ -110,21 +110,44 @@ function S:ReleaseAll()
     end
 end
 
-function S:Render(content, contentWidth, yStart)
-    self:ReleaseAll()
-    if not content then return 0 end
+local function isCampaignQuest(questID)
+    local Cache  = ns:GetSubsystem("Cache")
+    local quests = Cache and Cache.All and Cache:All()
+    local q = quests and quests[questID]
+    return (q and q.isCampaign) and true or false
+end
+
+function S:Count(wantCampaign)
     local n = getNum()
     if n == 0 then return 0 end
+    local want, c = wantCampaign and true or false, 0
+    for i = 1, n do
+        local questID = GetAutoQuestPopUp and GetAutoQuestPopUp(i)
+        if questID and isCampaignQuest(questID) == want then c = c + 1 end
+    end
+    return c
+end
 
-    local textW = math.max(40, (contentWidth or 0) - 16)
-    local y = yStart or 0
+-- Caller (Tracker:Render) releases all boxes once per pass, then calls Render for
+-- the Campaign and Quests sections in turn; each call APPENDS only the popups whose
+-- quest matches wantCampaign, so a campaign quest's popup never lands in both.
+function S:Render(content, contentWidth, yStart, wantCampaign)
+    if not content then return 0, 0 end
+    local n = getNum()
+    if n == 0 then return 0, 0 end
+
+    local want   = wantCampaign and true or false
+    local textW  = math.max(40, (contentWidth or 0) - 16)
+    local y      = yStart or 0
     local startY = y
+    local rendered = 0
 
     local Blocks = ns:GetSubsystem("TrackerBlocks")
     for i = 1, n do
         local questID, popUpType
         if GetAutoQuestPopUp then questID, popUpType = GetAutoQuestPopUp(i) end
-        if questID then
+        if questID and isCampaignQuest(questID) == want then
+            rendered = rendered + 1
             local box = acquire(content)
             box.questID   = questID
             box.popUpType = popUpType
@@ -156,5 +179,5 @@ function S:Render(content, contentWidth, yStart)
         end
     end
 
-    return y - startY
+    return y - startY, rendered
 end

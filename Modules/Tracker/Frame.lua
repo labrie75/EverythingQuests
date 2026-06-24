@@ -10,7 +10,6 @@ local GRIP_SIZE        = 14
 
 local _popupSet = {}
 local _visible  = {}
-local _popups   = {}
 local _distScratch = {}
 local DIST_TICK     = 2
 local DIST_MOVE_EPS = 0.0025
@@ -356,6 +355,16 @@ local function makeSectionHeader(parent, id, title, onToggle)
     h.bar:SetPoint("RIGHT", h, "RIGHT", 0, 0)
     h.bar:Hide()
 
+    -- Optional soft-edge mask: feathers the bar's top/left/right (hard bottom, where
+    -- it meets the content) while leaving the horizontal gradient intact — it masks
+    -- the bar's ALPHA only. Added to the bar in ApplyHeaderBar when the option is on.
+    if h.CreateMaskTexture then
+        h.barMask = h:CreateMaskTexture(nil, "BACKGROUND")
+        h.barMask:SetTexture("Interface\\AddOns\\EverythingQuests\\Media\\Textures\\headerbar-softmask.tga",
+            "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        h.barMask:SetAllPoints(h.bar)
+    end
+
     buildHairline(h)
 
     h.text = h:CreateFontString(nil, "OVERLAY", "ObjectiveTrackerHeaderFont")
@@ -425,13 +434,36 @@ function Tracker:ApplyHeaderBar(h)
     local r, g, b, a = c.r or 0.80, c.g or 0.60, c.b or 0.20, c.a or 0.85
     h.bar:SetHeight(cfg.headerBarHeight or 22)
     if h.bar.SetGradient then
-        -- Solid gradient: full colour on the left to a darker shade of the same colour on
-        -- the right (both at the picked alpha), not a fade to transparent. Reuse cached
-        -- ColorMixins so dragging the colour/height sliders doesn't churn GC.
+        -- Solid gradient from the full picked colour to a darker shade of it (both at the
+        -- picked alpha), not a fade to transparent. Header Bar 1 runs it left→right; Header
+        -- Bar 2 runs it top→bottom (SetGradient VERTICAL takes min=bottom, max=top, so the
+        -- darker shade is the min). Reuse cached ColorMixins so the sliders don't churn GC.
         local k = 0.4
         if h._barC1 then h._barC1:SetRGBA(r, g, b, a) else h._barC1 = CreateColor(r, g, b, a) end
         if h._barC2 then h._barC2:SetRGBA(r * k, g * k, b * k, a) else h._barC2 = CreateColor(r * k, g * k, b * k, a) end
-        h.bar:SetGradient("HORIZONTAL", h._barC1, h._barC2)
+        if (cfg.headerBarStyle or 1) == 2 then
+            h.bar:SetGradient("VERTICAL", h._barC2, h._barC1)
+        else
+            h.bar:SetGradient("HORIZONTAL", h._barC1, h._barC2)
+        end
+    end
+    if h.barMask then
+        local wantSoft = cfg.headerBarSoftEdges and true or false
+        if wantSoft then
+            -- Strength controls softness by how far the mask is grown past the bar on the
+            -- top/left/right: at 10 the mask matches the bar (full feather, softest); lower
+            -- values oversize the mask so the bar samples its solid interior and the edge
+            -- tightens toward hard. The bottom stays flush so that edge is never softened.
+            local s    = cfg.headerBarSoftEdgeStrength or 10
+            local extX = 30 * (10 - s) / 9
+            local extY = 8  * (10 - s) / 9
+            h.barMask:ClearAllPoints()
+            h.barMask:SetPoint("TOPLEFT",     h.bar, "TOPLEFT",     -extX,  extY)
+            h.barMask:SetPoint("BOTTOMRIGHT", h.bar, "BOTTOMRIGHT",  extX,  0)
+            if not h._barMasked then h.bar:AddMaskTexture(h.barMask); h._barMasked = true end
+        elseif h._barMasked then
+            h.bar:RemoveMaskTexture(h.barMask); h._barMasked = false
+        end
     end
     h.bar:Show()
 end
@@ -505,50 +537,33 @@ function Tracker:_RenderQuestGroup(content, contentWidth, yStart, collapsed, wan
     local profile = DB.db.profile.tracker
     local quests  = Cache:All()
 
-    local allPopups = (AC and AC:GetActivePopups()) or {}
+    -- Quests with a COMPLETE auto-quest popup are drawn as popup boxes (campaign-
+    -- routed and counted by TrackerAutoQuestPopup); exclude them here so they are
+    -- not also listed as a block or double-counted. Only when popups are enabled —
+    -- with them off there is no box, so the quest must fall back to a normal block.
     wipe(_popupSet)
-    for i = 1, #allPopups do _popupSet[allPopups[i].questID] = true end
-
-    wipe(_popups)
-    local popups, pcount = _popups, 0
-    for i = 1, #allPopups do
-        local pq = quests[allPopups[i].questID]
-        local pIsCampaign = (pq and pq.isCampaign) and true or false
-        if pIsCampaign == wantCampaign then
-            pcount = pcount + 1
-            popups[pcount] = allPopups[i]
-        end
+    if AC and AC.FillCompleteSet and profile.showQuestPopups ~= false then
+        AC:FillCompleteSet(_popupSet)
     end
 
     wipe(_visible)
     local visible, count, total = _visible, 0, 0
     for questID, q in pairs(quests) do
-        if (q.isCampaign and true or false) == wantCampaign then
+        if (q.isCampaign and true or false) == wantCampaign and not _popupSet[questID] then
             total = total + 1
-            if not _popupSet[questID] and Filters:Visible(questID, q) then
+            if Filters:Visible(questID, q) then
                 count = count + 1
                 visible[count] = q
             end
         end
     end
 
-    if collapsed then return 0, count + pcount, total end
+    if collapsed then return 0, count, total end
 
     table.sort(visible, Sort.For(profile.sortMode, profile.manualOrder))
 
     local y = yStart
-
     local gap = getBlockGap()
-    if AC then
-        for i = 1, pcount do
-            local p = AC:Acquire(content)
-            p:SetWidth(contentWidth)
-            p:ClearAllPoints()
-            p:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
-            AC:Render(p, popups[i].questID, popups[i].title)
-            y = y + p:GetHeight() + gap
-        end
-    end
 
     for i = 1, count do
         local q = visible[i]
@@ -560,7 +575,7 @@ function Tracker:_RenderQuestGroup(content, contentWidth, yStart, collapsed, wan
         y = y + b:GetHeight() + gap
     end
 
-    return y - yStart, count + pcount, total
+    return y - yStart, count, total
 end
 
 function Tracker:_RenderCampaignSection(content, contentWidth, yStart, collapsed)
@@ -791,8 +806,8 @@ function Tracker:Render()
 
     local _Blocks = ns:GetSubsystem("TrackerBlocks")
     if _Blocks and _Blocks.BeginRenderPass then _Blocks:BeginRenderPass() end
-    local _AC = ns:GetSubsystem("TrackerAutoComplete")
-    if _AC and _AC.ReleaseAll then _AC:ReleaseAll() end
+    local _AQP = ns:GetSubsystem("TrackerAutoQuestPopup")
+    if _AQP and _AQP.ReleaseAll then _AQP:ReleaseAll() end
 
     local DB = ns:GetSubsystem("DB")
     if DB and f.background and f.bgFrame then
@@ -883,13 +898,17 @@ function Tracker:Render()
 
             local probeY = y + SECTION_H + 2
 
-            local popupH = 0
-            local AQP = (def.id == "quests") and ns:GetSubsystem("TrackerAutoQuestPopup") or nil
-            if AQP then
-                if not sectionCollapsed and (not cfg or cfg.showQuestPopups ~= false) then
-                    popupH = AQP:Render(content, contentWidth, probeY) or 0
-                elseif AQP.ReleaseAll then
-                    AQP:ReleaseAll()
+            local popupH, popupCount = 0, 0
+            local AQP = (def.id == "campaign" or def.id == "quests")
+                        and ns:GetSubsystem("TrackerAutoQuestPopup") or nil
+            if AQP and (not cfg or cfg.showQuestPopups ~= false) then
+                local wantCampaign = (def.id == "campaign")
+                if sectionCollapsed then
+                    popupCount = (AQP.Count and AQP:Count(wantCampaign)) or 0
+                else
+                    popupH, popupCount = AQP:Render(content, contentWidth, probeY, wantCampaign)
+                    popupH     = popupH or 0
+                    popupCount = popupCount or 0
                 end
             end
 
@@ -898,6 +917,10 @@ function Tracker:Render()
                 sectionHeight, sectionCount, sectionTotal = self[rendererName](self, content, contentWidth, probeY + popupH, sectionCollapsed)
             end
             sectionHeight = sectionHeight + popupH
+            sectionCount  = (sectionCount or 0) + popupCount
+            if type(sectionTotal) == "number" then
+                sectionTotal = sectionTotal + popupCount
+            end
 
             if sectionCount and sectionCount > 0 then
                 headerFrame:Show()
@@ -939,7 +962,6 @@ function Tracker:Render()
                 y = y + SECTION_H + 2 + sectionHeight + gap
             else
                 headerFrame:Hide()
-                if AQP and popupH > 0 and AQP.ReleaseAll then AQP:ReleaseAll() end
             end
         end
       end

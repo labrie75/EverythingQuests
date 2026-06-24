@@ -21,6 +21,7 @@ Desktop.ini
 # Localization translator worksheets (throwaway; regenerated from the manifest)
 frFR-TRANSLATE-ME*.lua
 ruRU-TRANSLATE-ME*.lua
+koKR-TRANSLATE-ME*.lua
 
 # Local dev tooling + drafts (not part of the shipped addon)
 docs/

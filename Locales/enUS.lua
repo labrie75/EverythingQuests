@@ -239,11 +239,20 @@ L["Background Color"] = true
 L["Border"] = true
 L["Border Color"] = true
 L["Border Thickness"] = true
+L["Header Bar"] = true
 L["Header bar"] = true
 L["Draws a coloured gradient bar behind each section header (Quests, Campaign, World Quests, and so on), for a look closer to the default Blizzard tracker. Off by default."] = true
 L["Bar Color"] = true
+L["Header Bar 1"] = true
+L["Header Bar 2"] = true
+L["Bar Style"] = true
+L["Header Bar 1 is a horizontal gradient (bright on the left, dark on the right). Header Bar 2 is a vertical gradient (bright at the top, dark at the bottom). Bar Color, Bar Height, and Soft edges all apply to whichever style you pick."] = true
+L["Soft edges"] = true
+L["Feathers the top, left, and right edges of the header bar so it blends into the UI instead of sitting in a hard box. The gradient colour is unchanged. Only applies while Header bar is on; off by default."] = true
 L["Bar Height"] = true
 L["How tall the section-header bar is. The bar is centred on the header row, so larger values fill more of it."] = true
+L["Edge Softness"] = true
+L["How soft the header bar's feathered edges are when Soft edges is on. Higher is softer; lower tightens toward a hard edge."] = true
 L["Tracker Skins"] = true
 L["Scroll Bar Background"] = true
 L["Scroll Bar Color"] = true
@@ -254,6 +263,8 @@ L["Thumb Width"] = true
 L["Hide scroll bar arrows"] = true
 L["Hides the up and down arrow buttons at the ends of the tracker scroll bar. The bar still scrolls by dragging the thumb or using the mouse wheel."] = true
 L["Colors & Dimensions"] = true
+L["Reset to Defaults"] = true
+L["Reset all Appearance settings to defaults?"] = true
 L["Quest Title Color Override"] = true
 L["When cleared, falls back to difficulty coloring or default yellow."] = true
 L["Use title color for completed quests"] = true
@@ -467,9 +478,6 @@ L["Press Ctrl+A to select all, then Ctrl+C to copy."] = true
 
 -- ─── Modules/Tracker/Achievements.lua ───
 L["Left-click to open, right-click to untrack."] = true
-
--- ─── Modules/Tracker/AutoComplete.lua ───
-L["Click to complete quest"] = true
 
 -- ─── Modules/Tracker/AutoQuestPopup.lua ───
 L["Click to view quest"] = true

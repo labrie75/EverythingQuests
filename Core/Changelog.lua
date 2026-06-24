@@ -2,6 +2,25 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.25.0", date = "2026-06-23",
+        sections = {
+            { head = "New Features", items = {
+                "Header bar styles & soft edges (Appearance tab) — choose Header Bar 1 (a horizontal gradient) or Header Bar 2 (a vertical gradient), and turn on Soft edges to feather the bar's top, left, and right edges so it blends into the UI. An Edge Softness slider tunes how soft the edges are. Thanks to Malevi4 for the requests.",
+                "Reset to Defaults (Appearance tab) — restores just the appearance settings (fonts, colours, shadows, header bar, scroll-bar skin, zone-bar look) to defaults, leaving filters, sections, sounds, and the zone bar's position untouched.",
+            } },
+            { head = "Improvements", items = {
+                "The Appearance tab now scrolls inside the Options window, so it no longer runs off the bottom of the screen.",
+            } },
+            { head = "Bug Fixes", items = {
+                "A campaign quest with a ready-to-turn-in popup could appear twice (once under Campaign, once under Quests); it now renders once, in the correct section.",
+            } },
+            { head = "Translations", items = {
+                "Korean (koKR) is now available, thanks to labrie75 — most of the addon is translated, with more on the way.",
+                "Russian (ruRU) wording refinements from Malevi4, plus the new strings; French (frFR) updated by Zox.",
+            } },
+        },
+    },
+    {
         version = "1.24.0", date = "2026-06-22",
         sections = {
             { head = "New Features", items = {

@@ -65,6 +65,9 @@ DB.defaults = {
             headerBar            = false,
             headerBarColor       = { r = 0.80, g = 0.60, b = 0.20, a = 0.85 },
             headerBarHeight      = 22,
+            headerBarStyle       = 1,
+            headerBarSoftEdges   = false,
+            headerBarSoftEdgeStrength = 10,
             blockSpacing         = 2,
             scrollBarBg          = true,
             scrollBarBgColor     = { r = 0.60, g = 0.60, b = 0.65, a = 0.25 },
@@ -155,6 +158,35 @@ DB.defaults = {
         },
     },
 }
+
+local APPEARANCE_KEYS = {
+    "font", "fontSize", "fontOutline", "titleSizeDelta",
+    "textShadow", "textShadowColor", "textShadowStrength",
+    "scenarioTextShadow", "scenarioTextShadowColor", "scenarioTextShadowStrength",
+    "scenarioTextAlign", "scenarioTextSizeDelta",
+    "colorByDifficulty", "titleColorOverride", "overrideCompleteGreen", "headerColor",
+    "headerBar", "headerBarColor", "headerBarHeight", "headerBarStyle",
+    "headerBarSoftEdges", "headerBarSoftEdgeStrength",
+    "blockSpacing", "scale",
+    "showBackground", "backgroundColor", "showBorder", "borderColor", "borderSize",
+    "scrollBarBg", "scrollBarBgColor", "hideScrollBar", "skinScrollBar",
+    "scrollBarThumbColor", "scrollBarThumbWidth", "hideScrollArrows",
+}
+
+-- Reverts only the Appearance-tab settings (fonts, colours, shadows, header bar,
+-- scroll-bar skin, zone-bar look) to defaults by clearing the keys; AceDB re-applies
+-- the defaults on the reload that follows. Behaviour settings (filters, sections,
+-- sounds, sort, etc.) and the zone bar's saved position/lock are left untouched.
+function DB:ResetTrackerAppearance()
+    local prof = self.db and self.db.profile and self.db.profile.tracker
+    if not prof then return end
+    for _, k in ipairs(APPEARANCE_KEYS) do prof[k] = nil end
+    local zb = prof.zoneProgressBar
+    if zb then
+        zb.showBackground, zb.showBorder, zb.scale = nil, nil, nil
+        zb.borderColor, zb.headerColor, zb.countColor, zb.font = nil, nil, nil, nil
+    end
+end
 
 function DB:OnInitialize()
     local AceDB = LibStub("AceDB-3.0")
