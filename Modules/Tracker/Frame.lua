@@ -4,6 +4,7 @@ local L = ns.L
 local Tracker = ns:RegisterSubsystem("Tracker", {})
 
 local CONTENT_PAD      = 4
+local SCROLLBAR_GUTTER = 26
 local REFRESH_THROTTLE = 0.25
 local DRAG_HANDLE_H    = 14
 local GRIP_SIZE        = 14
@@ -202,7 +203,9 @@ function Tracker:BuildFrame()
 
     local scenarioContainer = CreateFrame("Frame", nil, f)
     scenarioContainer:SetPoint("TOPLEFT",  CONTENT_PAD, -DRAG_HANDLE_H)
-    scenarioContainer:SetPoint("TOPRIGHT", -CONTENT_PAD, -DRAG_HANDLE_H)
+    -- Reserve the same scroll-bar gutter the quest list reserves so the banner
+    -- and criteria align with the scrolled quest text, not the wider frame edge.
+    scenarioContainer:SetPoint("TOPRIGHT", -(SCROLLBAR_GUTTER - CONTENT_PAD), -DRAG_HANDLE_H)
     scenarioContainer:SetHeight(1)
     f.scenarioContainer = scenarioContainer
     scenarioContainer:SetScript("OnSizeChanged", function() self:Refresh() end)
@@ -216,7 +219,7 @@ function Tracker:BuildFrame()
     eventsScroll:SetPoint("TOPLEFT",     eventsRegion, "TOPLEFT",  0, -(SECTION_H + 2))
     eventsScroll:SetPoint("BOTTOMRIGHT", eventsRegion, "BOTTOMRIGHT", 0, 0)
     local eventsContent = CreateFrame("Frame", nil, eventsScroll)
-    eventsContent:SetSize(cfg.width - 26, 1)
+    eventsContent:SetSize(cfg.width - SCROLLBAR_GUTTER, 1)
     eventsScroll:SetScrollChild(eventsContent)
     f.eventsScroll  = eventsScroll
     f.eventsContent = eventsContent
@@ -240,7 +243,7 @@ function Tracker:BuildFrame()
     eventsRegion:SetPoint("TOPRIGHT", scroll, "BOTTOMRIGHT", 0, -2)
 
     local content = CreateFrame("Frame", nil, scroll)
-    content:SetSize(cfg.width - 26, 1)
+    content:SetSize(cfg.width - SCROLLBAR_GUTTER, 1)
     scroll:SetScrollChild(content)
 
     f:SetScript("OnSizeChanged", function() self:Refresh() end)
@@ -846,6 +849,17 @@ function Tracker:Render()
         end
     end
 
+    -- Keep the scroll child's width tracking the live frame width so the quest
+    -- list reacts to drag-resize (it was frozen at its build-time width, while the
+    -- banner spans the frame). Secure-gated: content is in the item button's
+    -- protected ancestor chain, like the content:SetHeight below.
+    local _IBw = ns:GetSubsystem("TrackerItemButtons")
+    local _secureW = InCombatLockdown() and _IBw and _IBw.HasSecureButtons and _IBw:HasSecureButtons()
+    local liveContentW = math.max(1, math.floor((f:GetWidth() or 0) + 0.5) - SCROLLBAR_GUTTER)
+    if not _secureW and math.floor((content:GetWidth() or 0) + 0.5) ~= liveContentW then
+        content:SetWidth(liveContentW)
+    end
+
     local contentWidth = content:GetWidth()
     if contentWidth <= 0 then contentWidth = 280 end
 
@@ -984,7 +998,7 @@ function Tracker:Render()
     local wqRegionH = self:_RenderPinnedEvents(eventsCap) or 0
 
     if f.scroll and not secureLocked then
-        local scrollW = math.max(1, (f:GetWidth() or 0) - 26)
+        local scrollW = math.max(1, (f:GetWidth() or 0) - SCROLLBAR_GUTTER)
         local scrollH = math.min(questContentH, available - wqRegionH)
         if scrollH < 1 then scrollH = 1 end
         f.scroll:SetSize(scrollW, scrollH)

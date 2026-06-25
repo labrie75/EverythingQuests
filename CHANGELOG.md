@@ -5,6 +5,22 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-06-25
+
+The world-quest popout on the world map is now a single docked panel that matches Blizzard's (and ElvUI's) quest-map tabs, and the tracker now resizes correctly when you drag it wider or narrower — the quest list and the scenario/delve banner stay in step. Korean is now fully translated. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### Improvements
+
+- **World Quest map panel** — The world-quest popout on the world map is now a single docked panel (a reward summary plus a scrollable zone list) instead of separate floating boxes, and its pull-tab matches Blizzard's quest-map side tabs — including ElvUI's styling when its quest skin is active. Thanks to Malevi4 for the request.
+
+### Bug Fixes
+
+- **Tracker width** — The quest list now resizes with the tracker when you drag it wider or narrower (it previously stayed frozen at a fixed width), and the scenario / delve banner now lines up with the quest list instead of drifting to the right on a wider tracker. Thanks to Malevi4 for reporting it and helping track down the cause.
+
+### Translations
+
+- **Korean (koKR)** — Now fully translated, thanks to labrie75.
+
 ## [1.25.0] - 2026-06-23
 
 Header bars get more style — a vertical-gradient option and soft, feathered edges — plus a one-click Reset to Defaults for the Appearance tab, which now scrolls. A duplicate "quest ready" popup is fixed, and Korean joins the translations. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

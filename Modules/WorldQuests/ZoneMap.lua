@@ -3,15 +3,11 @@ local L = ns.L
 
 local Z = ns:RegisterSubsystem("WQZoneMap", {})
 
-local PANEL_W      = 240
 local PAD          = 6
-local HEADER_H     = 18
 local ROW_H        = 32
 local ROW_GAP      = 2
 local ICON_SIZE    = 26
 local PIN_TEMPLATE = "EQWorldQuestPinTemplate"
-local MAX_VISIBLE_ROWS = 10
-local BAR_W            = 18
 
 Z.rowPool   = {}
 Z.activeRows = {}
@@ -117,94 +113,27 @@ local function releaseAll()
     end
 end
 
-function Z:Build()
-    if self.frame then return end
-    if not WorldMapFrame then return end
-
-    local f = CreateFrame("Frame", "EQZoneQuestList", WorldMapFrame, "BackdropTemplate")
-    f:SetSize(PANEL_W, 80)
-
-    local Summary = ns:GetSubsystem("WQSummary")
-    if Summary and Summary.frame then
-        f:SetPoint("TOPLEFT",  Summary.frame, "BOTTOMLEFT",  0, -8)
-        f:SetPoint("TOPRIGHT", Summary.frame, "BOTTOMRIGHT", 0, -8)
-    else
-        f:SetPoint("TOPLEFT", WorldMapFrame, "TOPRIGHT", 8, -300)
-    end
-
-    f:SetFrameStrata("HIGH")
-    if WorldMapFrame.GetFrameLevel then
-        f:SetFrameLevel(WorldMapFrame:GetFrameLevel() + 100)
-    end
-
-    local bg = f:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.65)
-
-    local function edge()
-        local t = f:CreateTexture(nil, "BORDER")
-        t:SetColorTexture(0.635, 0.0, 0.039, 0.9)
-        return t
-    end
-    local top = edge(); top:SetHeight(1); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT")
-    local bot = edge(); bot:SetHeight(1); bot:SetPoint("BOTTOMLEFT"); bot:SetPoint("BOTTOMRIGHT")
-    local lt  = edge(); lt:SetWidth(1);   lt:SetPoint("TOPLEFT");     lt:SetPoint("BOTTOMLEFT")
-    local rt  = edge(); rt:SetWidth(1);   rt:SetPoint("TOPRIGHT");    rt:SetPoint("BOTTOMRIGHT")
-
-    f.header = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    f.header:SetPoint("TOP", 0, -PAD)
-    f.header:SetTextColor(1.0, 0.82, 0)
-
-    local scroll = CreateFrame("ScrollFrame", "EQZoneQuestListScroll", f, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT",  f, "TOPLEFT",   PAD,           -(HEADER_H + PAD))
-    scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(PAD + BAR_W), -(HEADER_H + PAD))
-    local list = CreateFrame("Frame", nil, scroll)
-    list:SetSize(PANEL_W - 2 * PAD - BAR_W, 1)
-    scroll:SetScrollChild(list)
-    scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(sf, delta)
-        local range = sf:GetVerticalScrollRange() or 0
-        if range <= 0 then return end
-        local new = (sf:GetVerticalScroll() or 0) - delta * (ROW_H + ROW_GAP)
-        if new < 0 then new = 0 elseif new > range then new = range end
-        sf:SetVerticalScroll(new)
-    end)
-    f.scroll = scroll
-    f.list   = list
-
-    self.frame = f
-end
-
-function Z:Refresh()
-    self:Build()
-    if not self.frame then return end
-
+-- Lays the current zone's world-quest rows into the panel's scroll list and
+-- returns (contentHeight, headerText). Returns (0, nil) when there is nothing to
+-- show (feature off, not a zone map, or no pins), so the panel hides the section.
+function Z:Render(list)
     local DB = ns:GetSubsystem("DB")
     if not (DB and DB.db.profile.worldQuests.enabled ~= false
-            and DB.db.profile.worldQuests.showOnZoneMap
-            and DB.db.profile.worldQuests.popoutOpen) then
-        self.frame:Hide()
-        return
+            and DB.db.profile.worldQuests.showOnZoneMap) then
+        releaseAll(); return 0, nil
     end
-    if not (WorldMapFrame and WorldMapFrame:IsShown()) then
-        self.frame:Hide()
-        return
-    end
+    if not (WorldMapFrame and WorldMapFrame:IsShown()) then releaseAll(); return 0, nil end
 
     local mapID = WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()
-    if not (mapID and mapID > 0) then self.frame:Hide(); return end
+    if not (mapID and mapID > 0) then releaseAll(); return 0, nil end
 
     local mapInfo = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
     local zoneType = (Enum and Enum.UIMapType and Enum.UIMapType.Zone) or 3
-    if not (mapInfo and mapInfo.mapType == zoneType) then
-        self.frame:Hide()
-        return
-    end
+    if not (mapInfo and mapInfo.mapType == zoneType) then releaseAll(); return 0, nil end
 
     local WQ = ns:GetSubsystem("WQWorldMap")
     if not (WQ and WQ.shadow and WQ.shadow.EnumeratePinsByTemplate) then
-        self.frame:Hide()
-        return
+        releaseAll(); return 0, nil
     end
 
     local pins = {}
@@ -214,10 +143,7 @@ function Z:Refresh()
         end
     end
 
-    if #pins == 0 then
-        self.frame:Hide()
-        return
-    end
+    if #pins == 0 then releaseAll(); return 0, nil end
 
     local sortMode = (DB and DB.db.profile.worldQuests.zoneListSort) or "time"
     table.sort(pins, function(a, b)
@@ -229,8 +155,8 @@ function Z:Refresh()
             if ca ~= cb then return ca < cb end
             return (questTitle(a.questID) or "") < (questTitle(b.questID) or "")
         elseif sortMode == "faction" then
-            local fa = (C_QuestLog.GetQuestFactionID and C_QuestLog.GetQuestFactionID(a.questID)) or 0
-            local fb = (C_QuestLog.GetQuestFactionID and C_QuestLog.GetQuestFactionID(b.questID)) or 0
+            local fa = (C_QuestLog and C_QuestLog.GetQuestFactionID and C_QuestLog.GetQuestFactionID(a.questID)) or 0
+            local fb = (C_QuestLog and C_QuestLog.GetQuestFactionID and C_QuestLog.GetQuestFactionID(b.questID)) or 0
             if fa ~= fb then return fa < fb end
             return (questTitle(a.questID) or "") < (questTitle(b.questID) or "")
         else
@@ -243,10 +169,6 @@ function Z:Refresh()
     end)
 
     releaseAll()
-    self.frame:Show()
-    self.frame.header:SetText(L["%s — %d quests"]:format(mapInfo.name, #pins))
-
-    local list = self.frame.list
     local y = 0
     for i = 1, #pins do
         local pin = pins[i]
@@ -267,13 +189,10 @@ function Z:Refresh()
                      and C_TaskQuest.GetQuestTimeLeftMinutes(pin.questID)
         row.timeText:SetText(Util.WQTimeLong(mins))
         row.timeText:SetTextColor(Util.WQTimeColor(mins))
+        row:Show()
 
         y = y + ROW_H + ROW_GAP
     end
 
-    list:SetHeight(math.max(1, y))
-    local scrollH = math.min(y, MAX_VISIBLE_ROWS * (ROW_H + ROW_GAP))
-    self.frame.scroll:SetHeight(math.max(1, scrollH))
-    self.frame.scroll:SetVerticalScroll(0)
-    self.frame:SetHeight(HEADER_H + PAD + scrollH + PAD)
+    return y, L["%s — %d quests"]:format(mapInfo.name, #pins)
 end

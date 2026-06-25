@@ -2,6 +2,20 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.26.0", date = "2026-06-25",
+        sections = {
+            { head = "Improvements", items = {
+                "World Quest map panel — the world-quest popout on the world map is now a single docked panel (a reward summary plus a scrollable zone list) instead of separate floating boxes, and its pull-tab matches Blizzard's quest-map side tabs, including ElvUI's styling when its quest skin is active. Thanks to Malevi4 for the request.",
+            } },
+            { head = "Bug Fixes", items = {
+                "The quest list now resizes with the tracker when you drag it wider or narrower — it previously stayed at a fixed width — and the scenario / delve banner now lines up with the quest list instead of drifting to the right on a wider tracker. Thanks to Malevi4 for reporting it and helping track down the cause.",
+            } },
+            { head = "Translations", items = {
+                "Korean (koKR) is now fully translated, thanks to labrie75.",
+            } },
+        },
+    },
+    {
         version = "1.25.0", date = "2026-06-23",
         sections = {
             { head = "New Features", items = {
