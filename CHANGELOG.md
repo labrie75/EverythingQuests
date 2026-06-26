@@ -5,6 +5,23 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.27.0] - 2026-06-26
+
+The Chain Guide now covers **Void Acropolis** — its quest chains are mapped out so you can follow them like every other Midnight zone. Plus clearer right-click quest options, finer-grained Appearance sliders, and a world-quest panel that no longer overlaps its pull-tab. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Void Acropolis (Chain Guide)** — The Chain Guide now includes the Void Acropolis zone, with its quest chains — *Assault and Strike Back: Val* and *Umbral Blitz* — laid out so you can follow them step by step like the rest of the Midnight zones.
+
+### Improvements
+
+- **Clearer quest menu** — The two right-click options on a tracked quest now read more clearly: **Open in Map & Quest Log** (the game's quest map) and **Pop Out Quest Details** (Everything Quests' own detail panel).
+- **Finer Appearance sliders** — The Appearance sliders (font sizes, shadows, border thickness, bar height, and so on) now adjust in 0.5 steps for more precise tuning.
+
+### Bug Fixes
+
+- **World Quest panel overlap** — The world-quest map panel no longer overlaps its pull-tab; the panel now sits clear of the tab.
+
 ## [1.26.0] - 2026-06-25
 
 The world-quest popout on the world map is now a single docked panel that matches Blizzard's (and ElvUI's) quest-map tabs, and the tracker now resizes correctly when you drag it wider or narrower — the quest list and the scenario/delve banner stay in step. Korean is now fully translated. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

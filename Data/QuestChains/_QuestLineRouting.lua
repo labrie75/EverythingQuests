@@ -85,5 +85,7 @@ ns.QUESTLINE_ROUTING = {
     [6230] = { cat = ns.CAT.REVELATIONS, name = "Ghosts of the Past" },
     [6231] = { cat = ns.CAT.REVELATIONS, name = "Original Sin" },
     [6232] = { cat = ns.CAT.REVELATIONS, name = "The Battle for Atal'Utek" },
+    [6272] = { cat = ns.CAT.VOID_ACROPOLIS, name = "Umbral Blitz" },
+    [6309] = { cat = ns.CAT.VOID_ACROPOLIS, name = "Assault and Strike Back: Val" },
     -- Campaign spine is sourced live via C_CampaignInfo in CampaignSource.lua; do not add campaign questlines here.
 }

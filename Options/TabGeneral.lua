@@ -152,12 +152,12 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         L["Where the quest icon + count sits relative to the enemy nameplate. Move it closer to the health bar to taste."])
 
     local szGet, szSet = npLayoutSetting("npIconSize")
-    local npSize = Options:CreateSlider(content, L["Icon size"], 12, 48, 1, szGet, szSet)
+    local npSize = Options:CreateSlider(content, L["Icon size"], 12, 48, 0.5, szGet, szSet)
     npSize:SetPoint("TOPLEFT", npPlace, "BOTTOMLEFT", 0, -12)
     npSize:SetWidth(280)
 
     local txtGet, txtSet = npLayoutSetting("npIconTextSize")
-    local npText = Options:CreateSlider(content, L["Count text size"], 8, 24, 1, txtGet, txtSet)
+    local npText = Options:CreateSlider(content, L["Count text size"], 8, 24, 0.5, txtGet, txtSet)
     npText:SetPoint("TOPLEFT", npSize, "BOTTOMLEFT", 0, -16)
     npText:SetWidth(280)
 

@@ -55,11 +55,15 @@ function providerMixin:_DoRefresh()
 
     self:_AcquirePins()
 
-    -- Always refresh the popout panel + tab while the map is open so they
-    -- reflect the current pin set and self-hide when the pins were cleared
-    -- (e.g. the player turned world-quest pins off) instead of lingering.
-    local Panel = ns:GetSubsystem("WQPanel")
-    if Panel and Panel.Refresh then Panel:Refresh() end
+    -- Only rebuild the panel while it's open; when closed it's already hidden (the
+    -- toggle hid it), so refreshing it is wasted tainted work on the open map. The
+    -- open case still self-hides it if the pins were cleared (WQ pins turned off).
+    local DB = ns:GetSubsystem("DB")
+    if DB and DB.db.profile.worldQuests.popoutOpen then
+        local Panel = ns:GetSubsystem("WQPanel")
+        if Panel and Panel.Refresh then Panel:Refresh() end
+    end
+    -- Tab owns its own show/hide + content gate, so refresh it every cycle.
     local Tab = ns:GetSubsystem("WQTab")
     if Tab and Tab.Refresh then Tab:Refresh() end
 end

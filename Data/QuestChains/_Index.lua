@@ -20,6 +20,7 @@ ns.CAT = {
     ARATOR           = 1105,
     WAR_LIGHT_SHADOW = 1106,
     REVELATIONS      = 1107,
+    VOID_ACROPOLIS   = 1108,
 }
 
 DBmod:RegisterCategory(ns.CAT.CAMPAIGN,         { expansion = ns.EXP_MIDNIGHT, name = "Midnight Campaign", mapIDs = {}, campaignID = 270, order = 10 })
@@ -30,3 +31,4 @@ DBmod:RegisterCategory(ns.CAT.HARANDAR,         { expansion = ns.EXP_MIDNIGHT, n
 DBmod:RegisterCategory(ns.CAT.ARATOR,           { expansion = ns.EXP_MIDNIGHT, name = "Arator",         mapIDs = {}, order = 60 })
 DBmod:RegisterCategory(ns.CAT.VOIDSTORM,        { expansion = ns.EXP_MIDNIGHT, name = "Voidstorm",      mapIDs = { 2405 }, order = 70 })
 DBmod:RegisterCategory(ns.CAT.REVELATIONS,      { expansion = ns.EXP_MIDNIGHT, name = "Revelations (12.0.7)", mapIDs = { 2424 }, order = 80 })
+DBmod:RegisterCategory(ns.CAT.VOID_ACROPOLIS,   { expansion = ns.EXP_MIDNIGHT, name = "Void Acropolis", mapIDs = { 2599 }, order = 90 })

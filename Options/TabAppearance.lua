@@ -84,12 +84,12 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     fontDD:SetWidth(280)
 
     local sizeGet, sizeSet = trackerSetting("fontSize")
-    local sizeSlider = Options:CreateSlider(content, L["Font Size"], 8, 24, 1, sizeGet, sizeSet)
+    local sizeSlider = Options:CreateSlider(content, L["Font Size"], 8, 24, 0.5, sizeGet, sizeSet)
     sizeSlider:SetPoint("TOPLEFT", fontDD, "BOTTOMLEFT", 0, -16)
     sizeSlider:SetWidth(280)
 
     local titleSizeGet, titleSizeSet = trackerSetting("titleSizeDelta")
-    local titleSizeSlider = Options:CreateSlider(content, L["Title Size Offset"], -6, 12, 1, titleSizeGet, titleSizeSet)
+    local titleSizeSlider = Options:CreateSlider(content, L["Title Size Offset"], -6, 12, 0.5, titleSizeGet, titleSizeSet)
     titleSizeSlider:SetPoint("TOPLEFT", sizeSlider, "BOTTOMLEFT", 0, -16)
     titleSizeSlider:SetWidth(280)
     Options:AttachTooltip(titleSizeSlider, L["Title Size Offset"],
@@ -131,7 +131,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     shadowPicker:SetPoint("LEFT", shadowCheck, "RIGHT", 120, 0)
 
     local shStrengthGet, shStrengthSet = trackerSetting("textShadowStrength")
-    local shadowSizeSlider = Options:CreateSlider(content, L["Shadow Size"], 1, 6, 1, shStrengthGet, shStrengthSet)
+    local shadowSizeSlider = Options:CreateSlider(content, L["Shadow Size"], 1, 6, 0.5, shStrengthGet, shStrengthSet)
     shadowSizeSlider:SetPoint("TOPLEFT", shadowCheck, "BOTTOMLEFT", 0, -14)
     shadowSizeSlider:SetWidth(280)
     Options:AttachTooltip(shadowSizeSlider, L["Shadow Size"],
@@ -159,7 +159,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     scShadowPicker:SetPoint("LEFT", scShadowCheck, "RIGHT", 120, 0)
 
     local scStrGet, scStrSet = scenarioSetting("scenarioTextShadowStrength")
-    local scShadowSizeSlider = Options:CreateSlider(content, L["Shadow Size"], 1, 6, 1, scStrGet, scStrSet)
+    local scShadowSizeSlider = Options:CreateSlider(content, L["Shadow Size"], 1, 6, 0.5, scStrGet, scStrSet)
     scShadowSizeSlider:SetPoint("TOPLEFT", scShadowCheck, "BOTTOMLEFT", 0, -14)
     scShadowSizeSlider:SetWidth(280)
     Options:AttachTooltip(scShadowSizeSlider, L["Shadow Size"],
@@ -179,7 +179,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         L["Positions the scenario / delve banner within the tracker. Left lines it up with the quest text, Center keeps it centered (the default), and Right pushes it to the tracker's right edge."])
 
     local scSizeGet, scSizeSet = scenarioRenderSetting("scenarioTextSizeDelta")
-    local scSizeSlider = Options:CreateSlider(content, L["Banner Text Size"], -4, 6, 1, scSizeGet, scSizeSet)
+    local scSizeSlider = Options:CreateSlider(content, L["Banner Text Size"], -4, 6, 0.5, scSizeGet, scSizeSet)
     scSizeSlider:SetPoint("TOPLEFT", scAlignDD, "BOTTOMLEFT", 0, -16)
     scSizeSlider:SetWidth(280)
     Options:AttachTooltip(scSizeSlider, L["Banner Text Size"],
@@ -225,7 +225,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     alignSwatchTo(borderPicker, bgPicker)
 
     local bThickGet, bThickSet = trackerSetting("borderSize")
-    local borderThickSlider = Options:CreateSlider(content, L["Border Thickness"], 1, 5, 1, bThickGet, bThickSet)
+    local borderThickSlider = Options:CreateSlider(content, L["Border Thickness"], 1, 5, 0.5, bThickGet, bThickSet)
     borderThickSlider:SetPoint("TOPLEFT", borderCheck, "BOTTOMLEFT", 0, -20)
     borderThickSlider:SetWidth(280)
 
@@ -270,14 +270,14 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     hbSoftCheck:SetPoint("LEFT", hbStyleDD.button, "RIGHT", 24 + (hbSoftCheck.label:GetStringWidth() or 70), 1)
 
     local hbHeightGet, hbHeightSet = headerBarSetting("headerBarHeight")
-    local hbHeightSlider = Options:CreateSlider(content, L["Bar Height"], 6, 26, 1, hbHeightGet, hbHeightSet)
+    local hbHeightSlider = Options:CreateSlider(content, L["Bar Height"], 6, 26, 0.5, hbHeightGet, hbHeightSet)
     hbHeightSlider:SetPoint("TOPLEFT", hbStyleDD, "BOTTOMLEFT", 0, -14)
     hbHeightSlider:SetWidth(280)
     Options:AttachTooltip(hbHeightSlider, L["Bar Height"],
         L["How tall the section-header bar is. The bar is centred on the header row, so larger values fill more of it."])
 
     local hbSoftStrGet, hbSoftStrSet = headerBarSetting("headerBarSoftEdgeStrength")
-    local hbSoftSlider = Options:CreateSlider(content, L["Edge Softness"], 1, 10, 1, hbSoftStrGet, hbSoftStrSet)
+    local hbSoftSlider = Options:CreateSlider(content, L["Edge Softness"], 1, 10, 0.5, hbSoftStrGet, hbSoftStrSet)
     hbSoftSlider:SetPoint("TOPLEFT", hbHeightSlider, "BOTTOMLEFT", 0, -14)
     hbSoftSlider:SetWidth(280)
     Options:AttachTooltip(hbSoftSlider, L["Edge Softness"],
@@ -324,7 +324,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     alignSwatchTo(thumbColorPicker, sbPicker)
 
     local twGet, twSet = trackerSetting("scrollBarThumbWidth")
-    local thumbWidthSlider = Options:CreateSlider(content, L["Thumb Width"], 4, 16, 1, twGet, twSet)
+    local thumbWidthSlider = Options:CreateSlider(content, L["Thumb Width"], 4, 16, 0.5, twGet, twSet)
     thumbWidthSlider:SetPoint("TOPLEFT", thumbSkinCheck, "BOTTOMLEFT", 0, -14)
     thumbWidthSlider:SetWidth(280)
 
@@ -436,7 +436,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
-    local spacingSlider = Options:CreateSlider(content, L["Block Spacing"], 0, 12, 1, spacingGet, spacingSet)
+    local spacingSlider = Options:CreateSlider(content, L["Block Spacing"], 0, 12, 0.5, spacingGet, spacingSet)
     spacingSlider:SetPoint("TOPLEFT", scaleSlider, "BOTTOMLEFT", 0, -16)
     spacingSlider:SetWidth(280)
 

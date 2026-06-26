@@ -494,8 +494,8 @@ L["Pin to tracker"] = "Закрепить в трекере"
 L["Unfocus"] = "Снять фокус"
 L["Focus"] = "Фокус"
 L["Get Directions"] = "Проложить маршрут"
-L["Show in Quest Log"] = "Показать в журнале заданий"
-L["Open Quest Details"] = "Подробности задания"
+L["Open in Map & Quest Log"] = "Открыть на карте и в журнале заданий"
+L["Pop Out Quest Details"] = "Открепить подробности задания"
 L["Abandon Quest"] = "Отменить задание"
 
 -- ─── Modules/Tracker/Scenario.lua ───

@@ -507,8 +507,8 @@ L["Pin to tracker"] = true
 L["Unfocus"] = true
 L["Focus"] = true
 L["Get Directions"] = true
-L["Show in Quest Log"] = true
-L["Open Quest Details"] = true
+L["Open in Map & Quest Log"] = true
+L["Pop Out Quest Details"] = true
 L["Abandon Quest"] = true
 L["Drag the top edge of the tracker to move it.\n\nType |cffEBB706/eqs|r for options."] = true
 

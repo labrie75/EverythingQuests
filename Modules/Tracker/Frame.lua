@@ -1283,7 +1283,7 @@ function Tracker:ShowBlockMenu(block, questID)
             if WP and WP.GoTo then WP:GoTo(questID) end
         end)
 
-        root:CreateButton(L["Show in Quest Log"], function()
+        root:CreateButton(L["Open in Map & Quest Log"], function()
             if C_AddOns and C_AddOns.LoadAddOn then
                 C_AddOns.LoadAddOn("Blizzard_QuestLog")
             end
@@ -1294,7 +1294,7 @@ function Tracker:ShowBlockMenu(block, questID)
             end
         end)
 
-        root:CreateButton(L["Open Quest Details"], function()
+        root:CreateButton(L["Pop Out Quest Details"], function()
             openQuestDetailsPopup(questID)
         end)
 

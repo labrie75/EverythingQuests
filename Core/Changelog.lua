@@ -2,6 +2,21 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.27.0", date = "2026-06-26",
+        sections = {
+            { head = "New Features", items = {
+                "Chain Guide — added the Void Acropolis zone, with its quest chains (Assault and Strike Back: Val, and Umbral Blitz) now mapped out so you can follow them like the rest of the Midnight zones.",
+            } },
+            { head = "Improvements", items = {
+                "The two right-click options on a tracked quest now read more clearly: \"Open in Map & Quest Log\" (the game's quest map) and \"Pop Out Quest Details\" (Everything Quests' own detail panel).",
+                "Appearance sliders (font sizes, shadows, border thickness, bar height, and so on) now adjust in finer 0.5 steps for more precise tuning.",
+            } },
+            { head = "Bug Fixes", items = {
+                "The world-quest map panel no longer overlaps its pull-tab — the panel now sits clear of the tab.",
+            } },
+        },
+    },
+    {
         version = "1.26.0", date = "2026-06-25",
         sections = {
             { head = "Improvements", items = {

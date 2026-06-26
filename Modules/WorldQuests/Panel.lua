@@ -4,7 +4,9 @@ local L = ns.L
 local P = ns:RegisterSubsystem("WQPanel", {})
 
 local PANEL_W     = 250
-local LEFT_GAP    = 28
+-- Offset past the WQ side-tab on the map's right edge (TAB_W ~43) so the docked
+-- panel doesn't overlap the tab button.
+local LEFT_GAP    = 50
 local TOP_INSET   = 4
 local BOT_INSET   = 4
 local PAD         = 6

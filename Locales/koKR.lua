@@ -509,8 +509,8 @@ L["Pin to tracker"] = "추적기에 고정"
 L["Unfocus"] = "추적 해제"
 L["Focus"] = "추적"
 L["Get Directions"] = "경로 안내"
-L["Show in Quest Log"] = "퀘스트 일지에서 보기"
-L["Open Quest Details"] = "퀘스트 상세 정보 열기"
+L["Open in Map & Quest Log"] = "지도 및 퀘스트 일지에서 열기"
+L["Pop Out Quest Details"] = "퀘스트 상세 정보 창 띄우기"
 L["Abandon Quest"] = "퀘스트 포기"
 
 -- ─── Modules/Tracker/Profession.lua ───
