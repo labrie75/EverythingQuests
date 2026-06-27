@@ -41,11 +41,17 @@ local function pickAtlases(textureKit)
 end
 
 local function categoryLabel(scenarioType, textureKit, scenarioName, instType, diffID)
-    -- scenarioType 8 = Delves. Verified live via C_Scenario.GetInfo /
-    -- C_ScenarioInfo.GetScenarioInfo inside a Midnight delve; the legacy
-    -- textureKit return is nil there, which is why a kit-name check alone
-    -- always fell through to the generic "Scenario" label.
-    if scenarioType == 8 then return "Delves" end
+    -- scenarioType 8 is the Delve template, but Ritual Sites (the Void ritual-
+    -- site activity, e.g. Broken Throne) REUSE it while Blizzard's own UI calls
+    -- them "Ritual Site". They're separable by kit: a ritual site reports a
+    -- non-delve "themed-scenario" kit (live: type 8 / "themed-scenario" / diff
+    -- 12); a real Midnight delve reports a "delves-*" kit or nil.
+    if scenarioType == 8 then
+        if textureKit and textureKit ~= "" and not textureKit:lower():find("delve") then
+            return "Ritual Site"
+        end
+        return "Delves"
+    end
     if textureKit and textureKit:lower():find("delve") then return "Delves" end
     if scenarioType == 1 then return "Mythic+" end
     if scenarioType == 5 then return "Dungeon" end
@@ -270,6 +276,24 @@ function S:ApplyBannerFont()
     end
 end
 
+function S:_SetContainerHeight(h)
+    local container = self.frame
+    if not container then return end
+    -- The quest scroll is anchored to this container's BOTTOM (Tracker/Frame.lua),
+    -- so resizing the container moves the secure item buttons that sit below it →
+    -- ADDON_ACTION_BLOCKED in combat. Defer to combat end like the main render gate.
+    local IB = ns:GetSubsystem("TrackerItemButtons")
+    if InCombatLockdown() and IB and IB.HasSecureButtons and IB:HasSecureButtons() then
+        local Ev = ns:GetSubsystem("Events")
+        if Ev and Ev.RunWhenOutOfCombat then
+            self._deferredRefresh = self._deferredRefresh or function() self:Refresh() end
+            Ev:RunWhenOutOfCombat("scenarioRefresh", self._deferredRefresh)
+        end
+        return
+    end
+    container:SetHeight(math.max(1, h))
+end
+
 function S:Refresh()
     self:Build()
     local container = self.frame
@@ -290,7 +314,7 @@ function S:Refresh()
         if banner.WidgetContainer.UnregisterForWidgetSet then
             banner.WidgetContainer:UnregisterForWidgetSet()
         end
-        container:SetHeight(1)
+        self:_SetContainerHeight(1)
         self._sType, self._sKit, self._sName, self._sInst = nil, nil, nil, nil
         return
     end
@@ -475,7 +499,7 @@ function S:Refresh()
         h = h + CRITERIA_LINE_GAP + self.activeCriteria[i]:GetHeight()
     end
     h = h + 6
-    container:SetHeight(math.max(1, h))
+    self:_SetContainerHeight(h)
 end
 
 function S:OnEnable()

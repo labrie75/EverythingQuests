@@ -2,6 +2,23 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.28.0", date = "2026-06-27",
+        sections = {
+            { head = "New Features", items = {
+                "Chain Guide — added The Sunstrider Omnium (the Magisters' Terrace questline that unlocks the Omnium Folio) as its own zone, with its full quest chain mapped out like the rest of the Midnight content.",
+                "Chain Guide map pins — quest-giver map pins now show for The Sunstrider Omnium and Void Acropolis chains, so you can find each step on the world map (Void Acropolis had none before).",
+            } },
+            { head = "Improvements", items = {
+                "New addon icon — the minimap button, Titan Panel, and AddOns list now use a new gold crest in place of the old book.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Tracker sections no longer crowd together — with a lot of quests, achievements, and world quests tracked at once, a section's header could appear with its contents cut off. The quest list now keeps its sections intact, and the World Quests area yields space and scrolls instead.",
+                "Ritual Sites (such as Broken Throne) now show \"Ritual Site\" in the tracker's scenario header instead of \"Delves\" — they run on the delve system, but the addon now matches Blizzard's own label.",
+                "Fixed a combat error (\"action blocked\") that could appear when entering a Ritual Site or scenario while in combat with a usable quest item tracked.",
+            } },
+        },
+    },
+    {
         version = "1.27.0", date = "2026-06-26",
         sections = {
             { head = "New Features", items = {

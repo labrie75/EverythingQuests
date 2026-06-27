@@ -5,6 +5,25 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.28.0] - 2026-06-27
+
+A new Chain Guide questline — **The Sunstrider Omnium** — plus quest-giver map pins for it and Void Acropolis, a fresh addon icon, a tracker layout fix so sections no longer crowd together, and correct "Ritual Site" labelling. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **The Sunstrider Omnium (Chain Guide)** — Added the Magisters' Terrace questline that unlocks the Omnium Folio as its own Chain Guide zone, with its full chain mapped out like the rest of the Midnight content.
+- **Map pins for more chains** — Quest-giver map pins now show for *The Sunstrider Omnium* and *Void Acropolis* chains, so you can find each step on the world map (Void Acropolis had none before).
+
+### Improvements
+
+- **New addon icon** — The minimap button, Titan Panel, and AddOns list now use a new gold crest in place of the old book.
+
+### Bug Fixes
+
+- **Tracker sections no longer crowd together** — With a lot of quests, achievements, and world quests tracked at once, a section's header could appear with its contents cut off. The quest list now keeps its sections intact, and the World Quests area yields space and scrolls instead.
+- **"Ritual Site" label** — Ritual Sites such as *Broken Throne* now show **Ritual Site** in the tracker's scenario header instead of **Delves**. They run on the delve system under the hood, so the game reported them as delves — the tracker now matches Blizzard's own wording.
+- **Combat error in Ritual Sites** — Entering a Ritual Site or scenario while in combat (with a usable quest item tracked) could throw an "action blocked" error. The tracker now waits until combat ends to resize.
+
 ## [1.27.0] - 2026-06-26
 
 The Chain Guide now covers **Void Acropolis** — its quest chains are mapped out so you can follow them like every other Midnight zone. Plus clearer right-click quest options, finer-grained Appearance sliders, and a world-quest panel that no longer overlaps its pull-tab. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

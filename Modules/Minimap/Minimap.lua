@@ -10,7 +10,7 @@ function M:OnInitialize()
     self.dataObject = LDB:NewDataObject("EverythingQuests", {
         type = "launcher",
         text = "EQ",
-        icon = "Interface\\Icons\\INV_Misc_Book_09",
+        icon = "Interface\\AddOns\\EverythingQuests\\Media\\Textures\\eq-logo-v3.tga",
         OnClick = function(_, button)
             if button == "RightButton" then
                 local Options = ns:GetSubsystem("Options")

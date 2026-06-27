@@ -23,3 +23,4 @@ ignore:
   - .claude
   - .luarc.json
   - .release_changelog.md
+  - Media/Textures/eq-logo-source.png

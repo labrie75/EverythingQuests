@@ -2,10 +2,10 @@
 ## Title: Everything Quests
 ## Notes: Unified replacement for the Blizzard quest experience — tracker, quest log book, world map overlays, and a Midnight chain guide.
 ## Author: Wheelbarrel00
-## Version: 1.27.0
+## Version: 1.28.0
 ## SavedVariables: EverythingQuestsDB, EverythingQuestsChainCache, EverythingQuestsHistory, EverythingQuestsHistoryBackups
 ## SavedVariablesPerCharacter: EverythingQuestsCharDB
-## IconTexture: Interface\Icons\INV_Misc_Book_09
+## IconTexture: Interface\AddOns\EverythingQuests\Media\Textures\eq-logo-v3
 ## OptionalDeps: TitanClassic, ChocolateBar, ElvUI
 ## X-Curse-Project-ID: 1544648
 ## X-Wago-ID:

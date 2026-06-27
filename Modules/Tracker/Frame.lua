@@ -867,6 +867,7 @@ function Tracker:Render()
     local gap = getBlockGap()
 
     local y = 0
+    local sectionTops = {}
     local sections = self.sectionList or {}
 
     do
@@ -893,7 +894,6 @@ function Tracker:Render()
     local available = (f:GetHeight() or 0) - DRAG_HANDLE_H - scenarioH - 2 - (GRIP_SIZE + 2)
     if available < 1 then available = 1 end
     local fraction  = (cfg and cfg.worldQuestsPinnedMaxFraction) or WQ_PIN_FRACTION
-    local eventsCap = math.floor(available * fraction)
 
     for _, def in ipairs(sections) do
       if def.id ~= "events" then
@@ -973,6 +973,7 @@ function Tracker:Render()
                         if headerFrame.count then headerFrame.count:SetText(zcount or "") end
                     end
                 end
+                sectionTops[#sectionTops + 1] = y
                 y = y + SECTION_H + 2 + sectionHeight + gap
             else
                 headerFrame:Hide()
@@ -982,6 +983,15 @@ function Tracker:Render()
     end
 
     local questContentH = y
+
+    -- Quest list gets vertical-space priority so its trailing section
+    -- (Achievements / in-tracker zone bar) is never shown header-without-body.
+    -- The WQ region has one header and scrolls cleanly, so it yields; wqFloor
+    -- keeps it from vanishing and the fraction still caps it when quests are short.
+    local wqFloor    = SECTION_H + 2 + 40
+    local questWants = math.min(questContentH, math.max(1, available - wqFloor))
+    local eventsCap  = math.max(0, math.min(math.floor(available * fraction), available - questWants))
+
     local _IB = ns:GetSubsystem("TrackerItemButtons")
     local secureLocked = InCombatLockdown()
         and _IB and _IB.HasSecureButtons and _IB:HasSecureButtons()
@@ -997,10 +1007,22 @@ function Tracker:Render()
 
     local wqRegionH = self:_RenderPinnedEvents(eventsCap) or 0
 
+    -- Quest viewport = leftover after WQ's actual height, then snap the clip UP to
+    -- a section boundary so a section header never appears with its body cut off.
+    local scrollH = math.min(questContentH, available - wqRegionH)
+    if scrollH < questContentH then
+        for i = #sectionTops, 1, -1 do
+            local top = sectionTops[i]
+            if top > 0 and top < scrollH then
+                if (sectionTops[i + 1] or questContentH) > scrollH then scrollH = top end
+                break
+            end
+        end
+    end
+    if scrollH < 1 then scrollH = 1 end
+
     if f.scroll and not secureLocked then
         local scrollW = math.max(1, (f:GetWidth() or 0) - SCROLLBAR_GUTTER)
-        local scrollH = math.min(questContentH, available - wqRegionH)
-        if scrollH < 1 then scrollH = 1 end
         f.scroll:SetSize(scrollW, scrollH)
         if f.scroll.UpdateScrollChildRect then f.scroll:UpdateScrollChildRect() end
     end
@@ -1028,8 +1050,7 @@ function Tracker:Render()
             f.bgFrame:Hide()
             f.background:Hide()
         else
-            local sH = math.min(questContentH, available - wqRegionH)
-            if sH < 1 then sH = 1 end
+            local sH = math.max(1, scrollH)
             local neededHeight = DRAG_HANDLE_H + scenarioH + 2 + sH + 2 + wqRegionH + GRIP_SIZE + 6
             f.bgFrame:SetHeight(math.min(neededHeight, maxH))
             if cfg.showBackground then f.background:Show() else f.background:Hide() end

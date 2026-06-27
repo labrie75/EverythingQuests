@@ -3,27 +3,33 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.25.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.25.0"
+local FEATURE_POPUP_VERSION = "1.28.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.28.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706New: header bar styles and soft edges|r
-The Appearance tab's |cffffffffHeader bar|r gets more control. Choose |cffffffffHeader Bar 1|r (a horizontal gradient) or |cffffffffHeader Bar 2|r (a vertical one), and turn on |cffffffffSoft edges|r to feather the bar so it blends into the UI instead of sitting in a hard box. An |cffffffffEdge Softness|r slider tunes how soft those edges are. Thanks to Malevi4 for the requests.
+|cffEBB706New look: a fresh icon|r
+Everything Quests has a new icon — the minimap button, Titan Panel, and AddOns list now show a gold crest in place of the old book. Same addon, new badge.
 
-|cffEBB706New: Reset to Defaults for Appearance|r
-A |cffffffffReset to Defaults|r button at the top of the Appearance tab restores just the look — fonts, colours, shadows, header bar, scroll-bar skin, and zone bar — to defaults, leaving your filters, sections, and sounds untouched.
+|cffEBB706New chain: The Sunstrider Omnium|r
+The Chain Guide now includes |cffffffffThe Sunstrider Omnium|r — the Magisters' Terrace questline that unlocks the Omnium Folio — as its own zone, with the full chain mapped out like the rest of the Midnight content.
 
-|cffEBB706Appearance tab now scrolls|r
-The Appearance tab scrolls inside the Options window, so it's shorter and nothing crowds the bottom of the screen.
+|cffEBB706Map pins for more chains|r
+Quest-giver map pins now show for the |cffffffffSunstrider Omnium|r and |cffffffffVoid Acropolis|r chains, so you can find each step on the world map. Void Acropolis had none before.
 
-|cffEBB706Fixed: duplicate "quest ready" popup|r
-A campaign quest that was ready to turn in could show up twice — once under Campaign and once under Quests. It now appears once, in the right place.
+|cffEBB706Fixed: tracker sections crowding together|r
+When you had a lot of quests, achievements, and world quests tracked at once, a section's header could appear with its contents cut off. The quest list now keeps its sections intact, and the World Quests area gives up space and scrolls instead.
 
-|cffEBB706Korean is here|r
-Everything Quests is now available in |cffffffffKorean|r, thanks to |cfffffffflabrie75|r — most of the addon is translated, with more on the way. French and Russian are up to date too, with thanks to |cffffffffZox|r and |cffffffffMalevi4|r.
+|cffEBB706Fixed: "Ritual Site" label|r
+Ritual Sites like |cffffffffBroken Throne|r now read |cffffffffRitual Site|r in the tracker instead of |cffffffffDelves|r. They run on the delve system under the hood, so the game reported them as delves — the tracker now matches Blizzard's own wording.
+
+|cffEBB706Fixed: a combat error in Ritual Sites|r
+Entering a Ritual Site or scenario while in combat (with a usable quest item tracked) could throw an "action blocked" error. The tracker now waits until combat ends to resize, so it no longer fires.
+
+|cffEBB706Thanks for your patience|r
+There have been a lot of updates lately while the Midnight content gets filled in — sorry for the frequency, and thanks for sticking with it.
 
 |cffEBB706Found a bug? Please tell me|r
 If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.
