@@ -305,6 +305,105 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Lists every WQ in your zone without tracking each."])
     autoWQCheck:SetPoint("TOPLEFT", wqCheck, "BOTTOMLEFT", 0, -2)
 
+    local orderHeader = Options:CreateSectionHeader(content, L["Section Order"])
+    orderHeader:SetPoint("TOPLEFT", autoWQCheck, "BOTTOMLEFT", 0, -14)
+    Options:AttachTooltip(orderHeader, L["Section Order"],
+        L["Rearrange the tracker's sections with the arrows below. A section only appears on the tracker while it has something in it, so reordering an empty section won't look like anything changed. World Quests scroll in their own panel and can only sit at the very top or bottom \226\128\148 use the Top/Bottom control."])
+
+    local WQ_POS_OPTIONS = {
+        { value = "top",    label = L["Top"]    },
+        { value = "bottom", label = L["Bottom"] },
+    }
+    local wqPosGet = function()
+        local DB = ns:GetSubsystem("DB")
+        return DB and (DB.db.profile.tracker.worldQuestsPosition or "bottom")
+    end
+    local wqPosSet = function(value)
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker and Tracker.SetWorldQuestsPosition then Tracker:SetWorldQuestsPosition(value) end
+    end
+    local wqPos = Options:CreateRadioGroup(content, L["World Quests position"],
+        WQ_POS_OPTIONS, wqPosGet, wqPosSet, 300, 14,
+        L["World Quests position"],
+        L["Where the World Quests panel sits on the tracker. |cffffffffTop|r puts it above your quests; |cffffffffBottom|r keeps it below your quests (the default). World Quests scroll in their own capped panel, which is why they can't be mixed in between the other sections."])
+    wqPos:SetPoint("TOPLEFT", orderHeader, "BOTTOMLEFT", 0, -8)
+
+    local SECTION_ROW_LABELS = {
+        zoneprogress = L["Zone Progress"],
+        campaign     = L["Campaign"],
+        quests       = L["Quests"],
+        profession   = L["Profession"],
+        endeavors    = L["Endeavors"],
+        achievements = L["Achievements"],
+    }
+    local ORDER_ROW_H = 24
+    local orderList = CreateFrame("Frame", nil, content)
+    orderList:SetPoint("TOPLEFT", wqPos, "BOTTOMLEFT", 0, -8)
+    orderList:SetSize(300, ORDER_ROW_H)
+
+    local function makeOrderArrow(parent, dir)
+        local b = CreateFrame("Button", nil, parent)
+        b:SetSize(18, 18)
+        b:SetNormalTexture("Interface\\Buttons\\Arrow-" .. dir .. "-Up")
+        b:SetPushedTexture("Interface\\Buttons\\Arrow-" .. dir .. "-Down")
+        b:SetDisabledTexture("Interface\\Buttons\\Arrow-" .. dir .. "-Disabled")
+        local isUp = (dir == "Up")
+        b:HookScript("OnEnter", function(self2)
+            local r = self2:GetParent()
+            local name = (r and SECTION_ROW_LABELS[r.sectionID]) or ""
+            GameTooltip:SetOwner(self2, "ANCHOR_RIGHT")
+            -- SetText arg 5 is alpha (not wrap); pass 1 or the line can render invisible.
+            GameTooltip:SetText((isUp and L["Move %s up"] or L["Move %s down"]):format(name), 1, 1, 1, 1, true)
+            GameTooltip:AddLine(L["Reorders where this section sits in the tracker. A section only shows while it has something in it, so empty sections won't visibly move."], 0.82, 0.82, 0.82, true)
+            GameTooltip:Show()
+        end)
+        b:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        return b
+    end
+
+    local orderRows = {}
+    local function renderOrderRows()
+        local Tracker = ns:GetSubsystem("Tracker")
+        local order = (Tracker and Tracker.GetInContentOrder and Tracker:GetInContentOrder())
+                      or { "zoneprogress", "campaign", "quests", "profession", "endeavors", "achievements" }
+        for _, r in ipairs(orderRows) do r:Hide() end
+        for i, id in ipairs(order) do
+            local row = orderRows[i]
+            if not row then
+                row = CreateFrame("Frame", nil, orderList)
+                row:SetHeight(ORDER_ROW_H)
+                row.up = makeOrderArrow(row, "Up")
+                row.up:SetPoint("LEFT", 0, 0)
+                row.down = makeOrderArrow(row, "Down")
+                row.down:SetPoint("LEFT", row.up, "RIGHT", 3, 0)
+                row.label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.label:SetPoint("LEFT", row.down, "RIGHT", 8, 0)
+                row.label:SetTextColor(1, 1, 1)
+                orderRows[i] = row
+            end
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT",  orderList, "TOPLEFT",  0, -(i - 1) * ORDER_ROW_H)
+            row:SetPoint("TOPRIGHT", orderList, "TOPRIGHT", 0, -(i - 1) * ORDER_ROW_H)
+            row.sectionID = id
+            row.label:SetText(SECTION_ROW_LABELS[id] or id)
+            row.up:SetEnabled(i > 1)
+            row.down:SetEnabled(i < #order)
+            row.up:SetScript("OnClick", function()
+                local T = ns:GetSubsystem("Tracker")
+                if T and T.MoveSection then T:MoveSection(id, -1) end
+                renderOrderRows()
+            end)
+            row.down:SetScript("OnClick", function()
+                local T = ns:GetSubsystem("Tracker")
+                if T and T.MoveSection then T:MoveSection(id, 1) end
+                renderOrderRows()
+            end)
+            row:Show()
+        end
+        orderList:SetHeight(math.max(1, #order * ORDER_ROW_H))
+    end
+    renderOrderRows()
+
     local zpHeader = Options:CreateSectionHeader(content, L["Zone Progress Bar"])
     zpHeader:SetPoint("TOPLEFT", soundDD, "BOTTOMLEFT", 0, -16)
 

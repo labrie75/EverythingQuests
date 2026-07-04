@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.28.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.29.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)
@@ -318,7 +318,11 @@ function Options:CreateCheckbox(parent, label, getter, setter, tooltip)
     return cb
 end
 
-function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWidth, pad)
+-- tipTitle/tipBody attach a hover tooltip to each option BUTTON (not the wide
+-- container): a container-anchored tooltip only triggers on the sliver not covered
+-- by the buttons and anchors ANCHOR_RIGHT off the full width (mid-screen). Per-button
+-- hover fixes both the hit area and the anchor.
+function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWidth, pad, tipTitle, tipBody)
     local container = CreateFrame("Frame", nil, parent)
 
     local labelFS
@@ -367,6 +371,15 @@ function Options:CreateRadioGroup(parent, label, options, getter, setter, maxWid
             if setter then setter(b.value) end
             paint(b.value)
         end)
+        if tipTitle or tipBody then
+            btn:HookScript("OnEnter", function(b)
+                GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
+                if tipTitle then GameTooltip:SetText(tipTitle, YELLOW[1], YELLOW[2], YELLOW[3], 1, true) end
+                if tipBody and tipBody ~= "" then GameTooltip:AddLine(tipBody, 0.82, 0.82, 0.82, true) end
+                GameTooltip:Show()
+            end)
+            btn:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        end
         x = x + w + BTN_GAP
         if x > maxX then maxX = x end
         buttons[#buttons + 1] = btn
@@ -706,6 +719,10 @@ local function eqSlashHandler(msg)
     elseif msg == "session" then
         local Sess = ns:GetSubsystem("Session")
         if Sess and Sess.Print then Sess:Print() end
+        return
+    elseif msg == "whatsnew chat" then
+        local WN = ns:GetSubsystem("WhatsNew")
+        if WN and WN.PrintChatLink then WN:PrintChatLink() end
         return
     elseif msg == "whatsnew" or msg == "changes" then
         local WN = ns:GetSubsystem("WhatsNew")

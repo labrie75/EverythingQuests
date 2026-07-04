@@ -90,6 +90,8 @@ DB.defaults = {
             showProfessionSection = true,
             showAchievementsSection = true,
             showWorldQuestsSection = true,
+            sectionOrder = { "zoneprogress", "campaign", "quests", "profession", "endeavors", "achievements" },
+            worldQuestsPosition = "bottom",
             showZoneProgressBar = false,
             zoneProgressLocation = "floating",
             zoneProgressBar = {
@@ -138,6 +140,8 @@ DB.defaults = {
     },
     global = {
         whatsNewSeen = "",
+        whatsNewAnnounced = "",
+        whatsNewMode = "popup",
         zoneProgress = {
             qlQuests = {},
             zoneCat = {},

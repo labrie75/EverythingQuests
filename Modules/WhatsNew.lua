@@ -3,33 +3,21 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.28.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.28.0"
+local FEATURE_POPUP_VERSION = "1.29.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.29.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706New look: a fresh icon|r
-Everything Quests has a new icon — the minimap button, Titan Panel, and AddOns list now show a gold crest in place of the old book. Same addon, new badge.
+|cffEBB706Rearrange your tracker sections|r
+You can now put the tracker's sections in whatever order you like. Open |cffffffff/eqs|r > |cffffffffTracker|r > |cffffffffSection Order|r and use the arrows to move Campaign, Quests, Profession, Endeavors, Achievements, and the Zone Progress bar up or down. Thanks to |cffffffffDrahgunFyre|r for suggesting it in the Discord.
 
-|cffEBB706New chain: The Sunstrider Omnium|r
-The Chain Guide now includes |cffffffffThe Sunstrider Omnium|r — the Magisters' Terrace questline that unlocks the Omnium Folio — as its own zone, with the full chain mapped out like the rest of the Midnight content.
+|cffEBB706Move World Quests to the top|r
+In that same Section Order area there is a |cffffffffTop|r / |cffffffffBottom|r switch for the World Quests panel — put it above your quests if you like them front and center, or leave it below (the default). It keeps its own scrollbar and size limit either way.
 
-|cffEBB706Map pins for more chains|r
-Quest-giver map pins now show for the |cffffffffSunstrider Omnium|r and |cffffffffVoid Acropolis|r chains, so you can find each step on the world map. Void Acropolis had none before.
-
-|cffEBB706Fixed: tracker sections crowding together|r
-When you had a lot of quests, achievements, and world quests tracked at once, a section's header could appear with its contents cut off. The quest list now keeps its sections intact, and the World Quests area gives up space and scrolls instead.
-
-|cffEBB706Fixed: "Ritual Site" label|r
-Ritual Sites like |cffffffffBroken Throne|r now read |cffffffffRitual Site|r in the tracker instead of |cffffffffDelves|r. They run on the delve system under the hood, so the game reported them as delves — the tracker now matches Blizzard's own wording.
-
-|cffEBB706Fixed: a combat error in Ritual Sites|r
-Entering a Ritual Site or scenario while in combat (with a usable quest item tracked) could throw an "action blocked" error. The tracker now waits until combat ends to resize, so it no longer fires.
-
-|cffEBB706Thanks for your patience|r
-There have been a lot of updates lately while the Midnight content gets filled in — sorry for the frequency, and thanks for sticking with it.
+|cffEBB706Quieter updates — sorry for the popup!|r
+You don't have to get a popup every update anymore. Under |cffffffff/eqs|r > |cffffffffGeneral|r > |cffffffffAfter an update|r you can switch these notices to a quiet, clickable |cffffffffChat link|r, or turn them off entirely. You can also tick |cffffffffDon't show these again|r at the bottom of this window.
 
 |cffEBB706Found a bug? Please tell me|r
 If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.
@@ -41,6 +29,11 @@ local YELLOW     = ns.Util.color.buttonYellow
 local HEADER_RED = ns.Util.color.brandRed
 local MUTED      = ns.Util.color.muted
 
+local function currentMode()
+    local m = ns.db and ns.db.global and ns.db.global.whatsNewMode
+    return m or "popup"
+end
+
 local function alreadySeen()
     return ns.db and ns.db.global and ns.db.global.whatsNewSeen == FEATURE_POPUP_VERSION
 end
@@ -50,6 +43,31 @@ local function markSeen()
         ns.db.global.whatsNewSeen = FEATURE_POPUP_VERSION
     end
 end
+
+local function alreadyAnnounced()
+    return ns.db and ns.db.global and ns.db.global.whatsNewAnnounced == FEATURE_POPUP_VERSION
+end
+
+local function markAnnounced()
+    if ns.db and ns.db.global then
+        ns.db.global.whatsNewAnnounced = FEATURE_POPUP_VERSION
+    end
+end
+
+local function announceChat()
+    local link = "|Haddon:EverythingQuests:whatsnew|h|cffEBB706[" .. L["See what's new"] .. "]|r|h"
+    DEFAULT_CHAT_FRAME:AddMessage(
+        "|cffEBB706Everything Quests|r " .. L["updated to"] .. " "
+        .. FEATURE_POPUP_VERSION .. " \226\128\148 " .. link)
+end
+
+-- Custom chat hyperlink (|Haddon:EverythingQuests:whatsnew|h); the client ignores the
+-- unknown link type, so we open the popup ourselves when ours is clicked.
+hooksecurefunc("SetItemRef", function(link)
+    if link == "addon:EverythingQuests:whatsnew" then
+        WN:Show()
+    end
+end)
 
 function WN:Build()
     if self.frame then return self.frame end
@@ -153,10 +171,36 @@ function WN:Build()
     f.close:SetPoint("TOPRIGHT", -4, -4)
     f.close:SetScript("OnClick", dismiss)
 
-    f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    f.hint:SetPoint("BOTTOM", 0, 44)
-    f.hint:SetText(L["(This message shows once and won't appear again.)"])
-    f.hint:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    f.dontShow = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+    f.dontShow:SetSize(22, 22)
+    f.dontShow:SetPoint("BOTTOMLEFT", 14, 44)
+    f.dontShow.text = f.dontShow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.dontShow.text:SetPoint("LEFT", f.dontShow, "RIGHT", 2, 0)
+    f.dontShow.text:SetText(L["Don't show these again"])
+    f.dontShow.text:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    f.dontShow:SetScript("OnShow", function(self2)
+        local m = currentMode()
+        -- Remember the non-"none" mode so unchecking restores it (e.g. a chat-link
+        -- user keeps "chat" instead of being silently reset to "popup").
+        if m ~= "none" then self2._prevMode = m end
+        self2:SetChecked(m == "none")
+    end)
+    f.dontShow:SetScript("OnClick", function(self2)
+        if not (ns.db and ns.db.global) then return end
+        if self2:GetChecked() then
+            ns.db.global.whatsNewMode = "none"
+        else
+            ns.db.global.whatsNewMode =
+                (self2._prevMode and self2._prevMode ~= "none" and self2._prevMode) or "popup"
+        end
+    end)
+    f.dontShow:SetScript("OnEnter", function(self2)
+        GameTooltip:SetOwner(self2, "ANCHOR_RIGHT")
+        -- SetText arg 5 is alpha (not wrap); pass 1 or the line can render invisible.
+        GameTooltip:SetText(L["Stops What's New notices entirely. You can turn them back on in /eqs > General."], 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    f.dontShow:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     self.frame = f
     return f
@@ -167,10 +211,25 @@ function WN:Show()
     self.frame:Show()
 end
 
+function WN:PrintChatLink()
+    announceChat()
+end
+
 function WN:OnEnable()
-    if alreadySeen() then return end
+    local mode = currentMode()
+    if mode == "none" then return end
+    local isChat = (mode == "chat")
+    if (isChat and alreadyAnnounced()) or (not isChat and alreadySeen()) then return end
     C_Timer.After(2, function()
-        if alreadySeen() then return end
-        self:Show()
+        local cur = currentMode()
+        if cur == "none" then return end
+        if cur == "chat" then
+            if not alreadyAnnounced() then
+                announceChat()
+                markAnnounced()
+            end
+        elseif not alreadySeen() then
+            self:Show()
+        end
     end)
 end

@@ -5,6 +5,20 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.0] - 2026-07-03
+
+Make the tracker yours: reorder its sections however you like, move the World Quests panel to the top or bottom, and choose how — or whether — Everything Quests tells you about updates. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Reorder tracker sections** — Put the tracker's sections in any order under **/eqs > Tracker > Section Order**, using the up/down arrows to move Campaign, Quests, Profession, Endeavors, Achievements, and the Zone Progress bar. Thanks to DrahgunFyre for suggesting it in the Discord.
+- **World Quests position** — A **Top / Bottom** switch in the same Section Order area moves the World Quests panel above or below your quests. It keeps its own scrollbar and size cap either way.
+- **Quieter update notices** — Choose how you hear about new features under **/eqs > General > After an update**: a popup window (the default), a quiet clickable chat link, or nothing at all. You can also turn the popup off with its own "Don't show these again" checkbox.
+
+### Improvements
+
+- **Reliable option tooltips** — Hovering the individual buttons of a multi-choice setting (such as World Quests position or the Nameplate icon position) now shows its explanation tooltip next to the button.
+
 ## [1.28.0] - 2026-06-27
 
 A new Chain Guide questline — **The Sunstrider Omnium** — plus quest-giver map pins for it and Void Acropolis, a fresh addon icon, a tracker layout fix so sections no longer crowd together, and correct "Ritual Site" labelling. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

@@ -2,6 +2,19 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.29.0", date = "2026-07-03",
+        sections = {
+            { head = "New Features", items = {
+                "Reorder tracker sections — put the tracker's sections in any order under /eqs > Tracker > Section Order, using the up/down arrows to move Campaign, Quests, Profession, Endeavors, Achievements, and the Zone Progress bar. Thanks to DrahgunFyre for suggesting it in the Discord.",
+                "World Quests position — a Top / Bottom switch in the same Section Order area moves the World Quests panel above or below your quests; it keeps its own scrollbar and size cap either way.",
+                "Quieter update notices — choose how you hear about new features under /eqs > General > After an update: a popup window (the default), a quiet clickable chat link, or nothing at all. The popup also has its own \"Don't show these again\" checkbox.",
+            } },
+            { head = "Improvements", items = {
+                "Setting tooltips on multi-button options (like World Quests position and Nameplate icon position) now appear reliably next to the button you hover.",
+            } },
+        },
+    },
+    {
         version = "1.28.0", date = "2026-06-27",
         sections = {
             { head = "New Features", items = {

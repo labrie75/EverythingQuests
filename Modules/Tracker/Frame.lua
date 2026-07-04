@@ -23,6 +23,32 @@ local MAX_W, MAX_H     = 600, 2000
 
 local HEADER_COLOR = { 0.93, 0.32, 0.10 }
 
+-- The sections a user may freely reorder within the main scroll. World Quests
+-- ("events") is deliberately absent: it renders in its own capped scroll region,
+-- so its placement is a top/bottom choice handled by ApplyWorldQuestsPosition.
+local REORDERABLE_IDS = { "zoneprogress", "campaign", "quests", "profession", "endeavors", "achievements" }
+local REORDERABLE_SET = {}
+for _, id in ipairs(REORDERABLE_IDS) do REORDERABLE_SET[id] = true end
+
+-- Keep saved ids in their saved order, drop anything unknown, and append any
+-- reorderable section missing from the save so a newly-added section can never
+-- vanish from an old profile.
+local function reconcileSectionOrder(saved)
+    local seen, out = {}, {}
+    if type(saved) == "table" then
+        for _, id in ipairs(saved) do
+            if REORDERABLE_SET[id] and not seen[id] then
+                seen[id] = true
+                out[#out + 1] = id
+            end
+        end
+    end
+    for _, id in ipairs(REORDERABLE_IDS) do
+        if not seen[id] then out[#out + 1] = id end
+    end
+    return out
+end
+
 local function getHeaderColor()
     local DB = ns:GetSubsystem("DB")
     if DB and DB.db.profile.tracker and DB.db.profile.tracker.headerColor then
@@ -237,10 +263,8 @@ function Tracker:BuildFrame()
     f.eventsScrollBarBG = eBg
 
     local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", scenarioContainer, "BOTTOMLEFT", 0, -2)
-
-    eventsRegion:SetPoint("TOPLEFT",  scroll, "BOTTOMLEFT",  0, -2)
-    eventsRegion:SetPoint("TOPRIGHT", scroll, "BOTTOMRIGHT", 0, -2)
+    -- scroll + eventsRegion (World Quests) are anchored by ApplyWorldQuestsPosition,
+    -- which honours the Top/Bottom setting; do not hard-anchor them to each other here.
 
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(cfg.width - SCROLLBAR_GUTTER, 1)
@@ -262,6 +286,8 @@ function Tracker:BuildFrame()
 
     f.scroll = scroll
     f.content = content
+
+    self:ApplyWorldQuestsPosition()
 
     local WHEEL_STEP = 24
     local function wheelScroll(sf, delta)
@@ -392,24 +418,25 @@ end
 function Tracker:BuildSectionHeaders(content)
     self.sectionFrames = {}
 
-    local sections = {
-        { id = "zoneprogress", title = L["Zone"] },
-        { id = "campaign",   title = L["Campaign"] },
-        { id = "quests",     title = L["Quests"] },
-        { id = "profession", title = L["Profession"] },
-        { id = "endeavors",  title = L["Endeavors"] },
-        { id = "achievements", title = L["Achievements"] },
-        { id = "events",     title = L["World Quests"] },
+    local titles = {
+        zoneprogress = L["Zone"],
+        campaign     = L["Campaign"],
+        quests       = L["Quests"],
+        profession   = L["Profession"],
+        endeavors    = L["Endeavors"],
+        achievements = L["Achievements"],
+        events       = L["World Quests"],
     }
-    self.sectionList = sections
+    self._sectionTitles = titles
 
-    for _, def in ipairs(sections) do
-        local sid = def.id
-        local h = makeSectionHeader(content, sid, def.title, function()
+    for _, sid in ipairs({ "zoneprogress", "campaign", "quests", "profession", "endeavors", "achievements", "events" }) do
+        local h = makeSectionHeader(content, sid, titles[sid], function()
             self:ToggleSectionCollapsed(sid)
         end)
         self.sectionFrames[sid] = h
     end
+
+    self:ApplySectionOrder()
 
     local eh = self.sectionFrames["events"]
     if eh and self.frame and self.frame.eventsRegion then
@@ -420,6 +447,84 @@ function Tracker:BuildSectionHeaders(content)
     end
 
     self:ApplyHeaderBars()
+end
+
+function Tracker:GetInContentOrder()
+    local DB = ns:GetSubsystem("DB")
+    local saved = DB and DB.db.profile.tracker and DB.db.profile.tracker.sectionOrder
+    return reconcileSectionOrder(saved)
+end
+
+function Tracker:ApplySectionOrder()
+    local titles = self._sectionTitles or {}
+    local list = {}
+    for _, id in ipairs(self:GetInContentOrder()) do
+        list[#list + 1] = { id = id, title = titles[id] }
+    end
+    -- World Quests never sits in the in-content flow (it has its own scroll region);
+    -- keep its header in the list so it still builds, but the render loop skips it and
+    -- ApplyWorldQuestsPosition decides whether the region anchors above or below.
+    list[#list + 1] = { id = "events", title = titles["events"] }
+    self.sectionList = list
+end
+
+function Tracker:MoveSection(id, delta)
+    local order = self:GetInContentOrder()
+    local idx
+    for i = 1, #order do
+        if order[i] == id then idx = i; break end
+    end
+    if not idx then return end
+    local j = idx + delta
+    if j < 1 or j > #order then return end
+    order[idx], order[j] = order[j], order[idx]
+    local DB = ns:GetSubsystem("DB")
+    if DB and DB.db.profile.tracker then DB.db.profile.tracker.sectionOrder = order end
+    self:ApplySectionOrder()
+    self:Refresh()
+end
+
+function Tracker:ApplyWorldQuestsPosition()
+    local f = self.frame
+    if not f then return end
+    local scroll = f.scroll
+    local region = f.eventsRegion
+    local scen   = f.scenarioContainer
+    if not (scroll and region and scen) then return end
+
+    -- scroll is in the item-button protected ancestor chain, so re-anchoring it is a
+    -- protected move; defer out of combat exactly like the content sizing in Render.
+    local IB = ns:GetSubsystem("TrackerItemButtons")
+    if InCombatLockdown() and IB and IB.HasSecureButtons and IB:HasSecureButtons() then
+        local Ev = ns:GetSubsystem("Events")
+        if Ev and Ev.RunWhenOutOfCombat then
+            self._applyWQPos = self._applyWQPos or function() self:ApplyWorldQuestsPosition() end
+            Ev:RunWhenOutOfCombat("trackerApplyWQPos", self._applyWQPos)
+        end
+        return
+    end
+
+    local DB  = ns:GetSubsystem("DB")
+    local pos = (DB and DB.db.profile.tracker and DB.db.profile.tracker.worldQuestsPosition) or "bottom"
+
+    scroll:ClearAllPoints()
+    region:ClearAllPoints()
+    if pos == "top" then
+        region:SetPoint("TOPLEFT",  scen,   "BOTTOMLEFT",  0, -2)
+        region:SetPoint("TOPRIGHT", scen,   "BOTTOMRIGHT", 0, -2)
+        scroll:SetPoint("TOPLEFT",  region, "BOTTOMLEFT",  0, -2)
+    else
+        scroll:SetPoint("TOPLEFT",  scen,   "BOTTOMLEFT",  0, -2)
+        region:SetPoint("TOPLEFT",  scroll, "BOTTOMLEFT",  0, -2)
+        region:SetPoint("TOPRIGHT", scroll, "BOTTOMRIGHT", 0, -2)
+    end
+end
+
+function Tracker:SetWorldQuestsPosition(pos)
+    local DB = ns:GetSubsystem("DB")
+    if DB and DB.db.profile.tracker then DB.db.profile.tracker.worldQuestsPosition = pos end
+    self:ApplyWorldQuestsPosition()
+    self:Refresh()
 end
 
 -- Optional gradient bar behind each section header (a "stock" look). The bar is a
@@ -1059,6 +1164,28 @@ function Tracker:Render()
     end
 end
 
+-- With World Quests pinned to the TOP the quest scroll (and its protected item
+-- buttons) hangs off this region's bottom, so resizing it in combat moves the secure
+-- chain and throws ADDON_ACTION_BLOCKED. Defer out of combat exactly like
+-- content:SetHeight and Scenario:_SetContainerHeight. In BOTTOM mode (default) nothing
+-- protected sits below the region, so it resizes freely with no gate.
+function Tracker:_SetEventsRegionHeight(region, h)
+    local DB  = ns:GetSubsystem("DB")
+    local pos = (DB and DB.db.profile.tracker and DB.db.profile.tracker.worldQuestsPosition) or "bottom"
+    if pos == "top" then
+        local IB = ns:GetSubsystem("TrackerItemButtons")
+        if InCombatLockdown() and IB and IB.HasSecureButtons and IB:HasSecureButtons() then
+            local Ev = ns:GetSubsystem("Events")
+            if Ev and Ev.RunWhenOutOfCombat then
+                self._deferredRender = self._deferredRender or function() self:Render() end
+                Ev:RunWhenOutOfCombat("trackerDeferredRender", self._deferredRender)
+            end
+            return
+        end
+    end
+    region:SetHeight(h)
+end
+
 function Tracker:_RenderPinnedEvents(eventsCap)
     local f = self.frame
     if not f then return 0 end
@@ -1082,7 +1209,7 @@ function Tracker:_RenderPinnedEvents(eventsCap)
         if header then header:Hide() end
         escroll:Hide()
         if f.eventsScrollBarBG then f.eventsScrollBarBG:Hide() end
-        region:SetHeight(1)
+        self:_SetEventsRegionHeight(region, 1)
         region:Hide()
     end
 
@@ -1134,7 +1261,7 @@ function Tracker:_RenderPinnedEvents(eventsCap)
     if collapsed then
         escroll:Hide()
         if f.eventsScrollBarBG then f.eventsScrollBarBG:Hide() end
-        region:SetHeight(SECTION_H + 2)
+        self:_SetEventsRegionHeight(region, SECTION_H + 2)
         return SECTION_H + 2
     end
 
@@ -1145,7 +1272,7 @@ function Tracker:_RenderPinnedEvents(eventsCap)
     if capViewport < 30 then capViewport = 30 end
     local viewport = math.min(heightUsed, capViewport)
     if viewport < 1 then viewport = 1 end
-    region:SetHeight(SECTION_H + 2 + viewport)
+    self:_SetEventsRegionHeight(region, SECTION_H + 2 + viewport)
 
     if escroll.UpdateScrollChildRect then escroll:UpdateScrollChildRect() end
 

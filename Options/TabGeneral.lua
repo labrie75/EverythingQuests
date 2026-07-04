@@ -106,6 +106,25 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         L["Restores the waypoint arrow."])
     restore:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
+    local WHATSNEW_MODES = {
+        { value = "popup", label = L["Popup window"] },
+        { value = "chat",  label = L["Chat link"] },
+        { value = "none",  label = L["None"] },
+    }
+    local function wnModeGet()
+        local DB = ns:GetSubsystem("DB")
+        return (DB and DB.db.global.whatsNewMode) or "popup"
+    end
+    local function wnModeSet(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.global.whatsNewMode = value end
+    end
+    local wnMode = Options:CreateRadioGroup(content, L["After an update"],
+        WHATSNEW_MODES, wnModeGet, wnModeSet, 320, 14,
+        L["After an update"],
+        L["How Everything Quests tells you about new features: a Popup window, a quiet clickable Chat link in your chat frame, or None. New features always ship off until you turn them on."])
+    wnMode:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -12)
+
     local function npLayoutSetting(key)
         return
             function()
@@ -121,7 +140,7 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
     end
 
     local npHeader = Options:CreateSectionHeader(content, L["Nameplate Quest Icons"])
-    npHeader:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -16)
+    npHeader:SetPoint("TOPLEFT", wnMode, "BOTTOMLEFT", 0, -16)
 
     local function npGet()
         local QI = ns:GetSubsystem("NameplateQuestIcons")
@@ -146,10 +165,10 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         { value = "BOTTOM", label = L["Below"] },
     }
     local placeGet, placeSet = npLayoutSetting("npIconPlacement")
-    local npPlace = Options:CreateRadioGroup(content, L["Position"], NP_PLACEMENT, placeGet, placeSet, 260)
-    npPlace:SetPoint("TOPLEFT", nameplates, "BOTTOMLEFT", 0, -8)
-    Options:AttachTooltip(npPlace, L["Position"],
+    local npPlace = Options:CreateRadioGroup(content, L["Position"], NP_PLACEMENT, placeGet, placeSet, 260, nil,
+        L["Position"],
         L["Where the quest icon + count sits relative to the enemy nameplate. Move it closer to the health bar to taste."])
+    npPlace:SetPoint("TOPLEFT", nameplates, "BOTTOMLEFT", 0, -8)
 
     local szGet, szSet = npLayoutSetting("npIconSize")
     local npSize = Options:CreateSlider(content, L["Icon size"], 12, 48, 0.5, szGet, szSet)
