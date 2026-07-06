@@ -140,14 +140,15 @@ function A:Render(content, contentWidth, yStart, collapsed)
 
     local DB = ns:GetSubsystem("DB")
     local t  = DB and DB.db and DB.db.profile and DB.db.profile.tracker
-    local ov = t and t.titleColorOverride
+    local ovR, ovG, ovB
+    if ns.Util and ns.Util.EffectiveTitleColor then ovR, ovG, ovB = ns.Util.EffectiveTitleColor(t) end
     local simplify = t and t.simplifyAchievements
     local doneHex = "44ff44"
-    if t and t.overrideCompleteGreen ~= false and ov and ov.r then
+    if t and t.overrideCompleteGreen ~= false and ovR then
         doneHex = ("%02x%02x%02x"):format(
-            math.floor(ov.r * 255 + 0.5),
-            math.floor(ov.g * 255 + 0.5),
-            math.floor(ov.b * 255 + 0.5))
+            math.floor(ovR * 255 + 0.5),
+            math.floor(ovG * 255 + 0.5),
+            math.floor(ovB * 255 + 0.5))
     end
 
     local shownCount = 0
@@ -166,8 +167,8 @@ function A:Render(content, contentWidth, yStart, collapsed)
             row.title:SetText(label)
             row._achID   = id
             row._achName = name
-            if ov and ov.r then
-                row.title:SetTextColor(ov.r, ov.g, ov.b)
+            if ovR then
+                row.title:SetTextColor(ovR, ovG, ovB)
             else
                 row.title:SetTextColor(1.0, 0.82, 0.0)
             end

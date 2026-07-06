@@ -42,6 +42,7 @@ read_globals = {
     "C_Reputation", "C_QuestInfoSystem", "C_QuestLine", "C_PvP", "C_LFGList",
     "C_Garrison", "C_FactionInfo", "C_MajorFactions", "C_TaxiMap", "C_GossipInfo",
     "C_CampaignInfo", "C_AreaPoiInfo", "C_Minimap",
+    "C_VignetteInfo", "C_UnitAuras", "C_UIWidgetManager",
     -- functions
     "hooksecurefunc", "issecurevariable", "InCombatLockdown", "secureexecuterange",
     "IsModifiedClick", "IsAltKeyDown", "IsInGroup", "IsQuestCompletable",

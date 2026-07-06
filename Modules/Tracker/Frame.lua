@@ -51,8 +51,13 @@ end
 
 local function getHeaderColor()
     local DB = ns:GetSubsystem("DB")
-    if DB and DB.db.profile.tracker and DB.db.profile.tracker.headerColor then
-        local c = DB.db.profile.tracker.headerColor
+    local t = DB and DB.db.profile.tracker
+    if t and t.headerColorUseClass and ns.Util and ns.Util.GetPlayerClassColor then
+        local r, g, b = ns.Util.GetPlayerClassColor()
+        if r then return r, g, b end
+    end
+    if t and t.headerColor then
+        local c = t.headerColor
         return c.r or HEADER_COLOR[1], c.g or HEADER_COLOR[2], c.b or HEADER_COLOR[3]
     end
     return HEADER_COLOR[1], HEADER_COLOR[2], HEADER_COLOR[3]
@@ -370,6 +375,16 @@ local function buildHairline(parent)
     return line
 end
 
+local function scaleCollapse(fs, extra)
+    if not fs then return end
+    if not fs._baseFont then
+        local file, sz, fl = fs:GetFont()
+        if file then fs._baseFont = { file, sz, fl } end
+    end
+    local base = fs._baseFont
+    if base then fs:SetFont(base[1], math.max(6, base[2] + extra), base[3] or "") end
+end
+
 local function makeSectionHeader(parent, id, title, onToggle)
     local h = CreateFrame("Button", nil, parent)
     h:SetHeight(SECTION_H)
@@ -394,7 +409,7 @@ local function makeSectionHeader(parent, id, title, onToggle)
         h.barMask:SetAllPoints(h.bar)
     end
 
-    buildHairline(h)
+    h.hairline = buildHairline(h)
 
     h.text = h:CreateFontString(nil, "OVERLAY", "ObjectiveTrackerHeaderFont")
     if not h.text:GetFont() then h.text:SetFontObject("GameFontNormalLarge") end
@@ -447,6 +462,7 @@ function Tracker:BuildSectionHeaders(content)
     end
 
     self:ApplyHeaderBars()
+    self:ApplyHeaderDividers()
 end
 
 function Tracker:GetInContentOrder()
@@ -580,6 +596,22 @@ function Tracker:ApplyHeaderBars()
     if not self.sectionFrames then return end
     for _, h in pairs(self.sectionFrames) do
         self:ApplyHeaderBar(h)
+    end
+end
+
+function Tracker:ApplyHeaderDivider(h)
+    if not (h and h.hairline) then return end
+    local DB  = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db.profile.tracker
+    local c   = cfg and cfg.headerDividerColor
+    h.hairline:SetColorTexture((c and c.r) or 0.92, (c and c.g) or 0.72,
+        (c and c.b) or 0.02, (c and c.a) or HAIRLINE_ALPHA)
+end
+
+function Tracker:ApplyHeaderDividers()
+    if not self.sectionFrames then return end
+    for _, h in pairs(self.sectionFrames) do
+        self:ApplyHeaderDivider(h)
     end
 end
 
@@ -1054,19 +1086,22 @@ function Tracker:Render()
                 else
                     headerFrame.count:SetText(tostring(sectionCount))
                 end
+                local headerDelta = (cfg and cfg.headerSizeDelta) or HEADER_FONT_DELTA
+                local headerExtra = headerDelta - HEADER_FONT_DELTA
                 if _M and _M.ApplyTrackerFont then
-                    _M:ApplyTrackerFont(headerFrame.count, -2)
+                    _M:ApplyTrackerFont(headerFrame.count, -2 + headerExtra)
                 end
                 headerFrame.count:SetTextColor(hr, hg, hb)
                 headerFrame.collapse:SetText(sectionCollapsed and "+" or "–")
                 local Media = ns:GetSubsystem("Media")
                 if headerFrame.text then
                     if Media and Media.ApplyTrackerFont then
-                        Media:ApplyTrackerFont(headerFrame.text, HEADER_FONT_DELTA)
+                        Media:ApplyTrackerFont(headerFrame.text, headerDelta)
                     end
                     headerFrame.text:SetTextColor(hr, hg, hb)
                 end
                 if headerFrame.collapse then
+                    scaleCollapse(headerFrame.collapse, headerExtra)
                     headerFrame.collapse:SetTextColor(hr, hg, hb)
                     if Media and Media.ApplyTextShadow then Media:ApplyTextShadow(headerFrame.collapse) end
                 end
@@ -1239,20 +1274,23 @@ function Tracker:_RenderPinnedEvents(eventsCap)
         header.count:SetText(tostring(count))
         header.collapse:SetText(collapsed and "+" or "–")
         local hr, hg, hb = getHeaderColor()
+        local headerDelta = (cfg and cfg.headerSizeDelta) or HEADER_FONT_DELTA
+        local headerExtra = headerDelta - HEADER_FONT_DELTA
         local Media = ns:GetSubsystem("Media")
         if header.text then
             if Media and Media.ApplyTrackerFont then
-                Media:ApplyTrackerFont(header.text, HEADER_FONT_DELTA)
+                Media:ApplyTrackerFont(header.text, headerDelta)
             end
             header.text:SetTextColor(hr, hg, hb)
         end
         if header.collapse then
+            scaleCollapse(header.collapse, headerExtra)
             header.collapse:SetTextColor(hr, hg, hb)
             if Media and Media.ApplyTextShadow then Media:ApplyTextShadow(header.collapse) end
         end
         if header.count then
             if Media and Media.ApplyTrackerFont then
-                Media:ApplyTrackerFont(header.count, -2)
+                Media:ApplyTrackerFont(header.count, -2 + headerExtra)
             end
             header.count:SetTextColor(hr, hg, hb)
         end

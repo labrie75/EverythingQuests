@@ -31,7 +31,7 @@ local OTHER_ADDONS = {
       gh   = "https://github.com/wheelbarrel00/LootPro" },
 }
 
-local THANKS = "Spydawg2233, Zox, LightsBeacon, Fostot"
+local THANKS = "Spydawg2233, Zox, LightsBeacon, Fostot, DrahgunFyre, ChipW0lf, tanglies"
 
 ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     local Options = ns:GetSubsystem("Options")

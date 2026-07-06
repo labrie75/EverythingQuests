@@ -5,6 +5,26 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.0] - 2026-07-05
+
+Make the tracker look the way you want, and never miss a delve's bonus loot. This release adds a movable Bonus Objectives HUD, a customizable section-header divider color, independent header text sizing, class-color options for titles and headers, and the full LibSharedMedia font list. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).
+
+### New Features
+
+- **Bonus Objectives HUD** - A new movable on-screen checklist for the bonus objectives you might otherwise miss. In delves it tracks the bonus loot mechanics (Nemesis Strongbox packs and the Sanctified Banner) so you can grab the extra rewards before the boss. Turn it on under **/eqs > Tracker > Scenario Bonus Objectives**, drag it anywhere, and right-click to lock or reset. Off by default. Thanks to DrahgunFyre for the idea in the Discord.
+- **Class color for titles and headers** - New "Use class color" toggles under **/eqs > Appearance** color your quest and achievement titles, and your section headers, with the class color of the character you are logged in on. Off by default. Thanks to ChipW0lf.
+- **Custom header divider color** - The thin line under each section header (Quests, Campaign, and so on) is no longer locked to gold. Set any color under **/eqs > Appearance > Divider Line Color**. Thanks to ChipW0lf.
+- **Independent header text size** - A new **Header Size Offset** slider under **/eqs > Appearance** sizes the section headers separately from the quest text, so they do not get oversized on a low UI scale. Thanks to ChipW0lf.
+
+### Improvements
+
+- **More fonts** - The font pickers now list every font registered through LibSharedMedia, including fonts added by other addons, instead of only the ones bundled with Everything Quests. Thanks to ChipW0lf.
+
+### Bug Fixes
+
+- **Clear button** - The Clear button next to Quest Title Color Override now resets the color swatch when clicked.
+- **Zone bar font** - When the zone progress bar is set to "Same as tracker font", it now follows the main tracker font, size, outline, and shadow live.
+
 ## [1.29.0] - 2026-07-03
 
 Make the tracker yours: reorder its sections however you like, move the World Quests panel to the top or bottom, and choose how — or whether — Everything Quests tells you about updates. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.29.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.30.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)
@@ -742,6 +742,14 @@ local function eqSlashHandler(msg)
         return
     elseif msg == "scenario" then
         Options:DumpScenarioInfo()
+        return
+    elseif msg == "bonushud" then
+        local Hud = ns:GetSubsystem("TrackerScenarioBonusHUD")
+        if Hud and Hud.Dump then Hud:Dump() end
+        return
+    elseif msg == "bonushud test" then
+        local Hud = ns:GetSubsystem("TrackerScenarioBonusHUD")
+        if Hud and Hud.ToggleTest then Hud:ToggleTest() end
         return
     elseif msg == "questobj" then
         Options:DumpQuestObjectives()

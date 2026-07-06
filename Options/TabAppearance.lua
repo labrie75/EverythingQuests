@@ -23,6 +23,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
                 if DB then DB.db.profile.tracker[key] = value end
                 local Tracker = ns:GetSubsystem("Tracker")
                 if Tracker then Tracker:Refresh() end
+                local ZP = ns:GetSubsystem("TrackerZoneProgress")
+                if ZP and ZP.UpdateFrame then ZP:UpdateFrame() end
             end
     end
 
@@ -95,6 +97,13 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(titleSizeSlider, L["Title Size Offset"],
         L["Sizes quest and achievement titles separately from the objective text. This value is added to the Font Size above: 0 keeps titles the same size as the base font, positive makes them larger, negative smaller."])
 
+    local headerSizeGet, headerSizeSet = trackerSetting("headerSizeDelta")
+    local headerSizeSlider = Options:CreateSlider(content, L["Header Size Offset"], -8, 12, 0.5, headerSizeGet, headerSizeSet)
+    headerSizeSlider:SetPoint("TOPLEFT", titleSizeSlider, "BOTTOMLEFT", 0, -16)
+    headerSizeSlider:SetWidth(280)
+    Options:AttachTooltip(headerSizeSlider, L["Header Size Offset"],
+        L["Sizes the section headers (Quests, Campaign, and so on) independently of the quest text. Added on top of the Font Size above: the default 4 keeps headers at their current size, lower shrinks them (handy on a low UI scale), higher enlarges them."])
+
     -- Outline flags passed directly to FontString:SetFont. WoW accepts a
     -- comma-joined combo (e.g. "MONOCHROME, OUTLINE") and ignores tokens
     -- it doesn't recognize, so an empty string == no outline.
@@ -109,7 +118,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local outlineGet, outlineSet = trackerSetting("fontOutline")
     local outlineDD = Options:CreateDropdown(content, L["Font Outline"],
         OUTLINE_OPTIONS, outlineGet, outlineSet)
-    outlineDD:SetPoint("TOPLEFT", titleSizeSlider, "BOTTOMLEFT", 0, -16)
+    outlineDD:SetPoint("TOPLEFT", headerSizeSlider, "BOTTOMLEFT", 0, -16)
     outlineDD:SetWidth(280)
 
     local shadowGet, shadowSet = trackerSetting("textShadow")
@@ -126,6 +135,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         if DB then DB.db.profile.tracker.textShadowColor = c end
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
+        local ZP = ns:GetSubsystem("TrackerZoneProgress")
+        if ZP and ZP.UpdateFrame then ZP:UpdateFrame() end
     end
     local shadowPicker = Options:CreateColorPicker(content, L["Shadow Color"], shadowColorGet, shadowColorSet)
     shadowPicker:SetPoint("LEFT", shadowCheck, "RIGHT", 120, 0)
@@ -366,13 +377,15 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
     end
+    local titlePicker
     local function clearTitleColor()
         local DB = ns:GetSubsystem("DB")
         if DB then DB.db.profile.tracker.titleColorOverride = nil end
         local Tracker = ns:GetSubsystem("Tracker")
         if Tracker then Tracker:Refresh() end
+        if titlePicker and titlePicker.paint then titlePicker.paint() end
     end
-    local titlePicker = Options:CreateColorPicker(content, L["Quest Title Color Override"], titleColorGet, titleColorSet)
+    titlePicker = Options:CreateColorPicker(content, L["Quest Title Color Override"], titleColorGet, titleColorSet)
     titlePicker:SetPoint("TOPLEFT", colorsHeader, "BOTTOMLEFT", 0, -16)
 
     local clearBtn = Options:CreateYellowButton(content, L["Clear"], clearTitleColor)
@@ -382,12 +395,18 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(titlePicker, L["Quest Title Color Override"],
         L["When cleared, falls back to difficulty coloring or default yellow."])
 
+    local titleClassGet, titleClassSet = trackerSetting("titleColorUseClass")
+    local titleClassCheck = Options:CreateCheckbox(content, L["Use class color"],
+        titleClassGet, titleClassSet,
+        L["Colors quest, achievement, and endeavor titles with the class color of the character you are currently logged in on. Overrides the color above while it is on. Off by default."])
+    titleClassCheck:SetPoint("TOPLEFT", titlePicker, "BOTTOMLEFT", 0, -10)
+
     local recolorGet, recolorSet = trackerSetting("overrideCompleteGreen")
     local recolorCheck = Options:CreateCheckbox(content,
         L["Use title color for completed quests"],
         recolorGet, recolorSet,
         L["Instead of green."])
-    recolorCheck:SetPoint("TOPLEFT", titlePicker, "BOTTOMLEFT", 0, -10)
+    recolorCheck:SetPoint("TOPLEFT", titleClassCheck, "BOTTOMLEFT", 0, -8)
 
     local function headerColorGet()
         local DB = ns:GetSubsystem("DB")
@@ -402,6 +421,28 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     local headerPicker = Options:CreateColorPicker(content, L["Section Header Color"], headerColorGet, headerColorSet)
     headerPicker:SetPoint("TOPLEFT", recolorCheck, "BOTTOMLEFT", 0, -16)
     alignSwatchTo(headerPicker, titlePicker)
+
+    local headerClassGet, headerClassSet = trackerSetting("headerColorUseClass")
+    local headerClassCheck = Options:CreateCheckbox(content, L["Use class color"],
+        headerClassGet, headerClassSet,
+        L["Colors the section headers (Quests, Campaign, and so on) with the class color of the character you are currently logged in on. Overrides the color above while it is on. Off by default."])
+    headerClassCheck:SetPoint("TOPLEFT", headerPicker, "BOTTOMLEFT", 0, -10)
+
+    local function dividerColorGet()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.headerDividerColor or { r = 0.92, g = 0.72, b = 0.02, a = 0.85 }
+    end
+    local function dividerColorSet(c)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.headerDividerColor = c end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker and Tracker.ApplyHeaderDividers then Tracker:ApplyHeaderDividers() end
+    end
+    local dividerPicker = Options:CreateColorPicker(content, L["Divider Line Color"], dividerColorGet, dividerColorSet)
+    dividerPicker:SetPoint("TOPLEFT", headerClassCheck, "BOTTOMLEFT", 0, -14)
+    alignSwatchTo(dividerPicker, titlePicker)
+    Options:AttachTooltip(dividerPicker, L["Divider Line Color"],
+        L["Sets the color of the thin line under each section header. Defaults to the original gold."])
 
     local function scaleGet()
         local DB = ns:GetSubsystem("DB")
@@ -423,7 +464,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         end
     end
     local scaleSlider = Options:CreateSlider(content, L["Tracker Scale"], 0.7, 1.5, 0.05, scaleGet, scaleSet)
-    scaleSlider:SetPoint("TOPLEFT", headerPicker, "BOTTOMLEFT", 0, -32)
+    scaleSlider:SetPoint("TOPLEFT", dividerPicker, "BOTTOMLEFT", 0, -32)
     scaleSlider:SetWidth(280)
 
     local function spacingGet()

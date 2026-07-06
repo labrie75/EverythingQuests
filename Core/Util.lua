@@ -69,6 +69,27 @@ function Util.HexToRGBA(hex, alpha)
     return r, g, b, alpha or 1
 end
 
+local playerClassColor
+function Util.GetPlayerClassColor()
+    if playerClassColor == nil then
+        local classFile = UnitClass and select(2, UnitClass("player"))
+        local c = classFile and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+        playerClassColor = c and { c.r, c.g, c.b } or false
+    end
+    if playerClassColor then
+        return playerClassColor[1], playerClassColor[2], playerClassColor[3]
+    end
+end
+
+function Util.EffectiveTitleColor(cfg)
+    if cfg and cfg.titleColorUseClass then
+        local r, g, b = Util.GetPlayerClassColor()
+        if r then return r, g, b end
+    end
+    local ov = cfg and cfg.titleColorOverride
+    if ov and ov.r then return ov.r, ov.g, ov.b end
+end
+
 function Util.ReconcileOrder(orderMap)
     if type(orderMap) ~= "table" then return {} end
     local list = {}

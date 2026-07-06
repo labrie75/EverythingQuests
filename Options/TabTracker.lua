@@ -442,6 +442,38 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Drag to move; right-click to lock or reset."])
     zpFloat:SetPoint("TOPLEFT", zpEnable, "BOTTOMLEFT", 0, -2)
 
+    local sbHeader = Options:CreateSectionHeader(content, L["Scenario Bonus Objectives"])
+    sbHeader:SetPoint("TOPLEFT", zpFloat, "BOTTOMLEFT", 0, -16)
+
+    local sbEnableGet = function()
+        local DB = ns:GetSubsystem("DB")
+        local st = DB and DB.db.profile.tracker.scenarioBonusHUD
+        return st and st.enabled
+    end
+    local sbEnableSet = function(value)
+        local Hud = ns:GetSubsystem("TrackerScenarioBonusHUD")
+        if Hud and Hud.SetEnabled then Hud:SetEnabled(value) end
+    end
+    local sbEnable = Options:CreateCheckbox(content,
+        L["Show bonus objectives HUD"],
+        sbEnableGet, sbEnableSet,
+        L["Shows a small movable checklist of the extra bonus objectives that appear during some scenarios and delves, so you do not miss their rewards. Drag to move, right-click to lock or reset. Off by default."])
+    sbEnable:SetPoint("TOPLEFT", sbHeader, "BOTTOMLEFT", 0, -8)
+
+    local sbScaleGet = function()
+        local DB = ns:GetSubsystem("DB")
+        local st = DB and DB.db.profile.tracker.scenarioBonusHUD
+        return (st and st.scale) or 1.0
+    end
+    local sbScaleSet = function(value)
+        local Hud = ns:GetSubsystem("TrackerScenarioBonusHUD")
+        if Hud and Hud.SetScale then Hud:SetScale(value) end
+    end
+    local sbScale = Options:CreateSlider(content, L["HUD Scale"], 0.5, 2.0, 0.05, sbScaleGet, sbScaleSet)
+    sbScale:SetPoint("TOPLEFT", sbEnable, "BOTTOMLEFT", 0, -16)
+    sbScale:SetWidth(280)
+    Options:AttachTooltip(sbScale, L["HUD Scale"], L["Sizes the bonus objectives HUD."])
+
     Options:AttachTooltip(header, L["On-Screen Tracker"],
         L["Changes apply immediately to the on-screen tracker."])
 end)

@@ -158,6 +158,11 @@ L["Show zone progress bar"] = true
 L["Approximate questline progress."] = true
 L["Float as a movable bar"] = true
 L["Drag to move; right-click to lock or reset."] = true
+L["Scenario Bonus Objectives"] = true
+L["Show bonus objectives HUD"] = true
+L["Shows a small movable checklist of the extra bonus objectives that appear during some scenarios and delves, so you do not miss their rewards. Drag to move, right-click to lock or reset. Off by default."] = true
+L["HUD Scale"] = true
+L["Sizes the bonus objectives HUD."] = true
 L["Changes apply immediately to the on-screen tracker."] = true
 
 -- ─── Options/TabWorldQuests.lua ───
@@ -234,6 +239,8 @@ L["Font"] = true
 L["Font Size"] = true
 L["Title Size Offset"] = true
 L["Sizes quest and achievement titles separately from the objective text. This value is added to the Font Size above: 0 keeps titles the same size as the base font, positive makes them larger, negative smaller."] = true
+L["Header Size Offset"] = true
+L["Sizes the section headers (Quests, Campaign, and so on) independently of the quest text. Added on top of the Font Size above: the default 4 keeps headers at their current size, lower shrinks them (handy on a low UI scale), higher enlarges them."] = true
 L["Outline"] = true
 L["Thick"] = true
 L["Mono"] = true
@@ -286,9 +293,14 @@ L["Reset to Defaults"] = true
 L["Reset all Appearance settings to defaults?"] = true
 L["Quest Title Color Override"] = true
 L["When cleared, falls back to difficulty coloring or default yellow."] = true
+L["Use class color"] = true
+L["Colors quest, achievement, and endeavor titles with the class color of the character you are currently logged in on. Overrides the color above while it is on. Off by default."] = true
 L["Use title color for completed quests"] = true
 L["Instead of green."] = true
 L["Section Header Color"] = true
+L["Colors the section headers (Quests, Campaign, and so on) with the class color of the character you are currently logged in on. Overrides the color above while it is on. Off by default."] = true
+L["Divider Line Color"] = true
+L["Sets the color of the thin line under each section header. Defaults to the original gold."] = true
 L["Tracker Scale"] = true
 L["Block Spacing"] = true
 L["Zone Bar Scale"] = true
@@ -534,10 +546,12 @@ L["Untrack Recipe"] = true
 L["Final Stage"] = true
 L["Stage %d"] = true
 
--- ─── Modules/Tracker/ZoneProgress.lua ───
+-- ─── Modules/Tracker/ScenarioBonusHUD.lua ───
+L["Bonus Objectives"] = true
 L["Unlock (allow moving)"] = true
 L["Lock position"] = true
 L["Reset position"] = true
+L["Delve Bonus Loot"] = true
 
 -- ─── Modules/WhatsNew.lua ───
 L["See what's new"] = true

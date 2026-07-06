@@ -3,24 +3,27 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.29.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.29.0"
+local FEATURE_POPUP_VERSION = "1.30.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.30.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
-If you skipped a version, every release's full notes live right inside the addon — type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
+If you skipped a version, every release's full notes live right inside the addon. Type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706Rearrange your tracker sections|r
-You can now put the tracker's sections in whatever order you like. Open |cffffffff/eqs|r > |cffffffffTracker|r > |cffffffffSection Order|r and use the arrows to move Campaign, Quests, Profession, Endeavors, Achievements, and the Zone Progress bar up or down. Thanks to |cffffffffDrahgunFyre|r for suggesting it in the Discord.
+|cffEBB706Never miss a delve's bonus loot|r
+There is a new movable |cffffffffBonus Objectives HUD|r. In delves it tracks the bonus loot mechanics (the Nemesis Strongbox packs and the Sanctified Banner) so you can grab the extra rewards before the boss. Turn it on under |cffffffff/eqs|r > |cffffffffTracker|r > |cffffffffScenario Bonus Objectives|r, then drag it anywhere and right-click to lock or reset. Off by default. Thanks to |cffffffffDrahgunFyre|r for the idea in the Discord.
 
-|cffEBB706Move World Quests to the top|r
-In that same Section Order area there is a |cffffffffTop|r / |cffffffffBottom|r switch for the World Quests panel — put it above your quests if you like them front and center, or leave it below (the default). It keeps its own scrollbar and size limit either way.
+|cffEBB706Class-colored titles and headers|r
+New |cffffffffUse class color|r toggles under |cffffffff/eqs|r > |cffffffffAppearance|r color your quest and achievement titles, and your section headers, with the class color of whoever you are logged in on. Off by default.
 
-|cffEBB706Quieter updates — sorry for the popup!|r
-You don't have to get a popup every update anymore. Under |cffffffff/eqs|r > |cffffffffGeneral|r > |cffffffffAfter an update|r you can switch these notices to a quiet, clickable |cffffffffChat link|r, or turn them off entirely. You can also tick |cffffffffDon't show these again|r at the bottom of this window.
+|cffEBB706More header controls|r
+You can now recolor the |cffffffffdivider line|r under each section header (it is no longer stuck on gold), and size the headers separately from your quest text with the new |cffffffffHeader Size Offset|r slider. Both live under |cffffffff/eqs|r > |cffffffffAppearance|r.
 
-|cffEBB706Found a bug? Please tell me|r
-If anything looks off, let me know on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.
+|cffEBB706All your fonts|r
+The font pickers now list every font from |cffffffffLibSharedMedia|r, including ones added by other addons, not just the fonts bundled with Everything Quests.
+
+|cffEBB706Thanks|r
+The header, font, and class-color options were all requested by |cffffffffChipW0lf|r in the CurseForge comments. Keep the ideas coming on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

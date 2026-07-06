@@ -2,6 +2,24 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.30.0", date = "2026-07-05",
+        sections = {
+            { head = "New Features", items = {
+                "Bonus Objectives HUD - a new movable on-screen checklist for the bonus objectives you might otherwise miss. In delves it tracks the bonus loot mechanics (Nemesis Strongbox packs and the Sanctified Banner) so you can grab the extra rewards before the boss. Turn it on under /eqs > Tracker > Scenario Bonus Objectives, drag it anywhere, and right-click to lock or reset. Off by default. Thanks to DrahgunFyre for the idea in the Discord.",
+                "Class color for titles and headers - new \"Use class color\" toggles under /eqs > Appearance color your quest and achievement titles, and your section headers, with the class color of the character you are logged in on. Off by default. Thanks to ChipW0lf.",
+                "Custom header divider color - the thin line under each section header (Quests, Campaign, and so on) is no longer locked to gold; set any color under /eqs > Appearance > Divider Line Color. Thanks to ChipW0lf.",
+                "Independent header text size - a new Header Size Offset slider under /eqs > Appearance sizes the section headers separately from the quest text, so they do not get oversized on a low UI scale. Thanks to ChipW0lf.",
+            } },
+            { head = "Improvements", items = {
+                "More fonts - the font pickers now list every font registered through LibSharedMedia, including fonts added by other addons, instead of only the ones bundled with Everything Quests. Thanks to ChipW0lf.",
+            } },
+            { head = "Bug Fixes", items = {
+                "The Clear button next to Quest Title Color Override now resets the color swatch when clicked.",
+                "When the zone progress bar is set to \"Same as tracker font\", it now follows the main tracker font, size, outline, and shadow live.",
+            } },
+        },
+    },
+    {
         version = "1.29.0", date = "2026-07-03",
         sections = {
             { head = "New Features", items = {

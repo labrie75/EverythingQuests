@@ -60,14 +60,17 @@ function Blocks:BeginRenderPass()
     local cON = (not t) or t.showObjectiveNumbers ~= false
     local cCB = (not t) or t.colorByDifficulty  ~= false
     local cOG = (not t) or t.overrideCompleteGreen ~= false
-    local tco = t and t.titleColorOverride
-    local tr, tg, tb = tco and tco.r, tco and tco.g, tco and tco.b
+    local useClass = t and t.titleColorUseClass and true or false
+    local tr, tg, tb
+    if ns.Util and ns.Util.EffectiveTitleColor then tr, tg, tb = ns.Util.EffectiveTitleColor(t) end
     if cL ~= self._cL or cQI ~= self._cQI or cZT ~= self._cZT
        or cON ~= self._cON or cCB ~= self._cCB or cOG ~= self._cOG
-       or tr ~= self._cTr or tg ~= self._cTg or tb ~= self._cTb then
+       or tr ~= self._cTr or tg ~= self._cTg or tb ~= self._cTb
+       or useClass ~= self._cUseClass then
         self._cL, self._cQI, self._cZT, self._cON, self._cCB = cL, cQI, cZT, cON, cCB
         self._cOG = cOG
         self._cTr, self._cTg, self._cTb = tr, tg, tb
+        self._cUseClass = useClass
         dirty = true
     end
 
@@ -488,13 +491,13 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     block.title:SetText(titleText)
 
     local colorByDifficulty = cfg.colorByDifficulty ~= false
-    local override = cfg.titleColorOverride
+    local ovR, ovG, ovB = self._cTr, self._cTg, self._cTb
     local recolorComplete = (cfg.overrideCompleteGreen ~= false)
-                            and override and override.r and true or false
+                            and ovR and true or false
     if questData.isComplete and not recolorComplete then
         block.title:SetTextColor(0.27, 0.85, 0.27)
-    elseif override and override.r then
-        block.title:SetTextColor(override.r, override.g, override.b)
+    elseif ovR then
+        block.title:SetTextColor(ovR, ovG, ovB)
     elseif colorByDifficulty and questData.level and GetQuestDifficultyColor then
         local c = GetQuestDifficultyColor(questData.level)
         block.title:SetTextColor(c.r, c.g, c.b)
@@ -535,9 +538,9 @@ function Blocks:RenderQuest(block, questData, simplifyMode)
     local completeHex
     if recolorComplete then
         completeHex = ("%02x%02x%02x"):format(
-            math.floor(override.r * 255 + 0.5),
-            math.floor(override.g * 255 + 0.5),
-            math.floor(override.b * 255 + 0.5))
+            math.floor(ovR * 255 + 0.5),
+            math.floor(ovG * 255 + 0.5),
+            math.floor(ovB * 255 + 0.5))
     end
     local subText = buildSubText(questData, simplifyMode,
                                  cfg.showObjectiveNumbers == false, completeHex)

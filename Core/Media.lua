@@ -122,6 +122,14 @@ end
 
 function Media:GetFontList()
     local out = {}
+    local LSM = self.LSM
+    local names = LSM and LSM:List("font")
+    if names and #names > 0 then
+        for _, name in ipairs(names) do
+            out[#out + 1] = { value = name, label = name }
+        end
+        return out
+    end
     for _, f in ipairs(WOW_FONTS) do
         out[#out + 1] = { value = f.name, label = f.name }
     end
