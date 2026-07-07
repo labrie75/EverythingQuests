@@ -5,6 +5,14 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.1] - 2026-07-06
+
+Localization catch-up: French and Russian are back to full coverage for everything added in the last two updates. No feature, gameplay, or interface changes in this release.
+
+### Improvements
+
+- **French and Russian translations** - now cover all of the v1.30.0 additions (Bonus Objectives HUD, class-color options for titles and headers, custom header divider color, and independent header size) as well as the v1.29.0 tracker section-order and update-notice strings. Thanks to Zox (French) and Malevi4 (Russian).
+
 ## [1.30.0] - 2026-07-05
 
 Make the tracker look the way you want, and never miss a delve's bonus loot. This release adds a movable Bonus Objectives HUD, a customizable section-header divider color, independent header text sizing, class-color options for titles and headers, and the full LibSharedMedia font list. Missed a previous version? Every release's notes are in the About tab's changelog (`/eqs` > About).

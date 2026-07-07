@@ -2,6 +2,14 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.30.1", date = "2026-07-06",
+        sections = {
+            { head = "Improvements", items = {
+                "Translations - French and Russian now cover everything added in the last two updates: the Bonus Objectives HUD, the class-color options, the custom header divider color, and the independent header size from v1.30.0, plus the tracker section order and update-notice options from v1.29.0. Thanks to Zox (French) and Malevi4 (Russian).",
+            } },
+        },
+    },
+    {
         version = "1.30.0", date = "2026-07-05",
         sections = {
             { head = "New Features", items = {
