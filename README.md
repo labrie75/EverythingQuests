@@ -216,7 +216,7 @@ EverythingQuests/
 ├── Bindings.xml                      # Keybinding declarations
 ├── Core/                             # Init, DB, Events, Profiler, Cache,
 │                                     #   Util, Media, TooltipScan, Dialog
-├── Locales/                          # enUS (full) + 10 stub locales
+├── Locales/                          # enUS, frFR, ruRU, koKR (all full)
 ├── Libs/                             # Bundled libraries
 ├── Modules/
 │   ├── Minimap/                      # LibDataBroker launcher
@@ -251,9 +251,9 @@ Everything Quests ships full, bundled translations — on a matching game client
 
 - **French (frFR)** — complete, by **Zox**
 - **Russian (ruRU)** — complete, by **Malevi4**
-- **Korean (koKR)** — by **labrie75**
+- **Korean (koKR)** — complete, by **labrie75**
 
-Stub files also exist for deDE, esES, esMX, itIT, ptBR, zhCN, and zhTW. Further translation contributions are welcome — see [Contributing](#contributing).
+Other game clients fall back to English. Contributions for more languages are welcome, see [Contributing](#contributing).
 
 ---
 
