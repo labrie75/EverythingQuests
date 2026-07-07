@@ -136,6 +136,7 @@ LibDataBroker-powered launcher compatible with Titan Panel, ChocolateBar, ElvUI'
 
 | Command | Action |
 |---|---|
+| `/eqs trackerdebug` | Dump the tracker's live frame/background/content heights and watched-vs-total quest counts (diagnoses "tracker shrinks" reports) |
 | `/eqs scenario` | Dump current scenario/instance API returns (used to confirm two-tier header sources) |
 | `/eqs questobj` | Dump every watched quest's objectives, including fallback sources for empty objective lists |
 | `/eqs autopopup` | Probe the auto-quest popup API surface (`GetNumAutoQuestPopUps` etc.) |

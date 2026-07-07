@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.30.1"))
+    f.version:SetText("v" .. (ns.VERSION or "1.30.2"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)
@@ -750,6 +750,10 @@ local function eqSlashHandler(msg)
     elseif msg == "bonushud test" then
         local Hud = ns:GetSubsystem("TrackerScenarioBonusHUD")
         if Hud and Hud.ToggleTest then Hud:ToggleTest() end
+        return
+    elseif msg == "trackerdebug" then
+        local T = ns:GetSubsystem("Tracker")
+        if T and T.DebugSize then T:DebugSize() end
         return
     elseif msg == "questobj" then
         Options:DumpQuestObjectives()

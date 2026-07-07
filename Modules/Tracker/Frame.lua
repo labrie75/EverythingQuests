@@ -648,6 +648,39 @@ function Tracker:Refresh()
     Events:Debounce("eq.tracker.refresh", REFRESH_THROTTLE, thunk)
 end
 
+function Tracker:DebugSize()
+    local f = self.frame
+    if not f then print("|cffEBB706EQ TrackerDebug|r: tracker not built.") return end
+    local DB  = ns:GetSubsystem("DB")
+    local cfg = DB and DB.db.profile.tracker
+    local function h(fr) return fr and math.floor((fr:GetHeight() or 0) + 0.5) or -1 end
+    local function shown(fr) return (fr and fr:IsShown()) and "shown" or "hidden" end
+
+    print("|cffEBB706EQ TrackerDebug|r (paste this to share):")
+    print(("  frame h=%d w=%d scale=%.2f  cfg.maxHeight=%s  inCombat=%s"):format(
+        h(f), math.floor((f:GetWidth() or 0) + 0.5), f:GetScale() or 1,
+        tostring(cfg and cfg.maxHeight), tostring(InCombatLockdown())))
+    print(("  bgFrame h=%d (%s)  background=%s  showBackground=%s showBorder=%s"):format(
+        h(f.bgFrame), shown(f.bgFrame), shown(f.background),
+        tostring(cfg and cfg.showBackground), tostring(cfg and cfg.showBorder)))
+    print(("  content(questH)=%d  scrollViewport=%d  scenario h=%d (%s)  wqRegion h=%d (%s)"):format(
+        h(f.content), h(f.scroll), h(f.scenarioContainer), shown(f.scenarioContainer),
+        h(f.eventsRegion), shown(f.eventsRegion)))
+
+    local nWatch = (C_QuestLog and C_QuestLog.GetNumQuestWatches and C_QuestLog.GetNumQuestWatches()) or -1
+    local nLog = 0
+    if C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo then
+        for i = 1, C_QuestLog.GetNumQuestLogEntries() do
+            local info = C_QuestLog.GetInfo(i)
+            if info and not info.isHeader and not info.isHidden then nLog = nLog + 1 end
+        end
+    end
+    local Cache, nCache = ns:GetSubsystem("Cache"), 0
+    if Cache and Cache.All then for _ in pairs(Cache:All()) do nCache = nCache + 1 end end
+    print(("  quests: log=%d  watched=%d  cache=%d  showOnlyWatched=%s  sortMode=%s"):format(
+        nLog, nWatch, nCache, tostring(cfg and cfg.showOnlyWatched), tostring(cfg and cfg.sortMode)))
+end
+
 function Tracker:ToggleCollapsed()
     local DB = ns:GetSubsystem("DB")
     if not DB then return end
@@ -1190,9 +1223,9 @@ function Tracker:Render()
             f.bgFrame:Hide()
             f.background:Hide()
         else
-            local sH = math.max(1, scrollH)
-            local neededHeight = DRAG_HANDLE_H + scenarioH + 2 + sH + 2 + wqRegionH + GRIP_SIZE + 6
-            f.bgFrame:SetHeight(math.min(neededHeight, maxH))
+            -- Span the full dragged frame (down to the grip), not the content, so the
+            -- bordered window never collapses to a few lines while the grip sits far below.
+            f.bgFrame:SetHeight(f:GetHeight() or maxH)
             if cfg.showBackground then f.background:Show() else f.background:Hide() end
             if cfg.showBackground or cfg.showBorder then f.bgFrame:Show() else f.bgFrame:Hide() end
         end

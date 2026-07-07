@@ -2,6 +2,17 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.30.2", date = "2026-07-07",
+        sections = {
+            { head = "Bug Fixes", items = {
+                "The tracker no longer shrinks to a few lines a moment after you log in. With a background or border enabled, the bordered window collapsed to hug the quest content while the resize handle stayed at the full height, leaving a large empty gap below it. The window now fills the full height you size it to. Thanks to ShodanDelacroix for the detailed report.",
+            } },
+            { head = "Improvements", items = {
+                "Russian translation - the Campaign term now uses the WoW-official spelling «Кампания». Thanks to Malevi4.",
+            } },
+        },
+    },
+    {
         version = "1.30.1", date = "2026-07-06",
         sections = {
             { head = "Improvements", items = {

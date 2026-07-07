@@ -5,6 +5,18 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.2] - 2026-07-07
+
+Bug-fix release: the quest tracker no longer shrinks after a relog.
+
+### Bug Fixes
+
+- **Tracker no longer shrinks after login** - with a background or border enabled, the tracker window collapsed to a few lines a moment after logging in, while the resize handle stayed far below. The bordered window now fills the full height you size it to, instead of hugging the quest content. Thanks to ShodanDelacroix for the detailed report.
+
+### Improvements
+
+- **Russian translation** - the "Campaign" term now uses the WoW-official spelling «Кампания». Thanks to Malevi4.
+
 ## [1.30.1] - 2026-07-06
 
 Localization catch-up: French and Russian are back to full coverage for everything added in the last two updates. No feature, gameplay, or interface changes in this release.
