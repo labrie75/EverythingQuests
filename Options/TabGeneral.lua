@@ -78,12 +78,19 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         mapGet, mapSet)
     mapHide:SetPoint("TOPLEFT", inst, "BOTTOMLEFT", 0, -2)
 
+    local mplusGet, mplusSet = generalSetting("hideInMythicPlus")
+    local mplus = Options:CreateCheckbox(content,
+        L["Hide tracker in Mythic+"],
+        mplusGet, mplusSet,
+        L["Hides the tracker during an active Mythic+ run, then brings it back when the run ends."])
+    mplus:SetPoint("TOPLEFT", mapHide, "BOTTOMLEFT", 0, -2)
+
     local autoGet, autoSet = generalSetting("autoTrackAccepted")
     local auto = Options:CreateCheckbox(content,
         L["Auto-track accepted quests"],
         autoGet, autoSet,
         L["Matches Blizzard's default."])
-    auto:SetPoint("TOPLEFT", mapHide, "BOTTOMLEFT", 0, -2)
+    auto:SetPoint("TOPLEFT", mplus, "BOTTOMLEFT", 0, -2)
 
     local autoAccGet, autoAccSet = generalSetting("autoAcceptQuests")
     local autoAcc = Options:CreateCheckbox(content,

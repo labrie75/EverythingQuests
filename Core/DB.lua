@@ -9,6 +9,7 @@ DB.defaults = {
             hideInCombat     = false,
             hideInInstances  = false,
             hideOnMapOpen    = false,
+            hideInMythicPlus = false,
             autoTrackAccepted = true,
             autoAcceptQuests = false,
             autoTurnInQuests = false,
@@ -115,6 +116,8 @@ DB.defaults = {
             },
             autoListZoneWorldQuests = false,
             worldQuestsPinnedMaxFraction = 0.40,
+            worldQuestsHeightOverride = false,
+            worldQuestsHeight = 120,
         },
         worldQuests = {
             enabled = true,

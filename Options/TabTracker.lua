@@ -305,8 +305,47 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         L["Lists every WQ in your zone without tracking each."])
     autoWQCheck:SetPoint("TOPLEFT", wqCheck, "BOTTOMLEFT", 0, -2)
 
+    local wqHeightSlider
+    local function setWqHeightEnabled(on)
+        if not wqHeightSlider then return end
+        wqHeightSlider:SetAlpha(on and 1 or 0.4)
+        if wqHeightSlider.slider then wqHeightSlider.slider:EnableMouse(on and true or false) end
+    end
+    local wqhGet = function()
+        local DB = ns:GetSubsystem("DB")
+        return DB and DB.db.profile.tracker.worldQuestsHeightOverride
+    end
+    local wqhSet = function(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.worldQuestsHeightOverride = value end
+        setWqHeightEnabled(value)
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    local wqhCheck = Options:CreateCheckbox(content,
+        L["Set a custom World Quests height"],
+        wqhGet, wqhSet,
+        L["By default the World Quests area shares space with your quest list and gets squeezed when you have a lot of quests. Turn this on to give it its own height, set by the slider below."])
+    wqhCheck:SetPoint("TOPLEFT", autoWQCheck, "BOTTOMLEFT", 0, -2)
+
+    local wqHeightGet = function()
+        local DB = ns:GetSubsystem("DB")
+        return (DB and DB.db.profile.tracker.worldQuestsHeight) or 120
+    end
+    local wqHeightSet = function(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB then DB.db.profile.tracker.worldQuestsHeight = value end
+        local Tracker = ns:GetSubsystem("Tracker")
+        if Tracker then Tracker:Refresh() end
+    end
+    wqHeightSlider = Options:CreateSlider(content, L["World Quests height"], 40, 400, 10,
+        wqHeightGet, wqHeightSet)
+    wqHeightSlider:SetPoint("TOPLEFT", wqhCheck, "BOTTOMLEFT", 0, -8)
+    wqHeightSlider:SetWidth(280)
+    setWqHeightEnabled(wqhGet())
+
     local orderHeader = Options:CreateSectionHeader(content, L["Section Order"])
-    orderHeader:SetPoint("TOPLEFT", autoWQCheck, "BOTTOMLEFT", 0, -14)
+    orderHeader:SetPoint("TOPLEFT", wqHeightSlider, "BOTTOMLEFT", 0, -18)
     Options:AttachTooltip(orderHeader, L["Section Order"],
         L["Rearrange the tracker's sections with the arrows below. A section only appears on the tracker while it has something in it, so reordering an empty section won't look like anything changed. World Quests scroll in their own panel and can only sit at the very top or bottom \226\128\148 use the Top/Bottom control."])
 

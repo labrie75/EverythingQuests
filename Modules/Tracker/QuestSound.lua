@@ -66,7 +66,8 @@ local function detectTransitions()
     for id, q in pairs(quests) do
         local was = Q.lastComplete[id]
         local now = q.isComplete and true or false
-        if now and not was then
+        -- was==false (not `not was`): a first-seen already-complete quest is nil here and must not fire (cold-login false positive).
+        if now and was == false then
             n = n + 1
             _readyTitles[n] = q.title or ""
         end

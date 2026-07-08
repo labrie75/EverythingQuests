@@ -12,6 +12,8 @@ local function shouldHide()
     if not cfg then return false end
     if cfg.hideInCombat and InCombatLockdown and InCombatLockdown() then return true end
     if cfg.hideInInstances and IsInInstance and (IsInInstance()) then return true end
+    if cfg.hideInMythicPlus and C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
+       and C_ChallengeMode.IsChallengeModeActive() then return true end
     if cfg.hideOnMapOpen and WorldMapFrame and WorldMapFrame:IsShown() then return true end
     return false
 end
@@ -53,6 +55,8 @@ function V:OnEnable()
     Events:On("PLAYER_REGEN_DISABLED", apply)
     Events:On("PLAYER_REGEN_ENABLED",  apply)
     Events:On("PLAYER_ENTERING_WORLD", apply)
+    Events:On("CHALLENGE_MODE_START",     apply)
+    Events:On("CHALLENGE_MODE_COMPLETED", apply)
 
     Events:On("QUEST_ACCEPTED", function(_, questID)
         local cfg = getCfg()

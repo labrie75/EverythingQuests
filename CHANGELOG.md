@@ -5,6 +5,21 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.0] - 2026-07-07
+
+Two tracker-customization features plus three bug fixes. Both new options are off by default, so nothing changes unless you turn them on.
+
+### New Features
+
+- **World Quests height** - when you have a lot of quests, the World Quests area used to get squeezed down to a line or two. Tick **Set a custom World Quests height** under `/eqs` > Tracker and drag the slider to give it as much room as you want. Off by default. Thanks to TheOneMVP.
+- **Hide tracker in Mythic+** - a new option under `/eqs` > General tucks the tracker away during an active Mythic+ run and brings it back when the run ends, so it stays out of your way next to the dungeon timer. Off by default. Thanks to TheOneMVP.
+
+### Bug Fixes
+
+- **Tracker no longer shrinks with many quests** - the quest viewport was collapsing to a section boundary when your quest list overflowed the frame, cutting it down to a couple of lines. It now fills the height you set and scrolls the overflow. Thanks to ShodanDelacroix for the debug info that pinpointed it.
+- **Quest-completion sound no longer plays at login** - on a cold login the sound tracker could capture its baseline before the quest log finished syncing, then mistake every already-complete quest for a fresh completion. It now only plays on a real incomplete-to-complete transition.
+- **Fixed a flight-map error** - opening the flight map with a quest tracked could throw a Lua error (the taxi-node highlighter misread a map API's return values). Thanks to DrahgunFyre for the report.
+
 ## [1.30.2] - 2026-07-07
 
 Bug-fix release: the quest tracker no longer shrinks after a relog.

@@ -33,7 +33,7 @@
         "HaveQuestData", "HaveQuestRewardData", "GetQuestInfoByQuestID",
         "GetQuestLogQuestText", "ToggleQuestLog",
         "WorldMapFrame", "QuestMapFrame", "QuestLogFrame", "FlightMapFrame",
-        "C_TaxiMap", "C_GossipInfo", "UnitOnTaxi", "IsAltKeyDown",
+        "C_TaxiMap", "C_GossipInfo", "C_ChallengeMode", "UnitOnTaxi", "IsAltKeyDown",
         "AcceptQuest", "DeclineQuest", "CompleteQuest", "IsQuestCompletable",
         "GetNumQuestChoices", "GetQuestReward",
         "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",

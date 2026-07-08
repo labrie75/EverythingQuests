@@ -1161,9 +1161,17 @@ function Tracker:Render()
     -- (Achievements / in-tracker zone bar) is never shown header-without-body.
     -- The WQ region has one header and scrolls cleanly, so it yields; wqFloor
     -- keeps it from vanishing and the fraction still caps it when quests are short.
-    local wqFloor    = SECTION_H + 2 + 40
-    local questWants = math.min(questContentH, math.max(1, available - wqFloor))
-    local eventsCap  = math.max(0, math.min(math.floor(available * fraction), available - questWants))
+    local eventsCap
+    if cfg and cfg.worldQuestsHeightOverride then
+        -- WQ gets its set height; quests keep a floor so they can't vanish.
+        local wqWant   = SECTION_H + 2 + math.max(0, cfg.worldQuestsHeight or 0)
+        local questMin = SECTION_H + 2 + 40
+        eventsCap = math.max(0, math.min(wqWant, available - questMin))
+    else
+        local wqFloor    = SECTION_H + 2 + 40
+        local questWants = math.min(questContentH, math.max(1, available - wqFloor))
+        eventsCap = math.max(0, math.min(math.floor(available * fraction), available - questWants))
+    end
 
     local _IB = ns:GetSubsystem("TrackerItemButtons")
     local secureLocked = InCombatLockdown()
@@ -1180,14 +1188,16 @@ function Tracker:Render()
 
     local wqRegionH = self:_RenderPinnedEvents(eventsCap) or 0
 
-    -- Quest viewport = leftover after WQ's actual height, then snap the clip UP to
-    -- a section boundary so a section header never appears with its body cut off.
+    -- Quest viewport = leftover after WQ's actual height. Only snap the clip UP to a
+    -- section top when the cut lands inside that header's own row (header shown with
+    -- no body). A section whose body merely overflows the cut must keep scrolling --
+    -- snapping to its top there would collapse the viewport to the sections above it.
     local scrollH = math.min(questContentH, available - wqRegionH)
     if scrollH < questContentH then
         for i = #sectionTops, 1, -1 do
             local top = sectionTops[i]
             if top > 0 and top < scrollH then
-                if (sectionTops[i + 1] or questContentH) > scrollH then scrollH = top end
+                if scrollH - top < SECTION_H + 2 then scrollH = top end
                 break
             end
         end

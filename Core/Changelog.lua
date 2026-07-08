@@ -2,6 +2,20 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.31.0", date = "2026-07-07",
+        sections = {
+            { head = "New Features", items = {
+                "World Quests height - the World Quests area used to get squeezed down to a line or two when you had a lot of quests. There is now a Set a custom World Quests height option under /eqs > Tracker, with a slider to give it as much room as you want. Off by default. Thanks to TheOneMVP.",
+                "Hide tracker in Mythic+ - a new option under /eqs > General tucks the tracker away during an active Mythic+ run and brings it back when the run ends, so it stays out of your way next to the dungeon timer. Off by default. Thanks to TheOneMVP.",
+            } },
+            { head = "Bug Fixes", items = {
+                "The tracker no longer shrinks to a few lines after a relog when you have more quests than fit. The viewport was collapsing to a section boundary; it now fills the height you set and scrolls the overflow. Thanks to ShodanDelacroix for the debug info that pinpointed it.",
+                "The quest-completion sound no longer occasionally plays once at login. On a cold login the sound tracker could capture its baseline before the quest log finished syncing, then mistake every already-complete quest for a fresh completion; it now only plays on a real incomplete-to-complete transition.",
+                "Fixed a Lua error when opening the flight map with a quest tracked (the taxi-node highlighter misread a map API's return values). Thanks to DrahgunFyre for the report.",
+            } },
+        },
+    },
+    {
         version = "1.30.2", date = "2026-07-07",
         sections = {
             { head = "Bug Fixes", items = {

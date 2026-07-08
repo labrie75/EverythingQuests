@@ -3,27 +3,21 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.30.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.30.0"
+local FEATURE_POPUP_VERSION = "1.31.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.31.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon. Type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706Never miss a delve's bonus loot|r
-There is a new movable |cffffffffBonus Objectives HUD|r. In delves it tracks the bonus loot mechanics (the Nemesis Strongbox packs and the Sanctified Banner) so you can grab the extra rewards before the boss. Turn it on under |cffffffff/eqs|r > |cffffffffTracker|r > |cffffffffScenario Bonus Objectives|r, then drag it anywhere and right-click to lock or reset. Off by default. Thanks to |cffffffffDrahgunFyre|r for the idea in the Discord.
+|cffEBB706Give World Quests more room|r
+When you have a lot of quests, the World Quests area used to get squeezed down to a line or two. There is now a |cffffffffWorld Quests height|r control under |cffffffff/eqs|r > |cffffffffTracker|r: tick |cffffffffSet a custom World Quests height|r and drag the slider to give it as much room as you want. Off by default, so nothing changes unless you turn it on. Thanks to |cffffffffTheOneMVP|r.
 
-|cffEBB706Class-colored titles and headers|r
-New |cffffffffUse class color|r toggles under |cffffffff/eqs|r > |cffffffffAppearance|r color your quest and achievement titles, and your section headers, with the class color of whoever you are logged in on. Off by default.
+|cffEBB706Auto-hide in Mythic+|r
+A new |cffffffffHide tracker in Mythic+|r option under |cffffffff/eqs|r > |cffffffffGeneral|r tucks the tracker away during a Mythic+ run and brings it back when the run ends, so it stays out of your way next to the dungeon timer. Off by default. Thanks to |cffffffffTheOneMVP|r.
 
-|cffEBB706More header controls|r
-You can now recolor the |cffffffffdivider line|r under each section header (it is no longer stuck on gold), and size the headers separately from your quest text with the new |cffffffffHeader Size Offset|r slider. Both live under |cffffffff/eqs|r > |cffffffffAppearance|r.
-
-|cffEBB706All your fonts|r
-The font pickers now list every font from |cffffffffLibSharedMedia|r, including ones added by other addons, not just the fonts bundled with Everything Quests.
-
-|cffEBB706Thanks|r
-The header, font, and class-color options were all requested by |cffffffffChipW0lf|r in the CurseForge comments. Keep the ideas coming on |cffffffffDiscord|r (button below) or in the |cffffffffCurseForge comments|r.
+|cffEBB706Bug fixes|r
+Fixed the tracker shrinking to a few lines after a relog - it now fills the height you set and scrolls. Fixed the quest-completion sound sometimes playing once at login. Fixed a Lua error when opening the flight map with a quest tracked. Thanks to |cffffffffShodanDelacroix|r and |cffffffffDrahgunFyre|r for the reports.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

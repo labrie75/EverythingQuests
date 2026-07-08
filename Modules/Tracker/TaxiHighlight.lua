@@ -55,11 +55,10 @@ local function questPosInContinent(continentMapID)
     local wm, wx, wy = C_QuestLog.GetNextWaypoint(qid)
     if not (wm and wx and wy) then return nil end
 
-    local rect = C_Map.GetMapRectOnMap(wm, continentMapID)
-    if not rect then return nil end
-    local rx, ry, rw, rh = rect.x, rect.y, rect.width, rect.height
-    if not (rx and ry and rw and rh) then return nil end
-    return rx + wx * rw, ry + wy * rh
+    -- GetMapRectOnMap returns four scalars (minX, maxX, minY, maxY), not a rect table.
+    local minX, maxX, minY, maxY = C_Map.GetMapRectOnMap(wm, continentMapID)
+    if not (minX and maxX and minY and maxY) then return nil end
+    return minX + wx * (maxX - minX), minY + wy * (maxY - minY)
 end
 
 local function findClosestNode(continentMapID, qcx, qcy)
