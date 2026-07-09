@@ -253,6 +253,15 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         end
         ReloadUI()
     end
+
+    local function profileExists(name)
+        local DB = ns:GetSubsystem("DB")
+        if not (DB and DB.db and DB.db.GetProfiles) then return false end
+        for _, p in ipairs(DB.db:GetProfiles()) do
+            if p == name then return true end
+        end
+        return false
+    end
     local profDD = Options:CreateDropdown(content, L["Active profile"],
         profileList, currentProfile, setProfile)
     profDD:SetPoint("TOPLEFT", profilesHeader, "BOTTOMLEFT", 0, -16)
@@ -271,7 +280,17 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
             onAccept = function(text)
                 local name = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
                 if name == "" then return end
-                createProfileCopiedFromCurrent(name)
+                if name ~= currentProfile() and profileExists(name) then
+                    Dialog:Show({
+                        title    = L["Overwrite profile?"],
+                        text     = (L["A profile named \"%s\" already exists. Overwrite it with a copy of your current settings?"]):format(name),
+                        button1  = L["Overwrite"],
+                        button2  = L["Cancel"],
+                        onAccept = function() createProfileCopiedFromCurrent(name) end,
+                    })
+                else
+                    createProfileCopiedFromCurrent(name)
+                end
             end,
         })
     end

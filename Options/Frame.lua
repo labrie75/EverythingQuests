@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.31.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.32.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)
@@ -778,7 +778,16 @@ local function eqSlashHandler(msg)
         end
         local n = C_QuestLog.GetNumQuestLogEntries()
         local header = "(none)"
-        print(("|cffEBB706EQ QuestZone|r %d entries — id title | hdr | C_TaskQuest.GetQuestZoneID | GetQuestUiMapID:"):format(n))
+        local pMap = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+        local onMapSet = {}
+        if pMap and C_QuestLog.GetQuestsOnMap then
+            for _, e in ipairs(C_QuestLog.GetQuestsOnMap(pMap) or {}) do
+                if e.questID then onMapSet[e.questID] = true end
+            end
+        end
+        print(("|cffEBB706EQ QuestZone|r zone=|cff66ccff%s|r  playerMap=%s(%s) — 'only current zone' shows a quest when onMap=Y or hdr==zone:"):format(
+            tostring(GetZoneText and GetZoneText() or "?"), tostring(pMap), mapName(pMap)))
+        print(("   %d entries — id title | hdr | onMap | Task=GetQuestZoneID | UiMap=GetQuestUiMapID:"):format(n))
         for i = 1, n do
             local info = C_QuestLog.GetInfo(i)
             if info then
@@ -789,8 +798,9 @@ local function eqSlashHandler(msg)
                     local tz  = C_TaskQuest and C_TaskQuest.GetQuestZoneID and C_TaskQuest.GetQuestZoneID(qid)
                     local ok, um = pcall(function() return GetQuestUiMapID and GetQuestUiMapID(qid) end)
                     if not ok then um = "ERR" end
-                    print(("   %s %s | hdr=|cff66ccff%s|r | Task=%s(%s) | UiMap=%s(%s)"):format(
+                    print(("   %s %s | hdr=|cff66ccff%s|r | onMap=%s | Task=%s(%s) | UiMap=%s(%s)"):format(
                         tostring(qid), tostring(info.title), tostring(header),
+                        onMapSet[qid] and "|cff44ff44Y|r" or "|cff888888n|r",
                         tostring(tz), mapName(tz), tostring(um), mapName(tonumber(um))))
                 end
             end

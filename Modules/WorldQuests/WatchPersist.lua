@@ -16,12 +16,15 @@ local function blizzardIsWatched(questID)
            and C_QuestLog.GetQuestWatchType(questID) ~= nil
 end
 
+-- NOT C_QuestLog.IsWorldQuest here: that is static classification, true for an
+-- EXPIRED world quest forever, so it could never prune (ghost entries survived
+-- every login and got re-watched each session).
 local function questStillActive(questID)
     if C_TaskQuest and C_TaskQuest.GetQuestTimeLeftMinutes then
         local t = C_TaskQuest.GetQuestTimeLeftMinutes(questID)
         if t and t > 0 then return true end
     end
-    if C_QuestLog and C_QuestLog.IsWorldQuest and C_QuestLog.IsWorldQuest(questID) then
+    if C_TaskQuest and C_TaskQuest.IsActive and C_TaskQuest.IsActive(questID) then
         return true
     end
     return false
@@ -72,6 +75,21 @@ function W:IsTracked(questID)
     return list and list[questID] == true
 end
 
+-- Tracked by ANY store: our persistent list OR Blizzard's runtime WQ watch
+-- (the latter can hold quests we never persisted, e.g. auto-watches).
+function W:IsWatched(questID)
+    if self:IsTracked(questID) then return true end
+    if C_QuestLog and C_QuestLog.GetNumWorldQuestWatches
+       and C_QuestLog.GetQuestIDForWorldQuestWatchIndex then
+        for i = 1, C_QuestLog.GetNumWorldQuestWatches() or 0 do
+            if C_QuestLog.GetQuestIDForWorldQuestWatchIndex(i) == questID then
+                return true
+            end
+        end
+    end
+    return blizzardIsWatched(questID)
+end
+
 -- Used by the Events tracker section so it sees both Blizzard's runtime
 -- watch list AND any of our persistent ones that haven't been re-added yet
 -- (e.g., during the first second after login).
@@ -91,7 +109,7 @@ function W:GetTrackedQuests()
     local list = getList()
     if list then
         for qid in pairs(list) do
-            if not seen[qid] then
+            if not seen[qid] and questStillActive(qid) then
                 seen[qid] = true
                 out[#out + 1] = qid
             end

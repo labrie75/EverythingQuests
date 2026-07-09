@@ -202,14 +202,19 @@ function QR:RenderRewards(tip, questID)
         end
     end
 
-    local numCur = GetNumQuestLogRewardCurrencies and GetNumQuestLogRewardCurrencies(questID) or 0
-    for i = 1, numCur do
-        local name, _, count = GetQuestLogRewardCurrencyInfo(i, questID)
-        if name then
-            local label = name
-            if count and count > 1 then label = label .. " ×" .. count end
-            tip:AddLine(label, 0.85, 0.85, 1.0)
-            hasReward = true
+    local currencies = C_QuestLog and C_QuestLog.GetQuestRewardCurrencies
+                       and C_QuestLog.GetQuestRewardCurrencies(questID)
+    if currencies then
+        for i = 1, #currencies do
+            local c = currencies[i]
+            local name = c and c.name
+            if name then
+                local count = c.totalRewardAmount
+                local label = name
+                if count and count > 1 then label = label .. " ×" .. count end
+                tip:AddLine(label, 0.85, 0.85, 1.0)
+                hasReward = true
+            end
         end
     end
 

@@ -383,10 +383,31 @@ function R:_enforceRetention()
     local n = #entries
     if n <= cap then return end
     local drop = n - cap
-    for i = 1, cap do
-        entries[i] = entries[i + drop]
+
+    -- Evict undated backfill stubs (t == 0) before dated turn-ins: stubs land
+    -- at the newest slots, so a plain front-trim would discard real history first.
+    local stubDrop = 0
+    for i = 1, n do
+        if (entries[i].t or 0) == 0 then stubDrop = stubDrop + 1 end
     end
-    for i = cap + 1, n do
+    if stubDrop > drop then stubDrop = drop end
+    local datedDrop = drop - stubDrop
+
+    local w = 0
+    for i = 1, n do
+        local e = entries[i]
+        local keep = true
+        if (e.t or 0) == 0 then
+            if stubDrop > 0 then stubDrop = stubDrop - 1; keep = false end
+        elseif datedDrop > 0 then
+            datedDrop = datedDrop - 1; keep = false
+        end
+        if keep then
+            w = w + 1
+            entries[w] = e
+        end
+    end
+    for i = w + 1, n do
         entries[i] = nil
     end
 end
@@ -406,8 +427,13 @@ function R:Backfill()
         if e.c == key then seen[e.q] = true end
     end
 
+    -- Cap stubs to the room left under retention so a huge backfill can't
+    -- push out (or churn-allocate over) real dated history.
+    local cap = retention()
+    local room = (cap > 0) and (cap - #entries) or math.huge
     local added = 0
     for i = 1, #got do
+        if room <= 0 then break end
         local qid = got[i]
         if not seen[qid] then
             entries[#entries + 1] = {
@@ -418,6 +444,7 @@ function R:Backfill()
             }
             self:_updateCompletion(qid, 0)
             added = added + 1
+            room = room - 1
         end
     end
     self.sv.charBackfilled[key] = true

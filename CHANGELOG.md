@@ -5,6 +5,36 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.32.0] - 2026-07-08
+
+A large bug-fix and polish release, plus a new scenario text-size option. Several tracker filters and hide options that quietly did nothing now work the way they should.
+
+### New Features
+
+- **Scenario text size** - a new **Criteria Text Size** slider under `/eqs` > Appearance > Scenario resizes the objective lines inside scenarios and delves, which used to render noticeably smaller than the rest of your tracker text.
+
+### Bug Fixes
+
+- **"Show only quests in current zone" no longer empties the tracker** - the filter was comparing quest-log group headers (often "Campaign") against your zone name and hiding everything. It now uses the quests actually on your current map.
+- **The tracker's hide options actually hide it now** - "hide in combat", "hide in instances", "hide in Mythic+", and "hide when the map is open" were being silently blocked under Midnight (the tracker owns protected quest-item buttons). The tracker now fades out reliably in all four cases.
+- **"World quests" tracker filter now works** - the checkbox had no effect before.
+- **Currency quest rewards show in tooltips again** - they stopped appearing after a Midnight API change, and reputation World Quests are now categorized correctly in every language.
+- **No more phantom World Quest rows** - a tracked World Quest that expired could come back as a ghost row after every login. Expired tracked World Quests are now pruned, and right-click Track/Untrack targets the correct quest and recognizes quests Blizzard is already watching.
+- **Distance sort includes ready-to-turn-in quests** - they were stranded at the bottom instead of sorted by how close the turn-in is.
+- **New Profile asks before overwriting** - creating a profile with the same name as an existing one now prompts for confirmation instead of silently replacing it.
+- **Pinned quests keep updating** - a pinned quest you were not watching could freeze and stop refreshing its objectives.
+- **"Reset filters to defaults" re-checks the watched-only box** correctly.
+- Assorted stability fixes to the Chain Guide, the Zone Progress bar, and the scenario banner.
+
+### Improvements
+
+- **Lighter in the background** - the scenario tracker, Bonus Objectives HUD, quest-completion sound, and internal event handling are now debounced and coalesced, several retry loops are capped, and the tracker no longer rebuilds itself while it is hidden.
+- **French and Russian translations** updated for this release. Thanks to Zox (French) and Malevi4 (Russian).
+
+### Thanks
+
+- Special thanks to **Agaman** - thanks for the codework on this one, your help has been extremely helpful.
+
 ## [1.31.0] - 2026-07-07
 
 Two tracker-customization features plus three bug fixes. Both new options are off by default, so nothing changes unless you turn them on.

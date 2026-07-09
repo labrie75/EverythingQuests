@@ -598,3 +598,10 @@ L[" for the many hours spent translating Everything Quests into French."] = " po
 L[" for the many hours spent translating Everything Quests into Russian."] = " pour les nombreuses heures passées à traduire Everything Quests en russe."
 L["Changelog"] = "Journal des modifications"
 L["Older versions are on CurseForge"] = "Les anciennes versions sont sur CurseForge"
+
+-- v1.32.0
+L["Overwrite profile?"] = "Écraser le profil ?"
+L["A profile named \"%s\" already exists. Overwrite it with a copy of your current settings?"] = "Un profil nommé « %s » existe déjà. L'écraser avec une copie de vos réglages actuels ?"
+L["Overwrite"] = "Écraser"
+L["Criteria Text Size"] = "Taille du texte des critères"
+L["Sizes the scenario / delve objective (criteria) lines shown under the banner, separately from the Banner Text Size above. Raise it if the criteria text looks small next to your quest and World Quest text."] = "Ajuste la taille des lignes d'objectifs (critères) du scénario / gouffre affichées sous la bannière, indépendamment de la Taille du texte de la bannière ci-dessus. Augmentez-la si le texte des critères paraît petit à côté du texte de vos quêtes et Expéditions."

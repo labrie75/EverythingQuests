@@ -68,8 +68,12 @@ local function detectTransitions()
         local now = q.isComplete and true or false
         -- was==false (not `not was`): a first-seen already-complete quest is nil here and must not fire (cold-login false positive).
         if now and was == false then
-            n = n + 1
-            _readyTitles[n] = q.title or ""
+            local title = q.title or ""
+            -- Already played by the instant chat path; skip so the debounced pass doesn't double-play.
+            if not isRecent(title) then
+                n = n + 1
+                _readyTitles[n] = title
+            end
         end
         Q.lastComplete[id] = now
     end
@@ -117,6 +121,8 @@ end
 
 function Q:OnEnable()
     local Events = ns:GetSubsystem("Events")
-    Events:On("QUEST_LOG_UPDATE", detectTransitions)
+    Events:On("QUEST_LOG_UPDATE", function()
+        Events:Debounce("eq.questsound", 0.2, detectTransitions)
+    end)
     Events:On("CHAT_MSG_SYSTEM",  onSystemChat)
 end

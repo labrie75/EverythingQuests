@@ -6,6 +6,7 @@ local RECOMPUTE_KEY   = "eq.zoneprogress.recompute"
 local ZONE_KEY        = "eq.zoneprogress.zone"
 local DEBOUNCE_DELAY  = 0.25
 local RETRY_DELAY     = 0.3
+local RETRY_MAX       = 5
 local MAX_HOPS        = 5
 
 local BAR_H       = 12
@@ -14,6 +15,7 @@ local ROW_PAD_BOT = 4
 
 ZP._countCache     = {}
 ZP._retryScheduled = {}
+ZP._retryCount     = {}
 ZP._seen           = {}
 ZP._scratchMaps    = {}
 ZP._voteTally      = {}
@@ -124,10 +126,13 @@ function ZP:EnsureQuests(qlID)
 
     local quests = C_QuestLine.GetQuestLineQuests(qlID)
     if not quests or #quests == 0 then
-        if not self._retryScheduled[qlID] then
+        local n = self._retryCount[qlID] or 0
+        if n < RETRY_MAX and not self._retryScheduled[qlID] then
             self._retryScheduled[qlID] = true
-            C_Timer.After(RETRY_DELAY, function()
+            self._retryCount[qlID] = n + 1
+            C_Timer.After(RETRY_DELAY * (n + 1), function()
                 self._retryScheduled[qlID] = nil
+                if not enabled() then return end
                 self:EnsureQuests(qlID)
                 self:ScheduleRecompute()
             end)
@@ -135,6 +140,7 @@ function ZP:EnsureQuests(qlID)
         return
     end
 
+    self._retryCount[qlID] = nil
     local existing = store[qlID]
     if not existing or #quests >= #existing then
         store[qlID] = quests

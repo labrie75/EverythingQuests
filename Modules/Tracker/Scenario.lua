@@ -415,6 +415,10 @@ function S:Refresh()
         local info = C_ScenarioInfo and C_ScenarioInfo.GetCriteriaInfo and C_ScenarioInfo.GetCriteriaInfo(i)
         if info then
             local row = acquireCriteria(container)
+            if Media and Media.ApplyScenarioCriteriaFont then
+                Media:ApplyScenarioCriteriaFont(row.text)
+                Media:ApplyScenarioCriteriaFont(row.bar.label)
+            end
             row:ClearAllPoints()
             if prev then
                 row:SetPoint("TOP", prev, "BOTTOM", 0, -CRITERIA_LINE_GAP)
@@ -502,17 +506,20 @@ function S:Refresh()
     self:_SetContainerHeight(h)
 end
 
+local REFRESH_DEBOUNCE = 0.1
+
 function S:OnEnable()
     local Events = ns:GetSubsystem("Events")
     local function refresh() self:Refresh() end
+    local function queue() Events:Debounce("eq.scenario.refresh", REFRESH_DEBOUNCE, refresh) end
 
-    Events:On("SCENARIO_UPDATE",                  refresh)
-    Events:On("SCENARIO_CRITERIA_UPDATE",         refresh)
-    Events:On("SCENARIO_SPELL_UPDATE",            refresh)
-    Events:On("SCENARIO_CRITERIA_SHOW_STATE_UPDATE", refresh)
-    Events:On("SCENARIO_COMPLETED",               refresh)
-    Events:On("ACTIVE_DELVE_DATA_UPDATE",         refresh)
-    Events:On("PLAYER_ENTERING_WORLD",            refresh)
+    Events:On("SCENARIO_UPDATE",                  queue)
+    Events:On("SCENARIO_CRITERIA_UPDATE",         queue)
+    Events:On("SCENARIO_SPELL_UPDATE",            queue)
+    Events:On("SCENARIO_CRITERIA_SHOW_STATE_UPDATE", queue)
+    Events:On("SCENARIO_COMPLETED",               queue)
+    Events:On("ACTIVE_DELVE_DATA_UPDATE",         queue)
+    Events:On("PLAYER_ENTERING_WORLD",            queue)
 
     self:Refresh()
 end

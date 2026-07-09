@@ -679,6 +679,20 @@ function Tracker:DebugSize()
     if Cache and Cache.All then for _ in pairs(Cache:All()) do nCache = nCache + 1 end end
     print(("  quests: log=%d  watched=%d  cache=%d  showOnlyWatched=%s  sortMode=%s"):format(
         nLog, nWatch, nCache, tostring(cfg and cfg.showOnlyWatched), tostring(cfg and cfg.sortMode)))
+
+    local nDist = 0
+    for _ in pairs(_distScratch) do nDist = nDist + 1 end
+    local posMap = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    local pos = posMap and C_Map.GetPlayerMapPosition
+                and C_Map.GetPlayerMapPosition(posMap, "player")
+    local px, py
+    if pos then px, py = pos:GetXY() end
+    print(("  distance: api=%s  harvested=%d  map=%s  pos=%s"):format(
+        tostring((C_QuestLog and C_QuestLog.GetDistanceSqToQuest) ~= nil), nDist,
+        tostring(posMap), (px and py) and ("%.3f, %.3f"):format(px, py) or "nil"))
+
+    local V = ns:GetSubsystem("TrackerVisibility")
+    if V and V.DebugState then V:DebugState() end
 end
 
 function Tracker:ToggleCollapsed()
@@ -720,11 +734,12 @@ function Tracker:_RenderQuestGroup(content, contentWidth, yStart, collapsed, wan
     end
 
     wipe(_visible)
+    local zoneSet = profile.filters.onlyCurrentZone and Filters:CurrentZoneQuests() or nil
     local visible, count, total = _visible, 0, 0
     for questID, q in pairs(quests) do
         if (q.isCampaign and true or false) == wantCampaign and not _popupSet[questID] then
             total = total + 1
-            if Filters:Visible(questID, q) then
+            if Filters:Visible(questID, q, nil, zoneSet) then
                 count = count + 1
                 visible[count] = q
             end
@@ -931,12 +946,12 @@ function Tracker:_UpdateDistanceSort(sortMode)
     wipe(_distScratch)
     local Cache = ns:GetSubsystem("Cache")
     if Cache and Cache.All then
-        for id, q in pairs(Cache:All()) do
-            if not q.isComplete then
-                local distSq, onContinent = C_QuestLog.GetDistanceSqToQuest(id)
-                if distSq and onContinent and distSq == distSq then
-                    _distScratch[id] = distSq
-                end
+        -- Complete quests resolve to their turn-in POI; skipping them pinned
+        -- ready-to-turn-in quests to the bottom instead of sorting by hand-in distance.
+        for id in pairs(Cache:All()) do
+            local distSq, onContinent = C_QuestLog.GetDistanceSqToQuest(id)
+            if distSq and onContinent and distSq == distSq then
+                _distScratch[id] = distSq
             end
         end
     end
@@ -976,6 +991,12 @@ function Tracker:Render()
     if not f then return end
     local content = f.content
     if not content then return end
+
+    if f._eqHidden or not f:IsShown() then
+        f._pendingRender = true
+        return
+    end
+    f._pendingRender = nil
 
     local _Blocks = ns:GetSubsystem("TrackerBlocks")
     if _Blocks and _Blocks.BeginRenderPass then _Blocks:BeginRenderPass() end
@@ -1400,6 +1421,8 @@ end
 local function setPinned(DB, questID, value)
     DB.char.pinned[questID] = value or nil
     if value then DB.char.hidden[questID] = nil end
+    local C = ns:GetSubsystem("Cache")
+    if C then C.dirtyObjectives = true end
     local T = ns:GetSubsystem("Tracker")
     if T and T.Refresh then T:Refresh() end
 end

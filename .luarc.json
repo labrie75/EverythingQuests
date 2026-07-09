@@ -28,7 +28,6 @@
         "GetMoney", "GetCoinTextureString", "BreakUpLargeNumbers",
         "GetItemInfo", "GetItemIcon", "GetItemQualityColor",
         "GetQuestLogRewardMoney", "GetQuestLogRewardInfo", "GetNumQuestLogRewards",
-        "GetNumQuestLogRewardCurrencies", "GetQuestLogRewardCurrencyInfo",
         "GetQuestLogRewardXP", "C_FactionInfo", "C_MajorFactions",
         "HaveQuestData", "HaveQuestRewardData", "GetQuestInfoByQuestID",
         "GetQuestLogQuestText", "ToggleQuestLog",

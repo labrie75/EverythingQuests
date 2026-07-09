@@ -24,6 +24,7 @@ local _revConn   = {}
 local _chainComplete = {}
 local _slotLoserOf   = {}
 local _slotWinner    = {}
+local _titleRequested = {}
 
 local function slotRank(s)
     if s == "complete" or s == "turnin" or s == "active" then return 4 end
@@ -56,6 +57,9 @@ function CV:OnEnable()
         end
     end
     Events:On("QUEST_DATA_LOAD_RESULT", function()
+        Events:Debounce("eq.chainview.dataload", 0.15, rerender)
+    end)
+    Events:On("QUESTLINE_UPDATE", function()
         Events:Debounce("eq.chainview.dataload", 0.15, rerender)
     end)
 end
@@ -691,7 +695,9 @@ function CV:Render(pane, chain, highlightQuestID)
             end
         else
             local cached = ns.Util.QuestTitle(resolved.id)
-            if (not cached) and C_QuestLog and C_QuestLog.RequestLoadQuestByID then
+            if (not cached) and resolved.id and not _titleRequested[resolved.id]
+               and C_QuestLog and C_QuestLog.RequestLoadQuestByID then
+                _titleRequested[resolved.id] = true
                 C_QuestLog.RequestLoadQuestByID(resolved.id)
             end
             title = resolved.name or cached or ("Quest #" .. tostring(resolved.id))

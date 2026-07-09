@@ -44,11 +44,6 @@ function R:ApplyToTexture(texture, reward)
     end
 end
 
-local function looksLikeReputationCurrency(name)
-    if not name then return false end
-    return name:find("Reputation") or name:find("Renown") or name:find("[Rr]ep[utation]*$")
-end
-
 local function looksLikeArtifactPower(name)
     if not name then return false end
     return name:find("Anima") or name:find("Resonance") or name:find("Artifact Power")
@@ -132,18 +127,26 @@ local function classify(questID)
         end
     end
 
-    local numCur = GetNumQuestLogRewardCurrencies and GetNumQuestLogRewardCurrencies(questID) or 0
-    if numCur and numCur > 0 then
-        local name, texture, count = GetQuestLogRewardCurrencyInfo(1, questID)
+    local currencies = C_QuestLog and C_QuestLog.GetQuestRewardCurrencies
+                       and C_QuestLog.GetQuestRewardCurrencies(questID)
+    if currencies and #currencies > 0 then
+        local c = currencies[1]
+        local name = c and c.name
         if name then
+            local count = c.totalRewardAmount
             local label = name
             if count and count > 1 then label = label .. " ×" .. count end
+            -- Faction-granting currencies classify as reputation locale-
+            -- independently; the old English-name heuristics never matched
+            -- on FR/RU/KO.
             local cat = R.FILTER.RESOURCE
-            if looksLikeArtifactPower(name)         then cat = R.FILTER.ARTIFACT_POWER
-            elseif looksLikeReputationCurrency(name) then cat = R.FILTER.REPUTATION end
+            local grantsFaction = c.currencyID and C_CurrencyInfo
+                                  and C_CurrencyInfo.GetFactionGrantedByCurrency
+                                  and C_CurrencyInfo.GetFactionGrantedByCurrency(c.currencyID)
+            if grantsFaction then cat = R.FILTER.REPUTATION end
             return {
                 category   = tagCat or cat,
-                icon       = texture or FALLBACK.icon,
+                icon       = c.texture,
                 iconCoords = { 0.08, 0.92, 0.08, 0.92 },
                 text       = label,
             }

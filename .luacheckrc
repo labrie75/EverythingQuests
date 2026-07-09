@@ -63,7 +63,7 @@ read_globals = {
     "GetMoney", "GetCoinTextureString", "BreakUpLargeNumbers",
     "GetItemInfo", "GetItemIcon", "GetItemQualityColor",
     "GetQuestLogRewardMoney", "GetQuestLogRewardInfo", "GetNumQuestLogRewards",
-    "GetNumQuestLogRewardCurrencies", "GetQuestLogRewardCurrencyInfo", "GetQuestLogRewardXP",
+    "GetQuestLogRewardXP",
     "HaveQuestData", "HaveQuestRewardData", "GetQuestInfoByQuestID", "GetQuestLogQuestText",
     "AcceptQuest", "DeclineQuest", "CompleteQuest", "GetNumQuestChoices", "GetQuestReward",
     "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",

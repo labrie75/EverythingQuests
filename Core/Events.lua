@@ -29,7 +29,13 @@ end
 frame:SetScript("OnEvent", function(_, event, ...)
     local list = listeners[event]
     if not list then return end
-    for i = 1, #list do list[i](event, ...) end
+    for i = 1, #list do
+        local fn = list[i]
+        if fn then
+            local ok, err = pcall(fn, event, ...)
+            if not ok then geterrorhandler()(err) end
+        end
+    end
 end)
 
 local _deferred   = {}
@@ -113,8 +119,9 @@ function Events:Throttle(key, delay, fn)
     t.fn    = nil
     t.delay = delay
 
-    fn()
     C_Timer.After(delay, getTickFn(key))
+    local ok, err = pcall(fn)
+    if not ok then geterrorhandler()(err) end
     return true
 end
 

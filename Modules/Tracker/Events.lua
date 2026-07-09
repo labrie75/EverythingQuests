@@ -86,27 +86,31 @@ local function buildHeader(parent)
         if not self.questID then return end
         if button == "RightButton" then
             if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
+            -- Capture the quest now: a re-render can reassign this pooled row
+            -- to a different quest while the menu is open.
+            local qid = self.questID
             local Watch = ns:GetSubsystem("WQWatchPersist")
-            local tracked = Watch and Watch.IsTracked and Watch:IsTracked(self.questID)
-            local title = ns.Util.QuestTitle(self.questID) or "World Quest"
+            local tracked = Watch and ((Watch.IsWatched and Watch:IsWatched(qid))
+                            or (Watch.IsTracked and Watch:IsTracked(qid)))
+            local title = ns.Util.QuestTitle(qid) or "World Quest"
             MenuUtil.CreateContextMenu(self, function(_, root)
                 root:CreateTitle(title)
                 if tracked then
                     root:CreateButton(L["Untrack Quest"], function()
-                        if Watch and Watch.Untrack then Watch:Untrack(self.questID) end
+                        if Watch and Watch.Untrack then Watch:Untrack(qid) end
                     end)
                 else
                     root:CreateButton(L["Track Quest"], function()
-                        if Watch and Watch.Track then Watch:Track(self.questID) end
+                        if Watch and Watch.Track then Watch:Track(qid) end
                     end)
                 end
                 root:CreateButton(L["Super-track (follow arrow)"], function()
                     if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
-                        C_SuperTrack.SetSuperTrackedQuestID(self.questID)
+                        C_SuperTrack.SetSuperTrackedQuestID(qid)
                     end
                 end)
                 root:CreateButton(L["Search on Wowhead"], function()
-                    ns:ShowURL("https://www.wowhead.com/quest=" .. tostring(self.questID))
+                    ns:ShowURL("https://www.wowhead.com/quest=" .. tostring(qid))
                 end)
             end)
         else
@@ -292,25 +296,38 @@ end
 local _activeCache    = {}
 local _activeSeen     = {}
 local _activeDirty    = true
+local _activeShowWorld
+local function showWorldFilter()
+    local DB = ns:GetSubsystem("DB")
+    local f = DB and DB.db and DB.db.profile and DB.db.profile.tracker
+              and DB.db.profile.tracker.filters
+    return not f or f.showWorld ~= false
+end
 local function rebuildActiveWorldQuests()
     wipe(_activeCache)
     wipe(_activeSeen)
+    _activeShowWorld = showWorldFilter()
     local Cache = ns:GetSubsystem("Cache")
-    local function push(qid)
+    -- knownWorldQuest: watched/zone sources are world quests by construction;
+    -- isWorldQuest() needs tag data that stale or out-of-zone quests never load.
+    local function push(qid, knownWorldQuest)
         if qid and not _activeSeen[qid]
-           and not (Cache and Cache.Get and Cache:Get(qid) ~= nil) then
+           and not (Cache and Cache.Get and Cache:Get(qid) ~= nil)
+           and (_activeShowWorld or not (knownWorldQuest or isWorldQuest(qid))) then
             _activeSeen[qid] = true
             _activeCache[#_activeCache + 1] = qid
         end
     end
-    for _, qid in ipairs(getWatchedWorldQuests())     do push(qid) end
+    for _, qid in ipairs(getWatchedWorldQuests())     do push(qid, true) end
     for _, qid in ipairs(getInZoneActiveTaskQuests()) do push(qid) end
     for _, qid in ipairs(getQuestLogTaskQuests())     do push(qid) end
-    for _, qid in ipairs(getZoneWorldQuests())        do push(qid) end
+    for _, qid in ipairs(getZoneWorldQuests())        do push(qid, true) end
     _activeDirty = false
 end
 local function getActiveWorldQuests()
-    if _activeDirty then rebuildActiveWorldQuests() end
+    if _activeDirty or _activeShowWorld ~= showWorldFilter() then
+        rebuildActiveWorldQuests()
+    end
     return _activeCache
 end
 

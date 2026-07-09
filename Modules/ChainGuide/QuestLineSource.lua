@@ -6,6 +6,8 @@ QLS._discovered     = {}
 QLS._populated      = {}
 QLS._registered     = {}
 QLS._retryScheduled = {}
+QLS._retryCount     = {}
+QLS._gen            = 0
 
 local _discoverSeen   = {}
 local _discoverUnique = {}
@@ -15,14 +17,19 @@ function QLS:Reset()
     for chainID, chain in pairs(Database.chains) do
         if chain._apiSourced then Database.chains[chainID] = nil end
     end
-    self._discovered = {}
-    self._populated  = {}
-    self._registered = {}
+    self._discovered     = {}
+    self._populated      = {}
+    self._registered     = {}
+    self._retryScheduled = {}
+    self._retryCount     = {}
+    self._gen = self._gen + 1
     local CS = ns:GetSubsystem("ChainGuideCampaignSource")
     if CS and CS.Reset then CS:Reset() end
 end
 
 local CHAIN_ID_OFFSET = 5000000
+local RETRY_BASE_DELAY = 0.3
+local RETRY_MAX        = 8
 
 local function showUnrouted()
     local DB = ns:GetSubsystem("DB")
@@ -196,9 +203,13 @@ function QLS:EnsureChainItems(chain)
         if curated and #curated > 0 then
             quests = curated
         else
-            if not self._retryScheduled[chain.id] then
+            local tries = self._retryCount[chain.id] or 0
+            if tries < RETRY_MAX and not self._retryScheduled[chain.id] then
                 self._retryScheduled[chain.id] = true
-                C_Timer.After(0.3, function()
+                self._retryCount[chain.id] = tries + 1
+                local gen = self._gen
+                C_Timer.After(RETRY_BASE_DELAY * (tries + 1), function()
+                    if gen ~= self._gen then return end
                     self._retryScheduled[chain.id] = nil
                     self:EnsureChainItems(chain)
                     local CG = ns:GetSubsystem("ChainGuide")

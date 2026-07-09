@@ -109,12 +109,16 @@ local function fullRebuild()
 end
 
 local function refreshDynamicFields()
+    local DB = ns:GetSubsystem("DB")
+    local profile = DB and DB.db.profile.tracker
+    local onlyWatched = (not profile) or profile.showOnlyWatched ~= false
+    local pinnedSet = DB and DB.char and DB.char.pinned
     for id, q in pairs(Cache.quests) do
         local watched = C_QuestLog.GetQuestWatchType
                         and C_QuestLog.GetQuestWatchType(id) ~= nil
         q.isWatched = watched
         q.isCampaign = deriveIsCampaign(id)
-        if watched then
+        if watched or not onlyWatched or (pinnedSet and pinnedSet[id]) then
             if C_QuestLog.GetQuestObjectives then
                 q.objectives = C_QuestLog.GetQuestObjectives(id) or q.objectives
             end

@@ -60,7 +60,7 @@ local function buildRow(parent)
         if button == "RightButton" then
             if MenuUtil and MenuUtil.CreateContextMenu then
                 local Watch = ns:GetSubsystem("WQWatchPersist")
-                local tracked = Watch and Watch.IsTracked and Watch:IsTracked(self.questID)
+                local tracked = Watch and Watch.IsWatched and Watch:IsWatched(self.questID)
                 MenuUtil.CreateContextMenu(self, function(_, root)
                     root:CreateTitle(questTitle(self.questID))
                     if tracked then

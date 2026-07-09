@@ -10,7 +10,9 @@ end
 local function shouldHide()
     local cfg = getCfg()
     if not cfg then return false end
-    if cfg.hideInCombat and InCombatLockdown and InCombatLockdown() then return true end
+    -- PLAYER_REGEN_DISABLED fires just BEFORE InCombatLockdown() reports true,
+    -- so trust our own regen-tracked flag too or the first combat never hides.
+    if cfg.hideInCombat and ((InCombatLockdown and InCombatLockdown()) or V._inCombat) then return true end
     if cfg.hideInInstances and IsInInstance and (IsInInstance()) then return true end
     if cfg.hideInMythicPlus and C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
        and C_ChallengeMode.IsChallengeModeActive() then return true end
@@ -18,42 +20,66 @@ local function shouldHide()
     return false
 end
 
--- Show/hide the tracker WITHOUT tainting. The tracker frame owns secure
--- item-button descendants (Modules/Tracker/ItemButtons.lua), so Hide()/Show()
--- on it are PROTECTED frame methods, blocked while InCombatLockdown() with an
--- ADDON_ACTION_BLOCKED that names EQ. This module is wired to
--- PLAYER_REGEN_DISABLED, where lockdown is already active, and the
--- hideInCombat rule by definition wants the hide DURING combat — so the
--- usual "defer to PLAYER_REGEN_ENABLED" pattern is inverted here (by then
--- shouldHide() is false and we'd show instead). Out of combat: use the real
--- Hide()/Show() (and undo any in-combat alpha damping). In combat: fall back
--- to a non-protected visual hide (alpha 0); the next out-of-combat Apply()
--- reconciles to the real Shown state.
+-- frame:Hide()/Show() are PROTECTED (the tracker owns secure item-button
+-- descendants) and Midnight silently no-ops them here even OUT of combat, so
+-- alpha is the only reliable hide. Drive visibility by alpha in every case;
+-- the real Show/Hide is a best-effort extra when out of combat.
 local function setVisible(frame, visible)
-    if InCombatLockdown and InCombatLockdown() then
-        frame:SetAlpha(visible and 1 or 0)
-        frame._eqCombatHidden = (not visible) or nil
-        return
+    frame:SetAlpha(visible and 1 or 0)
+    frame._eqHidden = (not visible) or nil
+    if not (InCombatLockdown and InCombatLockdown()) then
+        if visible then frame:Show() else frame:Hide() end
     end
-    if frame._eqCombatHidden then
-        frame:SetAlpha(1)
-        frame._eqCombatHidden = nil
-    end
-    if visible then frame:Show() else frame:Hide() end
 end
 
 function V:Apply()
+    local hide = shouldHide()
     local Tracker = ns:GetSubsystem("Tracker")
     if not (Tracker and Tracker.frame) then return end
-    setVisible(Tracker.frame, not shouldHide())
+    local visible = not hide
+    setVisible(Tracker.frame, visible)
+    if visible and Tracker.frame._pendingRender then
+        Tracker.frame._pendingRender = nil
+        if Tracker.Refresh then Tracker:Refresh() end
+    end
+end
+
+function V:DebugState()
+    local cfg = getCfg() or {}
+    local Tracker = ns:GetSubsystem("Tracker")
+    local f = Tracker and Tracker.frame
+    print(("|cffEBB706EQ Visibility|r: shouldHide=%s"):format(tostring(shouldHide())))
+    print(("  cfg: combat=%s inst=%s m+=%s mapOpen=%s"):format(
+        tostring(cfg.hideInCombat), tostring(cfg.hideInInstances),
+        tostring(cfg.hideInMythicPlus), tostring(cfg.hideOnMapOpen)))
+    print(("  conds: inCombat=%s inInstance=%s m+active=%s mapShown=%s"):format(
+        tostring(InCombatLockdown()),
+        tostring(IsInInstance and IsInInstance() or false),
+        tostring(C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
+                 and C_ChallengeMode.IsChallengeModeActive() or false),
+        tostring(WorldMapFrame and WorldMapFrame:IsShown() or false)))
+    if f then
+        print(("  frame: shown=%s alpha=%.2f eqHidden=%s pending=%s"):format(
+            tostring(f:IsShown()), f:GetAlpha() or -1,
+            tostring(f._eqHidden and true or false),
+            tostring(f._pendingRender and true or false)))
+    else
+        print("  frame: not built")
+    end
 end
 
 function V:OnEnable()
     local Events = ns:GetSubsystem("Events")
     local function apply() self:Apply() end
 
-    Events:On("PLAYER_REGEN_DISABLED", apply)
-    Events:On("PLAYER_REGEN_ENABLED",  apply)
+    Events:On("PLAYER_REGEN_DISABLED", function()
+        V._inCombat = true
+        V:Apply()
+    end)
+    Events:On("PLAYER_REGEN_ENABLED", function()
+        V._inCombat = false
+        V:Apply()
+    end)
     Events:On("PLAYER_ENTERING_WORLD", apply)
     Events:On("CHALLENGE_MODE_START",     apply)
     Events:On("CHALLENGE_MODE_COMPLETED", apply)

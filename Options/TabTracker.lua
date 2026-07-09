@@ -132,6 +132,7 @@ Options:AddTab("tracker", L["Tracker"], function(content)
         f.showWorld       = true
         f.onlyCurrentZone = false
         DB.db.profile.tracker.showOnlyWatched = true
+        watched:SetChecked(true)
         for _, entry in ipairs(filterCheckboxes) do
             entry.cb:SetChecked(f[entry.row.key] and true or false)
         end

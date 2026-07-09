@@ -196,6 +196,13 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     Options:AttachTooltip(scSizeSlider, L["Banner Text Size"],
         L["Grows or shrinks the scenario / delve banner's Stage and name text. 0 is the default size. The banner artwork is a fixed size, so large values may overflow it."])
 
+    local scCritSizeGet, scCritSizeSet = scenarioRenderSetting("scenarioFontSize")
+    local scCritSizeSlider = Options:CreateSlider(content, L["Criteria Text Size"], 8, 24, 0.5, scCritSizeGet, scCritSizeSet)
+    scCritSizeSlider:SetPoint("TOPLEFT", scSizeSlider, "BOTTOMLEFT", 0, -16)
+    scCritSizeSlider:SetWidth(280)
+    Options:AttachTooltip(scCritSizeSlider, L["Criteria Text Size"],
+        L["Sizes the scenario / delve objective (criteria) lines shown under the banner, separately from the Banner Text Size above. Raise it if the criteria text looks small next to your quest and World Quest text."])
+
     local trackerHeader = Options:CreateSectionHeader(content, L["Tracker"])
     -- Anchored at the end of the builder to the RIGHT column (under Zone Bar), swapped with
     -- Tracker Skins so the taller Tracker section (now with the Header bar) fits on-screen.
@@ -295,7 +302,7 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
         L["How soft the header bar's feathered edges are when Soft edges is on. Higher is softer; lower tightens toward a hard edge."])
 
     local skinsHeader = Options:CreateSectionHeader(content, L["Tracker Skins"])
-    skinsHeader:SetPoint("TOPLEFT", scSizeSlider, "BOTTOMLEFT", 0, -16)
+    skinsHeader:SetPoint("TOPLEFT", scCritSizeSlider, "BOTTOMLEFT", 0, -16)
 
     local sbGet, sbSet = trackerSetting("scrollBarBg")
     local sbCheck = Options:CreateCheckbox(content, L["Scroll Bar Background"], sbGet, sbSet)

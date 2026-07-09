@@ -213,3 +213,15 @@ function Media:ApplyScenarioFont(fontstring, base)
     local delta = (DB and DB.db.profile.tracker.scenarioTextSizeDelta) or 0
     fontstring:SetFont(base[1], math.max(6, base[2] + delta), base[3] or "")
 end
+
+-- Scenario criteria lines use the tracker font at their own absolute size so
+-- they match the quest / World Quest rows instead of the fixed small game font.
+function Media:ApplyScenarioCriteriaFont(fontstring)
+    if not fontstring then return end
+    local DB = ns:GetSubsystem("DB")
+    if not DB then return end
+    local cfg = DB.db.profile.tracker
+    local file = self:GetFontFile(cfg.font)
+    local size = math.max(8, cfg.scenarioFontSize or 13)
+    if file then fontstring:SetFont(file, size, cfg.fontOutline or "") end
+end

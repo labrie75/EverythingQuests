@@ -605,3 +605,10 @@ L["Click to show the World Quests list."] = "Щёлкните, чтобы пок
 -- ─── Modules/Tracker/ScenarioBonusHUD.lua ───
 L["Bonus Objectives"] = "Бонусные цели"
 L["Delve Bonus Loot"] = "Бонусная добыча вылазки"
+
+-- v1.32.0
+L["Overwrite profile?"] = "Перезаписать профиль?"
+L["A profile named \"%s\" already exists. Overwrite it with a copy of your current settings?"] = "Профиль с именем «%s» уже существует. Перезаписать его копией ваших текущих настроек?"
+L["Overwrite"] = "Перезаписать"
+L["Criteria Text Size"] = "Размер текста критериев"
+L["Sizes the scenario / delve objective (criteria) lines shown under the banner, separately from the Banner Text Size above. Raise it if the criteria text looks small next to your quest and World Quest text."] = "Задаёт размер строк целей (критериев) сценария / вылазки, отображаемых под баннером, отдельно от «Размера текста баннера» выше. Увеличьте, если текст критериев выглядит мелким рядом с текстом ваших заданий и локальных заданий."

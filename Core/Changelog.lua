@@ -2,6 +2,33 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.32.0", date = "2026-07-08",
+        sections = {
+            { head = "New Features", items = {
+                "Criteria Text Size - a new slider under /eqs > Appearance > Scenario resizes the objective (criteria) lines inside scenarios and delves, which used to render smaller than the rest of your tracker text.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Show only quests in current zone no longer empties the tracker. It was matching quest-log group headers (often Campaign) against your zone name and hiding everything; it now uses the quests actually on your current map.",
+                "The tracker's hide options (in combat, in instances, in Mythic+, on map open) now actually hide it. Under Midnight the tracker owns protected quest-item buttons that were silently blocking the hide, so it now fades out reliably.",
+                "The World quests tracker filter now works - the checkbox previously had no effect.",
+                "Currency quest rewards show in tooltips again after a Midnight API change, and reputation World Quests are now categorized correctly in every language.",
+                "World Quests you tracked no longer return as phantom rows after each login, and right-click Track/Untrack on a World Quest now targets the correct quest and recognizes quests Blizzard is already watching.",
+                "Distance sort now includes ready-to-turn-in quests instead of stranding them at the bottom of the list.",
+                "Creating a New Profile with the same name as an existing profile now asks before overwriting it.",
+                "Pinned quests you were not watching no longer freeze and stop updating their objectives.",
+                "Reset filters to defaults now correctly re-checks the watched-only box.",
+                "Assorted stability fixes to the Chain Guide, the Zone Progress bar, and the scenario banner.",
+            } },
+            { head = "Improvements", items = {
+                "Lower background CPU and memory use - the scenario tracker, Bonus Objectives HUD, quest-completion sound, and internal event handling are now debounced and coalesced, several retry loops are capped, and the tracker no longer rebuilds while it is hidden.",
+            } },
+            { head = "Thanks", items = {
+                "Special thanks to Agaman - thanks for the codework on this one, your help has been extremely helpful.",
+                "French and Russian translations updated for this release, by Zox (French) and Malevi4 (Russian).",
+            } },
+        },
+    },
+    {
         version = "1.31.0", date = "2026-07-07",
         sections = {
             { head = "New Features", items = {

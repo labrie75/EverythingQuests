@@ -299,7 +299,7 @@ local BANNER_RANK = { announced = 1, clicked = 2, buffed = 3, eliteUp = 4, grand
 
 local bannerState, ragerGUID
 local nemesisSeen, nemesisSeenCount, nemesisRemaining = {}, 0, nil
-local trackedDelve
+local trackedDelve, delveTier
 
 local function PlayerInDelve()
     return GetInstanceInfo and select(3, GetInstanceInfo()) == 208
@@ -404,6 +404,7 @@ local function CheckRun()
     local name = (GetInstanceInfo and GetInstanceInfo()) or "delve"
     if name ~= trackedDelve then
         trackedDelve = name
+        delveTier = nil
         bannerState, ragerGUID = nil, nil
         nemesisRemaining, nemesisSeenCount = nil, 0
         wipe(nemesisSeen)
@@ -417,7 +418,8 @@ function H:_GatherDelveModel()
 
     local crit = {}
     if nemesisSeenCount > 0 then
-        local tier = ReadTier() or 0
+        if not delveTier then delveTier = ReadTier() end
+        local tier = delveTier or 0
         local expected = 0
         if     tier >= 10 then expected = 4
         elseif tier >= 8  then expected = 3
@@ -444,8 +446,16 @@ function H:_GatherDelveModel()
     return { { name = ns.L["Delve Bonus Loot"], criteria = crit } }
 end
 
+function H:_ReconcileDelveEvents()
+    local want = enabled() and PlayerInDelve() or false
+    if want == self._delveEventsOn then return end
+    self._delveEventsOn = want
+    self:_SetDelveEvents(want)
+end
+
 function H:Refresh()
     if self._test then return end
+    self:_ReconcileDelveEvents()
     if not enabled() then
         if self.frame then self.frame:Hide() end
         return
@@ -459,23 +469,26 @@ function H:Refresh()
     self:_Render(model)
 end
 
+local function doQueuedRefresh()
+    H._refreshPending = false
+    H:Refresh()
+end
+
 function H:QueueRefresh()
+    if not enabled() then return end
     if self._refreshPending then return end
     self._refreshPending = true
-    C_Timer.After(0.25, function()
-        self._refreshPending = false
-        H:Refresh()
-    end)
+    C_Timer.After(0.25, doQueuedRefresh)
 end
 
 function H:SetEnabled(on)
     local st = state()
     if st then st.enabled = on and true or false end
-    self:_SetDelveEvents(on)
     if on then
         self:Refresh()
     else
         self._test = false
+        self:_ReconcileDelveEvents()
         self:_ReleaseRows()
         if self.frame then self.frame:Hide() end
     end
@@ -566,7 +579,7 @@ end
 function H:OnEnable()
     local Events = ns:GetSubsystem("Events")
     if Events then
-        local function refresh() H:Refresh() end
+        local function refresh() H:QueueRefresh() end
         Events:On("SCENARIO_UPDATE",                     refresh)
         Events:On("SCENARIO_CRITERIA_UPDATE",            refresh)
         Events:On("SCENARIO_CRITERIA_SHOW_STATE_UPDATE", refresh)
@@ -579,10 +592,9 @@ function H:OnEnable()
     local ef = CreateFrame("Frame")
     self.ef = ef
     ef:SetScript("OnEvent", function(_, event, ...)
-        if not enabled() then return end
+        if not (enabled() and PlayerInDelve()) then return end
         if event == "UNIT_AURA" then
             HandleUnitAura()
-            H:QueueRefresh()
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             local _, _, spellID = ...
             HandlePlayerCast(spellID)
@@ -595,7 +607,6 @@ function H:OnEnable()
     end)
 
     if enabled() then
-        self:_SetDelveEvents(true)
         self:Refresh()
     end
 end

@@ -3,21 +3,24 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.31.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.31.0"
+local FEATURE_POPUP_VERSION = "1.32.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.32.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon. Type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706Give World Quests more room|r
-When you have a lot of quests, the World Quests area used to get squeezed down to a line or two. There is now a |cffffffffWorld Quests height|r control under |cffffffff/eqs|r > |cffffffffTracker|r: tick |cffffffffSet a custom World Quests height|r and drag the slider to give it as much room as you want. Off by default, so nothing changes unless you turn it on. Thanks to |cffffffffTheOneMVP|r.
+|cffEBB706A big round of bug fixes|r
+Two tracker options that quietly did nothing now work. |cffffffffShow only quests in current zone|r no longer empties the tracker - it now uses the quests actually on your current map instead of matching quest-log group names. And the |cffffffffhide|r options (in combat, in instances, in Mythic+, on map open) now really hide the tracker - under Midnight they were being silently blocked.
 
-|cffEBB706Auto-hide in Mythic+|r
-A new |cffffffffHide tracker in Mythic+|r option under |cffffffff/eqs|r > |cffffffffGeneral|r tucks the tracker away during a Mythic+ run and brings it back when the run ends, so it stays out of your way next to the dungeon timer. Off by default. Thanks to |cffffffffTheOneMVP|r.
+|cffEBB706New: resize scenario text|r
+A new |cffffffffCriteria Text Size|r slider under |cffffffff/eqs|r > |cffffffffAppearance|r > |cffffffffScenario|r resizes the objective lines inside scenarios and delves, which used to render smaller than the rest of your tracker text.
 
-|cffEBB706Bug fixes|r
-Fixed the tracker shrinking to a few lines after a relog - it now fills the height you set and scrolls. Fixed the quest-completion sound sometimes playing once at login. Fixed a Lua error when opening the flight map with a quest tracked. Thanks to |cffffffffShodanDelacroix|r and |cffffffffDrahgunFyre|r for the reports.
+|cffEBB706More fixes|r
+The |cffffffffWorld quests|r tracker filter now works, currency quest rewards show in tooltips again, phantom World Quest rows no longer come back after login, New Profile warns before overwriting an existing profile, and pinned quests keep updating their objectives. The tracker also runs lighter in the background.
+
+|cffEBB706Thank you|r
+Special thanks to |cffffffffAgaman|r - thanks for the codework on this one, your help has been extremely helpful. Translations updated by |cffffffffZox|r (French) and |cffffffffMalevi4|r (Russian).
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]
