@@ -307,7 +307,13 @@ function HF:_buildQuestsPane(parent)
     search:SetAutoFocus(false)
     search:SetScript("OnTextChanged", function(eb, userInput)
         if SearchBoxTemplate_OnTextChanged then SearchBoxTemplate_OnTextChanged(eb) end
-        if userInput then HF:Render() end
+        if not userInput then return end
+        local Events = ns:GetSubsystem("Events")
+        if Events and Events.Debounce then
+            Events:Debounce("eq.history.search", 0.2, function() HF:Render() end)
+        else
+            HF:Render()
+        end
     end)
     pane._search = search
 
@@ -613,7 +619,7 @@ function HF:_buildStreakPane(parent)
     pane._note:SetJustifyH("LEFT")
     pane._note:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
     pane._note:SetText(
-        L["Streak counts consecutive days (server time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive — you don't lose it until a whole day passes with no activity."])
+        L["Streak counts consecutive days (local time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive - you don't lose it until a whole day passes with no activity."])
     thin(pane._note)
 
     return pane
@@ -805,7 +811,7 @@ function HF:_buildHeatmapPane(parent)
         cell:SetScript("OnEnter", function(cf)
             if not cf._day then return end
             GameTooltip:SetOwner(cf, "ANCHOR_CURSOR_RIGHT")
-            GameTooltip:SetText(date("%A, %Y-%m-%d", cf._day * 86400), 1, 1, 1)
+            GameTooltip:SetText(date("!%A, %Y-%m-%d", cf._day * 86400), 1, 1, 1)
             local c = cf._count or 0
             GameTooltip:AddLine((L["%d quest%s turned in"]):format(c, c == 1 and "" or "s"),
                 YELLOW[1], YELLOW[2], YELLOW[3])
@@ -898,7 +904,7 @@ function HF:_renderHeatmap()
     pane._totalValue:SetText(tostring(total))
     if busiestDay and busiestCount > 0 then
         pane._busiestValue:SetText(
-            (L["Busiest day: %s (%d quests)"]):format(date("%Y-%m-%d", busiestDay * 86400), busiestCount))
+            (L["Busiest day: %s (%d quests)"]):format(date("!%Y-%m-%d", busiestDay * 86400), busiestCount))
     else
         pane._busiestValue:SetText(" ")
     end
@@ -1322,7 +1328,7 @@ function HF:_renderTrends()
             bar:SetSize(math.max(barW, 1), math.max(h, 1))
             bar.fill:SetColorTexture(YELLOW[1], YELLOW[2], YELLOW[3], v > 0 and 0.9 or 0.12)
             local rng = p.label
-            if gran == "weekly" then rng = rng .. " \226\128\147 " .. date("%b %d", p.day1 * 86400) end
+            if gran == "weekly" then rng = rng .. " \226\128\147 " .. date("!%b %d", p.day1 * 86400) end
             bar._rangeText = rng
             bar._valueText = formatMetric(metric, v)
             bar:Show()
@@ -1513,7 +1519,7 @@ function HF:_exportActivity()
     lines[#lines + 1] = "# date | turn-ins"
     for i = HEATMAP_DAYS, 1, -1 do
         local day = today - (i - 1)
-        lines[#lines + 1] = ("%s | %d"):format(date("%Y-%m-%d", day * 86400), counts[day] or 0)
+        lines[#lines + 1] = ("%s | %d"):format(date("!%Y-%m-%d", day * 86400), counts[day] or 0)
     end
     return table.concat(lines, "\n")
 end
@@ -1565,8 +1571,8 @@ function HF:_exportTrends()
     for i = 1, #data.periods do
         local p = data.periods[i]
         local period = (gran == "weekly")
-            and (date("%Y-%m-%d", p.day0 * 86400) .. " – " .. date("%Y-%m-%d", p.day1 * 86400))
-            or  date("%Y-%m-%d", p.day0 * 86400)
+            and (date("!%Y-%m-%d", p.day0 * 86400) .. " – " .. date("!%Y-%m-%d", p.day1 * 86400))
+            or  date("!%Y-%m-%d", p.day0 * 86400)
         lines[#lines + 1] = ("%s | %d | %d | %s"):format(
             period, p.count, p.xp, fmtMoneyText(p.gold))
     end

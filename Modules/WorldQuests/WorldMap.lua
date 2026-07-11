@@ -118,11 +118,8 @@ function providerMixin:_AcquirePins()
                 local categoryAllowed = filters[reward.category] ~= false
                 local factionAllowed  = true
                 if categoryAllowed then
-                    local fid
-                    if GetQuestInfoByQuestID then
-                        local _t
-                        _t, fid = GetQuestInfoByQuestID(questID)
-                    end
+                    local fid = C_QuestLog and C_QuestLog.GetQuestFactionID
+                                and C_QuestLog.GetQuestFactionID(questID)
                     if fid and fid > 0 and factionFilters[fid] == false then
                         factionAllowed = false
                     end

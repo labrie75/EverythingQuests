@@ -42,25 +42,6 @@ function CS:IsChapterQuestline(qlID)
     return (self._chapterSet and self._chapterSet[qlID]) or false
 end
 
-local function resolveCampaignID(cat)
-    if cat and cat.campaignID then return cat.campaignID end
-    if not (C_CampaignInfo and C_CampaignInfo.GetCampaignID
-            and C_CampaignInfo.IsCampaignQuest and C_QuestLog
-            and C_QuestLog.GetNumQuestLogEntries) then
-        return nil
-    end
-    local n = C_QuestLog.GetNumQuestLogEntries() or 0
-    for i = 1, n do
-        local info = C_QuestLog.GetInfo and C_QuestLog.GetInfo(i)
-        local qid  = info and (not info.isHeader) and info.questID
-        if qid and C_CampaignInfo.IsCampaignQuest(qid) then
-            local cid = C_CampaignInfo.GetCampaignID(qid)
-            if cid and cid > 0 then return cid end
-        end
-    end
-    return nil
-end
-
 function CS:EnsureCampaignChains(catID)
     if self._discovered[catID] then return end
     if not (C_CampaignInfo and C_CampaignInfo.GetChapterIDs) then return end
@@ -69,8 +50,14 @@ function CS:EnsureCampaignChains(catID)
     local cat = Database and Database.categories[catID]
     if not cat then return end
 
-    local campaignID = resolveCampaignID(cat)
-    if not campaignID then return end
+    -- Only authored campaignID categories get campaign chains. Deriving one from
+    -- the quest log adopted whatever campaign was first in the log and misfiled
+    -- its chapters under an unrelated zone category (audit 3.6).
+    local campaignID = cat.campaignID
+    if not campaignID then
+        self._discovered[catID] = true
+        return
+    end
 
     local chapters = C_CampaignInfo.GetChapterIDs(campaignID)
     if not chapters or #chapters == 0 then return end

@@ -462,7 +462,7 @@ L["%d entries (showing %s %d)"] = "%d entrées (montre  %s %d "
 L["Current daily streak"] = "Série quotidienne actuelle"
 L["Best daily streak"] = "Meilleure série quotidienne"
 L["Total quests recorded with a date"] = "Nombre total de quêtes datées enregistrées"
-L["Streak counts consecutive days (server time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive — you don't lose it until a whole day passes with no activity."] = "Décompte de jours consécutifs avec série (Heure du serveur) avec au moins une quête rendue par n'importe quel personnage du compte. Aujourd'hui ou hier garde la série active - vous ne la perdez pas tant qu'un jour entier n'est pas passé sans activité"
+L["Streak counts consecutive days (local time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive - you don't lose it until a whole day passes with no activity."] = "Décompte de jours consécutifs avec série (Heure locale) avec au moins une quête rendue par n'importe quel personnage du compte. Aujourd'hui ou hier garde la série active - vous ne la perdez pas tant qu'un jour entier n'est pas passé sans activité"
 L["%d days"] = " %d jours"
 L["Chains where you have at least one completed quest. Click a chain to expand and see per-quest completion dates."] = "Chaînes dans lesquelles vous avez au moins une quête complétée. Cliquez sur une suite de quête pour l'agrandir et voir les dates de complétion par quête."
 L["(no chain quests recorded yet)"] = "(pas encore de suites de quêtes enregistrées"
@@ -605,3 +605,6 @@ L["A profile named \"%s\" already exists. Overwrite it with a copy of your curre
 L["Overwrite"] = "Écraser"
 L["Criteria Text Size"] = "Taille du texte des critères"
 L["Sizes the scenario / delve objective (criteria) lines shown under the banner, separately from the Banner Text Size above. Raise it if the criteria text looks small next to your quest and World Quest text."] = "Ajuste la taille des lignes d'objectifs (critères) du scénario / gouffre affichées sous la bannière, indépendamment de la Taille du texte de la bannière ci-dessus. Augmentez-la si le texte des critères paraît petit à côté du texte de vos quêtes et Expéditions."
+
+-- v1.33.0
+L[" for the many features, fixes, and reports that keep shaping Everything Quests."] = " pour les nombreuses fonctionnalités, corrections et retours qui continuent de façonner Everything Quests."

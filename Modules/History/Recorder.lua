@@ -20,6 +20,20 @@ local function ensureSV()
     return sv
 end
 
+-- History groups by the player's local calendar day. Stored timestamps are UTC
+-- epoch, so shift by the client offset before dividing. Labels render the shifted
+-- midnight with date("!...") (Frame.lua). Forcing isdst=false on both broken-down
+-- times cancels the standard-time error so the offset stays DST-correct.
+local function tzOffset()
+    local now = time()
+    local u, l = date("!*t", now), date("*t", now)
+    u.isdst, l.isdst = false, false
+    return time(l) - time(u)
+end
+local function localDay(t, off)
+    return math.floor((t + (off or tzOffset())) / 86400)
+end
+
 local MAX_SNAPSHOTS = 3
 local function ensureBackupSV()
     _G.EverythingQuestsHistoryBackups = _G.EverythingQuestsHistoryBackups or {}
@@ -354,7 +368,7 @@ function R:RecordMoney()
     if delta <= 0 then return end
 
     local key   = charKey()
-    local today = math.floor(((GetServerTime and GetServerTime()) or time()) / 86400)
+    local today = localDay((GetServerTime and GetServerTime()) or time())
     local ledger = self.sv.goldDaily
     local days = ledger[key]
     if not days then days = {}; ledger[key] = days end
@@ -515,7 +529,8 @@ function R:Query(filter)
     if dateRange and dateRange ~= "all" then
         local now = (GetServerTime and GetServerTime()) or time()
         if dateRange == "today" then
-            minTime = math.floor(now / 86400) * 86400
+            local off = tzOffset()
+            minTime = localDay(now, off) * 86400 - off
         elseif dateRange == "7d" then
             minTime = now - 7  * 86400
         elseif dateRange == "30d" then
@@ -580,12 +595,13 @@ function R:Streak()
     local entries = self.sv.entries
     if #entries == 0 then return { current = 0, best = 0, total = 0 } end
 
+    local off = tzOffset()
     local days = {}
     local datedCount = 0
     for i = 1, #entries do
         local t = entries[i].t
         if t and t > 0 then
-            local d = math.floor(t / 86400)
+            local d = localDay(t, off)
             if not days[d] then days[d] = true end
             datedCount = datedCount + 1
         end
@@ -596,7 +612,7 @@ function R:Streak()
     table.sort(list, function(a, b) return a > b end)
     if #list == 0 then return { current = 0, best = 0, total = datedCount } end
 
-    local today = math.floor(((GetServerTime and GetServerTime()) or time()) / 86400)
+    local today = localDay((GetServerTime and GetServerTime()) or time())
 
     local current = 0
     if list[1] == today or list[1] == today - 1 then
@@ -679,15 +695,16 @@ end
 
 function R:DayCounts(daysBack)
     daysBack = daysBack or 90
+    local off = tzOffset()
     local now = (GetServerTime and GetServerTime()) or time()
-    local today = math.floor(now / 86400)
+    local today = localDay(now, off)
     local minDay = today - daysBack + 1
     local counts = {}
     local entries = self.sv.entries
     for i = 1, #entries do
         local t = entries[i].t
         if t and t > 0 then
-            local d = math.floor(t / 86400)
+            local d = localDay(t, off)
             if d >= minDay and d <= today then
                 counts[d] = (counts[d] or 0) + 1
             end
@@ -700,8 +717,9 @@ function R:Trends(granularity, charFilter)
     local weekly   = (granularity == "weekly")
     local wantChar = charFilter
     if wantChar == "all" or wantChar == "" then wantChar = nil end
+    local off      = tzOffset()
     local now      = (GetServerTime and GetServerTime()) or time()
-    local today    = math.floor(now / 86400)
+    local today    = localDay(now, off)
     local nBuckets = weekly and 12 or 30
     local span     = weekly and 7 or 1
 
@@ -723,7 +741,7 @@ function R:Trends(granularity, charFilter)
         local e = entries[k]
         local t = e.t
         if t and t > 0 and (not wantChar or e.c == wantChar) then
-            local idx = bucketIndex(math.floor(t / 86400))
+            local idx = bucketIndex(localDay(t, off))
             if idx then
                 local p = periods[idx]
                 p.count = p.count + 1
@@ -752,7 +770,7 @@ function R:Trends(granularity, charFilter)
         if p.xp    > maxXP    then maxXP    = p.xp    end
         if p.gold  > maxGold  then maxGold  = p.gold  end
         if p.count > maxCount then maxCount = p.count end
-        p.label = date("%b %d", p.day0 * 86400)
+        p.label = date("!%b %d", p.day0 * 86400)
     end
 
     return {

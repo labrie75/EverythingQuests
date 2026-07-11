@@ -2,6 +2,26 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.33.0", date = "2026-07-11",
+        sections = {
+            { head = "New Features", items = {
+                "New quest nameplate icons - the marker over a quest enemy is now the Everything Quests crest in place of the default exclamation mark, and kill objectives use a custom skull. Thanks to DrahgunFyre for the suggestion.",
+            } },
+            { head = "Improvements", items = {
+                "Quest History follows your local day - the activity heatmap, streak, and trends now group turn-ins by your own calendar day instead of server time, so a late-night quest counts on the day you actually did it. This also fixes day labels that could read one day early west of UTC.",
+                "Smoother History search - typing in the History search box no longer re-runs the full search on every keystroke.",
+            } },
+            { head = "Bug Fixes", items = {
+                "Chain Guide campaign chapters no longer attach to the wrong zone. On some setups a campaign's chapters could register under an unrelated zone category for the session, leaving the real campaign entry empty; they now register only under their own campaign.",
+                "Quest nameplate icons no longer skip your own quest in a group. When a party member's quest for the same enemy was listed first, your own objective icon could be dropped; it now shows reliably.",
+                "The World Quest faction filter now applies. A dead code path meant a quest's own faction was never checked, so unchecking a faction on the map only partly filtered it; it now filters by the quest's faction as intended.",
+            } },
+            { head = "Thanks", items = {
+                "Special thanks to DrahgunFyre for the nameplate icon idea and the steady stream of features, fixes, and reports that keep shaping Everything Quests.",
+            } },
+        },
+    },
+    {
         version = "1.32.0", date = "2026-07-08",
         sections = {
             { head = "New Features", items = {

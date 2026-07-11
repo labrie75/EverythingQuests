@@ -5,6 +5,29 @@ All notable changes to Everything Quests will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.0] - 2026-07-11
+
+New Everything Quests icons on quest nameplates, and the Quest History calendar now follows your own local day instead of server time - plus fixes to the Chain Guide, World Quest filters, and grouped-quest nameplates.
+
+### New Features
+
+- **New quest nameplate icons** - the marker over a quest enemy is now the Everything Quests crest in place of the default exclamation mark, and kill objectives use a custom skull. Thanks to DrahgunFyre for the suggestion.
+
+### Improvements
+
+- **Quest History follows your local day** - the activity heatmap, streak, and trends now group turn-ins by your own calendar day instead of server time, so a late-night quest counts on the day you actually did it. This also fixes day labels that could read one day early west of UTC.
+- **Smoother History search** - typing in the History search box no longer re-runs the full search on every keystroke.
+
+### Bug Fixes
+
+- **Chain Guide campaign chapters no longer attach to the wrong zone** - on some setups a campaign's chapters could register under an unrelated zone category for the session, leaving the real campaign entry empty. They now register only under their own campaign.
+- **Quest nameplate icons no longer skip your own quest in a group** - when a party member's quest for the same enemy was listed first, your own objective icon could be dropped. It now shows reliably.
+- **World Quest faction filter now applies** - a dead code path meant a quest's own faction was never checked, so unchecking a faction on the map only partly filtered it. It now filters by the quest's faction as intended.
+
+### Thanks
+
+- Special thanks to **DrahgunFyre** for the nameplate icon idea and the steady stream of features, fixes, and reports that keep shaping Everything Quests.
+
 ## [1.32.0] - 2026-07-08
 
 A large bug-fix and polish release, plus a new scenario text-size option. Several tracker filters and hide options that quietly did nothing now work the way they should.

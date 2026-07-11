@@ -29,7 +29,7 @@
         "GetItemInfo", "GetItemIcon", "GetItemQualityColor",
         "GetQuestLogRewardMoney", "GetQuestLogRewardInfo", "GetNumQuestLogRewards",
         "GetQuestLogRewardXP", "C_FactionInfo", "C_MajorFactions",
-        "HaveQuestData", "HaveQuestRewardData", "GetQuestInfoByQuestID",
+        "HaveQuestData", "HaveQuestRewardData",
         "GetQuestLogQuestText", "ToggleQuestLog",
         "WorldMapFrame", "QuestMapFrame", "QuestLogFrame", "FlightMapFrame",
         "C_TaxiMap", "C_GossipInfo", "C_ChallengeMode", "UnitOnTaxi", "IsAltKeyDown",

@@ -450,7 +450,7 @@ L["%d entries (showing %s %d)"] = "%d записей (показаны %s %d)"
 L["Current daily streak"] = "Текущая ежедневная серия"
 L["Best daily streak"] = "Лучшая ежедневная серия"
 L["Total quests recorded with a date"] = "Всего заданий с датой"
-L["Streak counts consecutive days (server time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive — you don't lose it until a whole day passes with no activity."] = "Серия считает последовательные дни (по серверному времени), в которые было сдано хотя бы одно задание любым персонажем учётной записи. Сегодняшний или вчерашний день поддерживают серию - вы не теряете её, пока не пройдёт целый день без активности."
+L["Streak counts consecutive days (local time) with at least one quest turn-in across any character on the account. Today or yesterday keeps the streak alive - you don't lose it until a whole day passes with no activity."] = "Серия считает последовательные дни (по местному времени), в которые было сдано хотя бы одно задание любым персонажем учётной записи. Сегодняшний или вчерашний день поддерживают серию - вы не теряете её, пока не пройдёт целый день без активности."
 L["%d days"] = "%d дн."
 L["Chains where you have at least one completed quest. Click a chain to expand and see per-quest completion dates."] = "Цепочки, в которых у вас есть хотя бы одно выполненное задание. Нажмите на цепочку, чтобы развернуть и увидеть даты выполнения по каждому заданию."
 L["(no chain quests recorded yet)"] = "(пока нет записей о заданиях из цепочек)"
@@ -612,3 +612,6 @@ L["A profile named \"%s\" already exists. Overwrite it with a copy of your curre
 L["Overwrite"] = "Перезаписать"
 L["Criteria Text Size"] = "Размер текста критериев"
 L["Sizes the scenario / delve objective (criteria) lines shown under the banner, separately from the Banner Text Size above. Raise it if the criteria text looks small next to your quest and World Quest text."] = "Задаёт размер строк целей (критериев) сценария / вылазки, отображаемых под баннером, отдельно от «Размера текста баннера» выше. Увеличьте, если текст критериев выглядит мелким рядом с текстом ваших заданий и локальных заданий."
+
+-- v1.33.0
+L[" for the many features, fixes, and reports that keep shaping Everything Quests."] = " за множество функций, исправлений и отчётов, которые продолжают формировать Everything Quests."

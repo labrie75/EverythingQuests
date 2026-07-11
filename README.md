@@ -49,9 +49,9 @@ A native-feeling, draggable, resizable on-screen quest list that replaces Blizza
 - **Lock tracker** — Disable both drag-to-move and resize once you've placed and sized the tracker (also hides the resize grip)
 
 ### Nameplate Quest Icons
-Quest-objective enemies show a `!` (kill objectives get a skull, talk-to objectives a chat bubble, use-item objectives the quest's item icon) right on their nameplate, along with the remaining count or percent.
+Quest-objective enemies show EQ's logo (kill objectives get a skull, talk-to objectives a chat bubble, use-item objectives the quest's item icon) right on their nameplate, along with the remaining count or percent.
 
-- **Detection** — Two-source join: an `activeQuests` cache built from `C_QuestLog.GetQuestObjectives` (objectives keyed by display text → `{value, type, isPercent, itemTexture}`, where `value` is the *remaining* amount) joined to each nameplate via a `C_TooltipInfo.GetUnit` line-type scan (`Enum.TooltipDataLineType.QuestPlayer` filters out party-mates' progress; `QuestTitle` + `QuestObjective` are matched against the cache)
+- **Detection** — Two-source join: an `activeQuests` cache built from `C_QuestLog.GetQuestObjectives` (objectives keyed by display text → `{value, type, isPercent, itemTexture}`, where `value` is the *remaining* amount) joined to each nameplate via a `C_TooltipInfo.GetUnit` line-type scan (`QuestTitle` + `QuestObjective` lines matched against the cache, with matched objectives de-duplicated by entry so a party-mate's identical line can't double-count one of yours)
 - **Cached per GUID** — Tooltip scans only run when a new mob appears on a plate or quest log changes, never per frame
 - **Midnight-safe** — Guards all game-returned strings/GUIDs with `issecretvalue` so restricted values can't throw
 - **ElvUI-aware** — Default is ON unless ElvUI is loaded (which has its own version). A one-time custom dialog asks ElvUI users which to use so duplicates don't appear; preference is remembered

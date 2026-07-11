@@ -184,6 +184,8 @@ ns:GetSubsystem("Options"):AddTab("about", L["About"], function(content)
     header(L["Thanks"])
     body(WHITE .. L["Built with feedback, reports, and ideas from the community — especially "]
         .. GOLD .. THANKS .. CLOSE .. WHITE .. L[". Thank you!"] .. CLOSE)
+    body(WHITE .. L["Special thanks to "] .. GOLD .. "DrahgunFyre" .. CLOSE .. WHITE
+        .. L[" for the many features, fixes, and reports that keep shaping Everything Quests."] .. CLOSE)
     body(WHITE .. L["Special thanks to "] .. GOLD .. "Zox" .. CLOSE .. WHITE
         .. L[" for the many hours spent translating Everything Quests into French."] .. CLOSE)
     body(WHITE .. L["Special thanks to "] .. GOLD .. "Malevi4" .. CLOSE .. WHITE

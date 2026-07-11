@@ -3,24 +3,24 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.32.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.32.0"
+local FEATURE_POPUP_VERSION = "1.33.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.33.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon. Type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706A big round of bug fixes|r
-Two tracker options that quietly did nothing now work. |cffffffffShow only quests in current zone|r no longer empties the tracker - it now uses the quests actually on your current map instead of matching quest-log group names. And the |cffffffffhide|r options (in combat, in instances, in Mythic+, on map open) now really hide the tracker - under Midnight they were being silently blocked.
+|cffEBB706A new look for quest nameplate icons|r
+The marker over a quest enemy is now the Everything Quests crest instead of the default exclamation mark, and kill objectives show a custom skull - a small change that makes quest targets easier to spot at a glance. Thanks to |cffffffffDrahgunFyre|r for the idea.
 
-|cffEBB706New: resize scenario text|r
-A new |cffffffffCriteria Text Size|r slider under |cffffffff/eqs|r > |cffffffffAppearance|r > |cffffffffScenario|r resizes the objective lines inside scenarios and delves, which used to render smaller than the rest of your tracker text.
+|cffEBB706Quest History follows your day, not the server's|r
+The activity heatmap, streak, and trends now group your turn-ins by your own local calendar day, so a quest you finished late at night counts on the day you actually did it - and the day labels no longer read a day early. History search is smoother too, and no longer re-runs on every keystroke.
 
 |cffEBB706More fixes|r
-The |cffffffffWorld quests|r tracker filter now works, currency quest rewards show in tooltips again, phantom World Quest rows no longer come back after login, New Profile warns before overwriting an existing profile, and pinned quests keep updating their objectives. The tracker also runs lighter in the background.
+Chain Guide campaign chapters no longer attach to the wrong zone, your own quest icon no longer gets skipped on a shared enemy while grouped, and the World Quest faction filter now filters by the quest's faction as intended.
 
 |cffEBB706Thank you|r
-Special thanks to |cffffffffAgaman|r - thanks for the codework on this one, your help has been extremely helpful. Translations updated by |cffffffffZox|r (French) and |cffffffffMalevi4|r (Russian).
+Special thanks to |cffffffffDrahgunFyre|r for the nameplate icon idea and the steady stream of features, fixes, and reports that keep shaping Everything Quests.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

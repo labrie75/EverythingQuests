@@ -29,11 +29,10 @@ local function anchorFrame(f, plate, placement, offX, offY)
     f:SetPoint(p.point, plate, p.rel, p.x + (offX or 0), p.y + (offY or 0))
 end
 
--- Numeric fallbacks: 17 = QuestTitle, 8 = QuestObjective, 18 = QuestPlayer (probed from live client).
+-- Numeric fallbacks: 17 = QuestTitle, 8 = QuestObjective (probed from live client).
 local LT = Enum and Enum.TooltipDataLineType
 local QUEST_TITLE     = (LT and LT.QuestTitle)     or 17
 local QUEST_OBJECTIVE = (LT and LT.QuestObjective) or 8
-local QUEST_PLAYER    = (LT and LT.QuestPlayer)    or 18
 
 -- Midnight can hand back "secret values" from restricted APIs that error if
 -- indexed/compared. Guard tooltip text + GUID reads through this.
@@ -108,6 +107,7 @@ local function rebuildCache()
     end
 end
 
+local _scanSeen = {}
 local function scanInto(unit, out)
     wipe(out)
     if not (C_TooltipInfo and C_TooltipInfo.GetUnit) then return 0 end
@@ -115,23 +115,23 @@ local function scanInto(unit, out)
     local lines = data and data.lines
     if not lines then return 0 end
 
-    local count, notMine, objMap = 0, false, nil
+    -- Dedup by entry rather than filtering on the QuestPlayer line. objMap already
+    -- gates to quests you have, so a party member's line can only echo one of yours.
+    wipe(_scanSeen)
+    local count, objMap = 0, nil
     for i = 2, #lines do
         local line = lines[i]
         local text = line and line.leftText
         if ok(text) and text and text ~= "" then
             local lt = line.type
-            if lt == QUEST_PLAYER then
-                notMine = (text ~= QI.playerName)
-            elseif not notMine then
-                if lt == QUEST_TITLE then
-                    objMap = activeQuests[text]
-                elseif lt == QUEST_OBJECTIVE and objMap then
-                    local entry = objMap[text]
-                    if entry then
-                        count = count + 1
-                        out[count] = entry
-                    end
+            if lt == QUEST_TITLE then
+                objMap = activeQuests[text]
+            elseif lt == QUEST_OBJECTIVE and objMap then
+                local entry = objMap[text]
+                if entry and not _scanSeen[entry] then
+                    _scanSeen[entry] = true
+                    count = count + 1
+                    out[count] = entry
                 end
             end
         end
@@ -139,11 +139,13 @@ local function scanInto(unit, out)
     return count
 end
 
+local EQ_LOGO = "Interface\\AddOns\\EverythingQuests\\Media\\Textures\\eq-logo-v3.tga"
+
 local TEX = {
-    DEFAULT = { atlas = "SmallQuestBang" },
-    KILL    = { tex   = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull" },
-    CHAT    = { tex   = "Interface\\WorldMap\\ChatBubble_64.PNG", coord = { 0, 0.5, 0.5, 1 } },
-    ITEM    = { item  = true },
+    DEFAULT = { tex  = EQ_LOGO },
+    KILL    = { tex  = "Interface\\AddOns\\EverythingQuests\\Media\\Textures\\skull.tga" },
+    CHAT    = { tex  = "Interface\\WorldMap\\ChatBubble_64.PNG", coord = { 0, 0.5, 0.5, 1 } },
+    ITEM    = { item = true },
 }
 
 local function buildSlot(frame, iconSize, textSize)
@@ -215,7 +217,7 @@ local function render(plate, list, count)
                 ic:SetTexture(def.tex)
                 if def.coord then ic:SetTexCoord(unpack(def.coord)) else ic:SetTexCoord(0, 1, 0, 1) end
             else
-                ic:SetAtlas("SmallQuestBang"); ic:SetTexCoord(0, 1, 0, 1)
+                ic:SetTexture(EQ_LOGO); ic:SetTexCoord(0, 1, 0, 1)
             end
 
             ic:ClearAllPoints()
@@ -349,7 +351,6 @@ function QI:ApplyLayout()
 end
 
 function QI:OnEnable()
-    self.playerName = UnitName and UnitName("player")
     self.enabled = false
     self:ApplyEnabled()
 
