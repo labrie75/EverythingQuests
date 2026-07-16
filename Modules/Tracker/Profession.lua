@@ -16,6 +16,8 @@ P.reagentPool  = {}
 P.activeHeaders  = {}
 P.activeReagents = {}
 
+local INCLUDE_ACCOUNT = { false, true }
+
 local function buildHeader(parent)
     local r = CreateFrame("Button", nil, parent)
     r:SetHeight(HEADER_H)
@@ -114,7 +116,7 @@ local function getTrackedRecipes()
 
     local results = {}
     local seen = {}
-    for _, includeAccount in ipairs({ false, true }) do
+    for _, includeAccount in ipairs(INCLUDE_ACCOUNT) do
         local list = C_TradeSkillUI.GetRecipesTracked(includeAccount)
         if list then
             for i = 1, #list do
@@ -137,7 +139,14 @@ end
 
 local BASIC_REAGENT = (Enum and Enum.CraftingReagentType and Enum.CraftingReagentType.Basic) or 0
 
+-- The reagent list is static per (recipeID, isRecraft). GetRecipeSchematic returns
+-- fresh multi-KB nested tables, and BAG_UPDATE_DELAYED drives renders while farming,
+-- so cache the extracted list. Item counts stay live (fetched per render below).
+local _reagentCache = {}
 local function getReagents(recipeID, isRecraft)
+    local key = (isRecraft and "R" or "") .. recipeID
+    local cached = _reagentCache[key]
+    if cached then return cached end
     if not (C_TradeSkillUI and C_TradeSkillUI.GetRecipeSchematic) then return {} end
     local ok, schematic = pcall(C_TradeSkillUI.GetRecipeSchematic, recipeID, isRecraft and true or false)
     if not ok or not schematic or not schematic.reagentSlotSchematics then return {} end
@@ -153,6 +162,10 @@ local function getReagents(recipeID, isRecraft)
             end
         end
     end
+    -- Reached only with a valid loaded schematic, so cache even an empty list
+    -- (a reagent-less or not-learned account recipe) - the early return above
+    -- leaves unloaded recipes uncached so they still retry.
+    _reagentCache[key] = out
     return out
 end
 
@@ -255,6 +268,7 @@ function P:OnEnable()
         if Tracker and Tracker.Refresh then Tracker:Refresh() end
     end
     local function recipeChanged()
+        wipe(_reagentCache)
         recomputeHasTrackedRecipes()
         refresh()
     end

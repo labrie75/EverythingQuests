@@ -84,6 +84,8 @@ local function buildHeader(parent)
     end)
     r:SetScript("OnClick", function(self, button)
         if not self.questID then return end
+        local T = ns:GetSubsystem("Tracker")
+        if T and T.frame and T.frame._eqHidden then return end
         if button == "RightButton" then
             if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
             -- Capture the quest now: a re-render can reassign this pooled row
@@ -92,7 +94,7 @@ local function buildHeader(parent)
             local Watch = ns:GetSubsystem("WQWatchPersist")
             local tracked = Watch and ((Watch.IsWatched and Watch:IsWatched(qid))
                             or (Watch.IsTracked and Watch:IsTracked(qid)))
-            local title = ns.Util.QuestTitle(qid) or "World Quest"
+            local title = ns.Util.QuestTitle(qid) or L["World Quest"]
             MenuUtil.CreateContextMenu(self, function(_, root)
                 root:CreateTitle(title)
                 if tracked then
@@ -297,6 +299,10 @@ local _activeCache    = {}
 local _activeSeen     = {}
 local _activeDirty    = true
 local _activeShowWorld
+-- Per-quest static render data (atlas/canGroup/title). Refetching it every render
+-- churned a GetQuestTagInfo table plus 3 API calls per WQ, even on no-change passes.
+-- Wiped whenever the active set is rebuilt (which covers the data-load event).
+local _wqStatic       = {}
 local function showWorldFilter()
     local DB = ns:GetSubsystem("DB")
     local f = DB and DB.db and DB.db.profile and DB.db.profile.tracker
@@ -306,6 +312,7 @@ end
 local function rebuildActiveWorldQuests()
     wipe(_activeCache)
     wipe(_activeSeen)
+    wipe(_wqStatic)
     _activeShowWorld = showWorldFilter()
     local Cache = ns:GetSubsystem("Cache")
     -- knownWorldQuest: watched/zone sources are world quests by construction;
@@ -339,6 +346,23 @@ local colorizeProgress = ns.Util.ColorizeProgress
 
 local function questTitle(questID)
     return ns.Util.QuestTitle(questID, true)
+end
+
+local function buildStatic(qid)
+    local tagInfo = C_QuestLog and C_QuestLog.GetQuestTagInfo
+                    and C_QuestLog.GetQuestTagInfo(qid)
+    local atlas = "Worldquest-icon"
+    if QuestUtil and QuestUtil.GetWorldQuestAtlasInfo and tagInfo then
+        atlas = QuestUtil.GetWorldQuestAtlasInfo(qid, tagInfo, false) or atlas
+    end
+    -- CanCreateQuestGroup is the exact signal Blizzard's own tracker uses. GetActivityIDForQuestID returns truthy for ordinary world quests too, so avoid it.
+    local canGroup
+    if QuestUtil and QuestUtil.CanCreateQuestGroup then
+        canGroup = QuestUtil.CanCreateQuestGroup(qid)
+    elseif C_LFGList and C_LFGList.CanCreateQuestGroup then
+        canGroup = C_LFGList.CanCreateQuestGroup(qid)
+    end
+    return { atlas = atlas, canGroup = canGroup or false, title = questTitle(qid) }
 end
 
 
@@ -376,13 +400,9 @@ function V:Render(content, contentWidth, yStart, collapsed)
         row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
         row.questID = qid
 
-        local tagInfo = C_QuestLog and C_QuestLog.GetQuestTagInfo
-                        and C_QuestLog.GetQuestTagInfo(qid)
-        local atlas = "Worldquest-icon"
-        if QuestUtil and QuestUtil.GetWorldQuestAtlasInfo and tagInfo then
-            atlas = QuestUtil.GetWorldQuestAtlasInfo(qid, tagInfo, false) or atlas
-        end
-        row.icon:SetAtlas(atlas)
+        local st = _wqStatic[qid]
+        if not st then st = buildStatic(qid); _wqStatic[qid] = st end
+        row.icon:SetAtlas(st.atlas)
         row.ring:SetTexture("Interface/WorldMap/UI-QuestPoi-NumberIcons")
         if qid == superID then
             row.ring:SetTexCoord(0.500, 0.625, 0.375, 0.5)
@@ -393,22 +413,14 @@ function V:Render(content, contentWidth, yStart, collapsed)
         row.title:ClearAllPoints()
         row.title:SetPoint("LEFT", row.iconHolder, "RIGHT", LABEL_PAD, 0)
 
-        -- CanCreateQuestGroup is the exact signal Blizzard's own tracker uses; avoid
-        -- GetActivityIDForQuestID which returns truthy for ordinary world quests too.
-        local canGroup
-        if QuestUtil and QuestUtil.CanCreateQuestGroup then
-            canGroup = QuestUtil.CanCreateQuestGroup(qid)
-        elseif C_LFGList and C_LFGList.CanCreateQuestGroup then
-            canGroup = C_LFGList.CanCreateQuestGroup(qid)
-        end
-        if canGroup then
+        if st.canGroup then
             row.groupFinder:Show()
             row.title:SetPoint("RIGHT", row.groupFinder, "LEFT", -4, 0)
         else
             row.groupFinder:Hide()
             row.title:SetPoint("RIGHT", row, "RIGHT", -4, 0)
         end
-        row.title:SetText(questTitle(qid))
+        row.title:SetText(st.title)
         if ovR then
             row.title:SetTextColor(ovR, ovG, ovB)
         else

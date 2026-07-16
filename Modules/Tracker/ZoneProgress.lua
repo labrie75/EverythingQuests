@@ -100,15 +100,22 @@ local function categoryByMapID(rootID)
     return nil
 end
 
+-- zoneRoot is called several times per tracker render (HeaderInfo + Render), each
+-- walking up to MAX_HOPS GetMapInfo allocations. Cache it, invalidated on the zone
+-- events onZone already fires for.
+local _rootID, _rootName, _rootDirty = nil, nil, true
 local function zoneRoot()
+    if not _rootDirty then return _rootID, _rootName end
     if not (C_Map and C_Map.GetBestMapForUnit) then return nil end
     local mapID = C_Map.GetBestMapForUnit("player")
     if not mapID or mapID <= 0 then return nil end
+    _rootDirty = false
     local id = mapID
     for _ = 1, MAX_HOPS do
         local info = C_Map.GetMapInfo(id)
         if not info then break end
         if info.mapType == Enum.UIMapType.Zone then
+            _rootID, _rootName = id, info.name
             return id, info.name
         end
         local parent = info.parentMapID
@@ -116,7 +123,8 @@ local function zoneRoot()
         id = parent
     end
     local info = C_Map.GetMapInfo(mapID)
-    return mapID, info and info.name or nil
+    _rootID, _rootName = mapID, info and info.name or nil
+    return _rootID, _rootName
 end
 
 function ZP:EnsureQuests(qlID)
@@ -354,6 +362,7 @@ function ZP:OnEnable()
     end
 
     local function onZone()
+        _rootDirty = true
         if not enabled() then return end
         Events:Debounce(ZONE_KEY, DEBOUNCE_DELAY, ZP._zoneThunk)
     end

@@ -108,7 +108,7 @@ local function pinContextMenu(pin)
 
     local title = (C_TaskQuest and C_TaskQuest.GetQuestInfoByQuestID
                    and C_TaskQuest.GetQuestInfoByQuestID(questID))
-                  or ("World Quest #" .. tostring(questID))
+                  or (L["World Quest #"] .. tostring(questID))
 
     MenuUtil.CreateContextMenu(pin, function(_owner, root)
         root:CreateTitle(title)

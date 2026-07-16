@@ -286,6 +286,8 @@ ns:GetSubsystem("Options"):AddTab("appearance", L["Appearance"], function(conten
     hbSoftCheck.label:ClearAllPoints()
     hbSoftCheck.label:SetPoint("RIGHT", hbSoftCheck, "LEFT", -4, 1)
     hbSoftCheck:SetPoint("LEFT", hbStyleDD.button, "RIGHT", 24 + (hbSoftCheck.label:GetStringWidth() or 70), 1)
+    -- The label sits LEFT here, so flip the tooltip's right-extending hit rect to the left.
+    hbSoftCheck:SetHitRectInsets(-((hbSoftCheck.label:GetStringWidth() or 70) + 8), 0, 0, 0)
 
     local hbHeightGet, hbHeightSet = headerBarSetting("headerBarHeight")
     local hbHeightSlider = Options:CreateSlider(content, L["Bar Height"], 6, 26, 0.5, hbHeightGet, hbHeightSet)

@@ -608,3 +608,21 @@ L["Sizes the scenario / delve objective (criteria) lines shown under the banner,
 
 -- v1.33.0
 L[" for the many features, fixes, and reports that keep shaping Everything Quests."] = " pour les nombreuses fonctionnalités, corrections et retours qui continuent de façonner Everything Quests."
+
+-- v1.34.0
+L["Options Window Scale"] = "Échelle de la fenêtre d'options"
+L["Resizes this Everything Quests options window only. It does not change the quest tracker or anything shown in the game world. The new size applies when you let go of the slider."] = "Redimensionne uniquement cette fenêtre d'options d'Everything Quests. Cela ne modifie pas le module de suivi des quêtes ni rien de ce qui est affiché dans le monde du jeu. La nouvelle taille s'applique lorsque vous relâchez le curseur."
+L["World Quest #"] = "Expédition n°"
+L["Time Left: "] = "Temps restant : "
+L["Expired"] = "Expirée"
+L["Gear"] = "Équipement"
+L["Reputation"] = "Réputation"
+L["Resources"] = "Ressources"
+L["Professions"] = "Professions"
+L["Pet Battles"] = "Combats de mascottes"
+L["Completed: "] = "Complétée : "
+L["(before tracking)"] = "(avant le suivi)"
+L["first time seeing |cffffffff%s|r - added %d past completion%s (no dates; future turn-ins are dated)."] = "première fois que je vois |cffffffff%s|r - %d complétion%s ancienne ajoutée (pas de dates ; les futures quêtes rendues seront datées)."
+L["Quest history loaded empty; restored a backup from %s (%d entries)."] = "L'historique des quêtes était vide au chargement ; une sauvegarde du %s a été restaurée (%d entrées)."
+L["Quest history for %s was missing; restored a backup from %s (%d entries)."] = "L'historique des quêtes de %s était manquant ; une sauvegarde du %s a été restaurée (%d entrées)."
+L[" for the many hours spent translating Everything Quests into Korean."] = " pour les nombreuses heures passées à traduire Everything Quests en coréen."

@@ -216,7 +216,7 @@ EverythingQuests/
 ├── EverythingQuests.toc              # Addon manifest, module load order
 ├── Bindings.xml                      # Keybinding declarations
 ├── Core/                             # Init, DB, Events, Profiler, Cache,
-│                                     #   Util, Media, TooltipScan, Dialog
+│                                     #   Util, Media, Dialog
 ├── Locales/                          # enUS, frFR, ruRU, koKR (all full)
 ├── Libs/                             # Bundled libraries
 ├── Modules/
@@ -236,7 +236,6 @@ EverythingQuests/
 │   ├── QuestAuto.lua                 # Auto-accept / auto-turn-in handlers
 │   └── WhatsNew.lua                  # One-time popup for new releases
 ├── Data/
-│   ├── RewardIcons.lua               # World-quest reward icon mapping
 │   └── QuestChains/                  # Hand-authored Midnight chain data
 └── Options/                          # General, Tracker, World Quests,
                                       #   Appearance, Chain Guide, History tabs

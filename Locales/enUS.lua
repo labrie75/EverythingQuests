@@ -45,6 +45,8 @@ L["Auto-turn-in quests"] = true
 L["Skips reward-choice screens."] = true
 L["Keep focused quest after relog"] = true
 L["Restores the waypoint arrow."] = true
+L["Options Window Scale"] = true
+L["Resizes this Everything Quests options window only. It does not change the quest tracker or anything shown in the game world. The new size applies when you let go of the slider."] = true
 L["Popup window"] = true
 L["Chat link"] = true
 L["None"] = true
@@ -370,6 +372,9 @@ L["ilvl %d"] = true
 L["%d XP"] = true
 L["Choose one:"] = true
 
+-- ─── Core/Util.lua ───
+L["Expired"] = true
+
 -- ─── Modules/ChainGuide/CampaignSource.lua ───
 L["Campaign Map"] = true
 
@@ -382,6 +387,7 @@ L["A later quest in this chain has already passed this one."] = true
 L["May be worth going back to pick up."] = true
 L["Not started"] = true
 L["Level %d"] = true
+L["Completed: "] = true
 L["Completed (before tracking)"] = true
 L["Shift-click to link in chat"] = true
 L["Level %d–%d"] = true
@@ -431,6 +437,7 @@ L["Find this quest in EQ's Chain Guide"] = true
 L["Falls back to a Wowhead link in chat if EQ doesn't have a chain for this quest yet."] = true
 
 -- ─── Modules/History/Frame.lua ───
+L["(before tracking)"] = true
 L["|cffEBB706EQ History|r: |cffffffff%s|r isn't part of any chain in the Chain Guide."] = true
 L["Right-click to open in the Chain Guide"] = true
 L["Click to expand"] = true
@@ -515,6 +522,11 @@ L["   |cffaaaaaa(%.1f / hour)|r"] = true
 L["%d   |cffaaaaaa(%d to %d)|r"] = true
 L["Press Ctrl+A to select all, then Ctrl+C to copy."] = true
 
+-- ─── Modules/History/Recorder.lua ───
+L["first time seeing |cffffffff%s|r - added %d past completion%s (no dates; future turn-ins are dated)."] = true
+L["Quest history loaded empty; restored a backup from %s (%d entries)."] = true
+L["Quest history for %s was missing; restored a backup from %s (%d entries)."] = true
+
 -- ─── Modules/Tracker/Achievements.lua ───
 L["Left-click to open, right-click to untrack."] = true
 
@@ -571,9 +583,22 @@ L["Got it"] = true
 L["Don't show these again"] = true
 L["Stops What's New notices entirely. You can turn them back on in /eqs > General."] = true
 
+-- ─── Modules/WorldQuests/Pin.lua ───
+L["World Quest #"] = true
+
+-- ─── Modules/WorldQuests/Summary.lua ───
+L["Gear"] = true
+L["Reputation"] = true
+L["Resources"] = true
+L["Professions"] = true
+L["Pet Battles"] = true
+
 -- ─── Modules/WorldQuests/Tab.lua ───
 L["Click to hide the World Quests list."] = true
 L["Click to show the World Quests list."] = true
+
+-- ─── Modules/WorldQuests/Tooltip.lua ───
+L["Time Left: "] = true
 
 -- ─── Modules/WorldQuests/ZoneMap.lua ───
 L["%s — %d quests"] = true
@@ -605,6 +630,7 @@ L["Special thanks to "] = true
 L[" for the many features, fixes, and reports that keep shaping Everything Quests."] = true
 L[" for the many hours spent translating Everything Quests into French."] = true
 L[" for the many hours spent translating Everything Quests into Russian."] = true
+L[" for the many hours spent translating Everything Quests into Korean."] = true
 L["Changelog"] = true
 L["Older versions are on CurseForge"] = true
 

@@ -182,7 +182,7 @@ local function hideFrame(plate)
     f.guid = nil
 end
 
-local function render(plate, list, count)
+local function render(plate, list, count, hostile)
     local f = getIconFrame(plate)
     -- render() is the single source of truth for size/placement so recycled
     -- nameplate frames (pooled by Blizzard, EQQuestIcons persists) always pick up
@@ -208,7 +208,11 @@ local function render(plate, list, count)
             ic:SetSize(iconSize, iconSize)
             ic.text:SetFont(STANDARD_TEXT_FONT, textSize, "OUTLINE")
 
-            local def = TEX[q.type] or TEX.DEFAULT
+            -- objType keywords only classify on enUS. Locale-independent fallback:
+            -- an unclassified objective on an attackable unit is a kill, so skull it.
+            local qtype = q.type
+            if qtype == "DEFAULT" and hostile then qtype = "KILL" end
+            local def = TEX[qtype] or TEX.DEFAULT
             if def.atlas then
                 ic:SetAtlas(def.atlas); ic:SetTexCoord(0, 1, 0, 1)
             elseif def.item and q.itemTexture then
@@ -266,7 +270,7 @@ local function updatePlate(unit, event)
     else
         count = f.count
     end
-    render(plate, f.list, count)
+    render(plate, f.list, count, UnitCanAttack("player", unit))
 end
 
 local function refreshAllPlates(event)
@@ -292,7 +296,7 @@ end
 local function onQuestLogUpdate()
     local Events = ns:GetSubsystem("Events")
     if Events and Events.Throttle then
-        Events:Throttle("nameplateQuestIcons", 0.2, questLogRefresh)
+        Events:Throttle("nameplateQuestIcons", 0.5, questLogRefresh)
     else
         questLogRefresh()
     end

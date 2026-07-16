@@ -113,6 +113,9 @@ end
 
 function Dialog:Show(opts)
     local f = self:Build()
+    -- Replacing a dialog that is still up: cancel the outgoing one so its
+    -- callbacks are not silently dropped. (_finish nils self.opts.)
+    if self.opts then self:_finish(false) end
     self.opts = opts
 
     f.title:SetText(opts.title or "Everything Quests")

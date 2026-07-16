@@ -256,6 +256,30 @@ function S:ApplyHeaderLabels(scenarioType, textureKit, scenarioName)
     end
 end
 
+-- ApplyHeaderLabels memoizes on scenario identity, so a mid-scenario font change
+-- would leave the sub-header stale while the banner re-fonts. Re-apply every Refresh.
+function S:ApplyHeaderFont()
+    local subHeader = self.subHeader
+    if not subHeader then return end
+    local Media = ns:GetSubsystem("Media")
+    if not (Media and Media.ApplyTrackerFont) then return end
+    Media:ApplyTrackerFont(subHeader.text, 4)
+    local h
+    if subHeader.cat and subHeader.cat:IsShown() then
+        Media:ApplyTrackerFont(subHeader.cat, -1)
+        h = subHeader.cat:GetStringHeight() + CAT_GAP + subHeader.text:GetStringHeight() + 6
+    else
+        h = SUBHEADER_H
+    end
+    -- Re-fonting changes the reserved height, so keep subHeaderH in sync (Refresh
+    -- reads it below for the banner anchor + container). Only touch height on an
+    -- actual change so steady-state refreshes stay no-ops.
+    if h ~= self.subHeaderH then
+        self.subHeaderH = h
+        subHeader:SetHeight(h)
+    end
+end
+
 function S:ApplyBannerShadow()
     local banner = self.banner
     if not banner then return end
@@ -321,6 +345,7 @@ function S:Refresh()
 
     subHeader:Show()
     self:ApplyHeaderLabels(scenarioType, textureKit, scenarioName)
+    self:ApplyHeaderFont()
     banner:Show()
 
     local stageName, numCriteria, widgetSetID

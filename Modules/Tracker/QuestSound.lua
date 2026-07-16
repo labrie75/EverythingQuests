@@ -22,9 +22,12 @@ local function isRecent(title)
 end
 
 local function recordRecent(title)
-    if title and title ~= "" then
-        _recentTitles[title] = GetTime() + DEDUP_WINDOW_S
+    if not (title and title ~= "") then return end
+    local now = GetTime()
+    for k, exp in pairs(_recentTitles) do
+        if exp <= now then _recentTitles[k] = nil end
     end
+    _recentTitles[title] = now + DEDUP_WINDOW_S
 end
 
 local function shouldPlay()

@@ -46,7 +46,9 @@ local function getObjectivesText(id)
         text = objText or ""
         if saved and saved ~= 0 then C_QuestLog.SetSelectedQuest(saved) end
     end
-    objTextCache[id] = text
+    -- Do not memoize "" - on a cold-login race the objective text has not
+    -- streamed yet, and a cached "" would never retry (it is not nil).
+    if text ~= "" then objTextCache[id] = text end
     return text
 end
 
@@ -149,10 +151,6 @@ end
 function Cache:All()
     refresh()
     return self.quests
-end
-
-function Cache:Invalidate()
-    self.dirtyAll = true
 end
 
 function Cache:OnInitialize()

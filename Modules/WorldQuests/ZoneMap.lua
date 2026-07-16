@@ -19,7 +19,7 @@ local function questTitle(questID)
         local t = C_TaskQuest.GetQuestInfoByQuestID(questID)
         if t and t ~= "" then return t end
     end
-    return "World Quest"
+    return L["World Quest"]
 end
 
 local function buildRow(parent)

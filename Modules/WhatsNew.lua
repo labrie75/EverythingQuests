@@ -3,24 +3,24 @@ local L = ns.L
 
 local WN = ns:RegisterSubsystem("WhatsNew", {})
 
-local FEATURE_POPUP_VERSION = "1.33.0"
-local POPUP_TITLE           = "What's New in Everything Quests v1.33.0"
+local FEATURE_POPUP_VERSION = "1.34.0"
+local POPUP_TITLE           = "What's New in Everything Quests v1.34.0"
 
 local POPUP_BODY = [[
 |cffEBB706Missed the last update?|r
 If you skipped a version, every release's full notes live right inside the addon. Type |cffffffff/eqs|r, open the |cffffffffAbout|r tab, and read the changelog there. This popup only covers the latest release.
 
-|cffEBB706A new look for quest nameplate icons|r
-The marker over a quest enemy is now the Everything Quests crest instead of the default exclamation mark, and kill objectives show a custom skull - a small change that makes quest targets easier to spot at a glance. Thanks to |cffffffffDrahgunFyre|r for the idea.
+|cffEBB706Scale the settings window to fit your screen|r
+A new |cffffffffOptions Window Scale|r slider under |cffffffff/eqs|r > General resizes the entire Everything Quests options window, so you can make it larger or smaller to suit your display. The setting is account-wide, so it follows you across characters.
 
-|cffEBB706Quest History follows your day, not the server's|r
-The activity heatmap, streak, and trends now group your turn-ins by your own local calendar day, so a quest you finished late at night counts on the day you actually did it - and the day labels no longer read a day early. History search is smoother too, and no longer re-runs on every keystroke.
+|cffEBB706More of the interface follows your language|r
+Several World Quest labels and status lines that used to show in English no matter your game client - time left, world quest, expired, ready to turn in, and more - now use your language's translation.
 
-|cffEBB706More fixes|r
-Chain Guide campaign chapters no longer attach to the wrong zone, your own quest icon no longer gets skipped on a shared enemy while grouped, and the World Quest faction filter now filters by the quest's faction as intended.
+|cffEBB706Smoother, lighter, and a batch of fixes|r
+The World Quests section, profession lookups, Quest History, and quest nameplate icons all do less redundant work now. On the fixes side: quest item buttons no longer stay blank after combat, blank quest objectives now fill in properly on login, wiping History also clears its gold and trends data, and Chain Guide chapters no longer show up twice.
 
 |cffEBB706Thank you|r
-Special thanks to |cffffffffDrahgunFyre|r for the nameplate icon idea and the steady stream of features, fixes, and reports that keep shaping Everything Quests.
+Thanks to |cffffffffZox|r (French) and |cffffffffMalevi4|r (Russian) for keeping Everything Quests translated, and to everyone sending in reports and suggestions.
 
 |cffEBB706Want to see this again?|r Type |cffffffff/eqs whatsnew|r anytime to reopen this summary.
 ]]

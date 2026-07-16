@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local T = ns:RegisterSubsystem("WQTooltip", {})
 
@@ -13,7 +14,7 @@ local function questTitle(questID)
         local n = QuestUtils_GetQuestName(questID)
         if n and n ~= "" then return n end
     end
-    return "World Quest"
+    return L["World Quest"]
 end
 
 local function factionName(questID)
@@ -62,7 +63,7 @@ function T:Show(owner, questID)
                  and C_TaskQuest.GetQuestTimeLeftMinutes(questID)
     if mins and mins > 0 then
         local r, g, b = Util.WQTimeColor(mins)
-        tip:AddLine("Time Left: " .. Util.WQTimeLong(mins), r, g, b)
+        tip:AddLine(L["Time Left: "] .. Util.WQTimeLong(mins), r, g, b)
     end
 
     tip:Show()

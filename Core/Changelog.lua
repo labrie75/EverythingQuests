@@ -2,6 +2,28 @@ local _, ns = ...
 
 ns.Changelog = {
     {
+        version = "1.34.0", date = "2026-07-15",
+        sections = {
+            { head = "New Features", items = {
+                "Scale the settings window - a new Options Window Scale slider under /eqs > General resizes the entire Everything Quests options window so you can make it larger or smaller to fit your screen. The setting is account-wide.",
+            } },
+            { head = "Improvements", items = {
+                "More of the interface follows your language - several World Quest labels and status strings (time left, world quest, expired, ready to turn in, and others) that were shown in English regardless of your game client now use your language's translation.",
+                "Lighter in the background - the World Quests section, profession reagent lookups, Quest History, and quest nameplate icons now do less redundant work on each refresh.",
+                "French and Russian translations updated for this release. Thanks to Zox (French) and Malevi4 (Russian).",
+            } },
+            { head = "Bug Fixes", items = {
+                "Quest item buttons no longer stay blank after combat. A usable quest item added to the tracker while you were in combat could show an empty button until the next update; it now paints correctly once combat ends.",
+                "A hidden tracker no longer catches clicks. When the tracker was hidden during combat it could still intercept mouse clicks in its now-invisible area.",
+                "Quest objectives that loaded blank on login now fill in. An objective line whose text had not yet streamed from the server could stay blank for the rest of the session.",
+                "Wiping Quest History now also clears the gold and trends data. The per-day gold totals behind the Trends view used to survive a history wipe.",
+                "Chain Guide chapters no longer appear twice. A campaign chapter could show under both its campaign and a zone questline until the guide was reopened.",
+                "Reset all settings now truly resets everything - the window scale, What's New notice mode, and minimap-button visibility were left untouched despite the dialog's promise.",
+                "Assorted smaller fixes to the History heatmap and timeline, the Endeavors header count, scenario header fonts, and several option hit areas, plus internal hardening so one failing module can no longer stop others from loading.",
+            } },
+        },
+    },
+    {
         version = "1.33.0", date = "2026-07-11",
         sections = {
             { head = "New Features", items = {

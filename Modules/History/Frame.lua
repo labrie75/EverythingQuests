@@ -27,7 +27,7 @@ local function thin(fs)
 end
 
 local function fmtTime(t)
-    if not t or t == 0 then return "(before tracking)" end
+    if not t or t == 0 then return L["(before tracking)"] end
     return date("%Y-%m-%d %H:%M", t)
 end
 
@@ -129,6 +129,7 @@ local function releaseAllRows()
         r.title:SetText("")
         r.meta:SetText("")
         r.right:SetText("")
+        r.right:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
         r:EnableMouse(false)
         r._kind = nil
         r._questID, r._fullName = nil, nil
@@ -698,10 +699,11 @@ function HF:_renderTimeline()
     for chainID, chain in pairs(Database.chains) do
         local items = chain.items
         if items and #items > 0 then
-            local doneN, latest = 0, 0
+            local doneN, latest, questTotal = 0, 0, 0
             for i = 1, #items do
                 local it = items[i]
                 if it and it.type == "quest" then
+                    questTotal = questTotal + 1
                     local t = completion[it.id]
                     if t and t ~= nil then
                         doneN = doneN + 1
@@ -710,7 +712,7 @@ function HF:_renderTimeline()
                 end
             end
             if doneN > 0 then
-                sorted[#sorted + 1] = { id = chainID, chain = chain, doneN = doneN, latest = latest, total = #items }
+                sorted[#sorted + 1] = { id = chainID, chain = chain, doneN = doneN, latest = latest, total = questTotal }
             end
         end
     end
@@ -873,7 +875,7 @@ function HF:_renderHeatmap()
     local R = ns:GetSubsystem("History")
     if not (pane and R and R.DayCounts) then return end
 
-    local counts, today = R:DayCounts(HEATMAP_DAYS - 1)
+    local counts, today = R:DayCounts(HEATMAP_DAYS)
     local maxCount, total, busiestDay, busiestCount = 0, 0, nil, 0
     for d, c in pairs(counts) do
         total = total + c
@@ -1457,7 +1459,7 @@ function HF:_exportQuests()
     lines[#lines + 1] = "# date | character | quest | type | zone"
     for i = 1, #entries do
         local e = entries[i]
-        local d = (e.t and e.t > 0) and date("%Y-%m-%d %H:%M", e.t) or "(before tracking)"
+        local d = (e.t and e.t > 0) and date("%Y-%m-%d %H:%M", e.t) or L["(before tracking)"]
         lines[#lines + 1] = ("%s | %s | %s | %s | %s"):format(
             d, e.c or "?", e.n or ("Quest #" .. tostring(e.q)), e.k or "?", e.z or "")
     end
@@ -1480,16 +1482,19 @@ function HF:_exportTimeline()
     local sorted = {}
     for chainID, chain in pairs(Database.chains) do
         if chain.items and #chain.items > 0 then
-            local doneN, latest = 0, 0
+            local doneN, latest, questTotal = 0, 0, 0
             for i = 1, #chain.items do
                 local it = chain.items[i]
-                if it and it.type == "quest" and completion[it.id] then
-                    doneN = doneN + 1
-                    if completion[it.id] > latest then latest = completion[it.id] end
+                if it and it.type == "quest" then
+                    questTotal = questTotal + 1
+                    if completion[it.id] then
+                        doneN = doneN + 1
+                        if completion[it.id] > latest then latest = completion[it.id] end
+                    end
                 end
             end
             if doneN > 0 then
-                sorted[#sorted + 1] = { id = chainID, chain = chain, doneN = doneN, latest = latest }
+                sorted[#sorted + 1] = { id = chainID, chain = chain, doneN = doneN, latest = latest, total = questTotal }
             end
         end
     end
@@ -1497,13 +1502,13 @@ function HF:_exportTimeline()
     local lines = { "# Chain Timeline — chains with at least one recorded completion" }
     for _, rec in ipairs(sorted) do
         lines[#lines + 1] = ("## %s — %d of %d quests"):format(
-            rec.chain.name or ("Chain #" .. tostring(rec.id)), rec.doneN, #rec.chain.items)
+            rec.chain.name or ("Chain #" .. tostring(rec.id)), rec.doneN, rec.total)
         for j = 1, #rec.chain.items do
             local it = rec.chain.items[j]
             if it and it.type == "quest" then
                 local t = completion[it.id]
                 local title = ns.Util.QuestTitle(it.id) or it.name or ("Quest #" .. tostring(it.id))
-                local when = t and ((t > 0 and date("%Y-%m-%d", t)) or "(before tracking)") or "—"
+                local when = t and ((t > 0 and date("%Y-%m-%d", t)) or L["(before tracking)"]) or "—"
                 lines[#lines + 1] = ("  - %s [%s]"):format(title, when)
             end
         end
@@ -1514,7 +1519,7 @@ end
 function HF:_exportActivity()
     local R = ns:GetSubsystem("History")
     if not (R and R.DayCounts) then return "(history unavailable)" end
-    local counts, today = R:DayCounts(HEATMAP_DAYS - 1)
+    local counts, today = R:DayCounts(HEATMAP_DAYS)
     local lines = { ("# Activity — last %d days"):format(HEATMAP_DAYS) }
     lines[#lines + 1] = "# date | turn-ins"
     for i = HEATMAP_DAYS, 1, -1 do

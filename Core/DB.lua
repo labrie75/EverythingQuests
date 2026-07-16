@@ -158,6 +158,7 @@ DB.defaults = {
         whatsNewSeen = "",
         whatsNewAnnounced = "",
         whatsNewMode = "popup",
+        optionsWindowScale = 1.0,
         zoneProgress = {
             qlQuests = {},
             zoneCat = {},

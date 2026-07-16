@@ -53,7 +53,7 @@ function Options:Build()
 
     f.version = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.version:SetPoint("TOPRIGHT", -34, -14)
-    f.version:SetText("v" .. (ns.VERSION or "1.33.0"))
+    f.version:SetText("v" .. (ns.VERSION or "1.34.0"))
     f.version:SetTextColor(unpack(YELLOW))
 
     f.discord = CreateFrame("Button", nil, f)
@@ -186,6 +186,24 @@ function Options:SelectTab(id)
     if DB then DB.char.lastOptionsTab = id end
 end
 
+function Options:ApplyWindowScale()
+    local f = self.frame
+    if not f then return end
+    local DB = ns:GetSubsystem("DB")
+    local s = DB and DB.db and DB.db.global and DB.db.global.optionsWindowScale
+    if type(s) ~= "number" or s <= 0 then s = 1 end
+    -- SetScale re-reads the frame's anchor offset in the new scale, so a window the
+    -- user has dragged off center would jump on resize. Keep its on-screen center fixed.
+    local cx, cy = f:GetCenter()
+    local oldEff = f:GetEffectiveScale()
+    f:SetScale(s)
+    if cx and cy and oldEff then
+        local newEff = f:GetEffectiveScale()
+        f:ClearAllPoints()
+        f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cx * oldEff / newEff, cy * oldEff / newEff)
+    end
+end
+
 function Options:Toggle()
     self:Build()
     if self.frame:IsShown() then self.frame:Hide() else self:Show() end
@@ -193,6 +211,7 @@ end
 
 function Options:Show()
     self:Build()
+    self:ApplyWindowScale()
     self.frame:Show()
     self.frame:Raise()
     local CG = ns:GetSubsystem("ChainGuide")

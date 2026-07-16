@@ -283,6 +283,10 @@ local function buildBlock()
         local wasDragging = self._wasDragging
         self._wasDragging = nil
         if wasDragging or not self.questID then return end
+        -- Combat-hide leaves the tracker shown at alpha 0 (Hide is protected), so
+        -- ignore clicks on the invisible frame - otherwise they untrack/open menus.
+        local T = ns:GetSubsystem("Tracker")
+        if T and T.frame and T.frame._eqHidden then return end
 
         if button == "RightButton" then
             local Tracker = ns:GetSubsystem("Tracker")

@@ -289,7 +289,7 @@ local function buildQuestTooltip(item, statusKey)
         local t = R:GetCompletionTime(item.id)
         if t then
             if t > 0 then
-                GameTooltip:AddLine("Completed: " .. date("%Y-%m-%d %H:%M", t), 0.55, 0.85, 0.55)
+                GameTooltip:AddLine(L["Completed: "] .. date("%Y-%m-%d %H:%M", t), 0.55, 0.85, 0.55)
             else
                 GameTooltip:AddLine(L["Completed (before tracking)"], 0.55, 0.85, 0.55)
             end

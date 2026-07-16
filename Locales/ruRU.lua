@@ -615,3 +615,21 @@ L["Sizes the scenario / delve objective (criteria) lines shown under the banner,
 
 -- v1.33.0
 L[" for the many features, fixes, and reports that keep shaping Everything Quests."] = " за множество функций, исправлений и отчётов, которые продолжают формировать Everything Quests."
+
+-- v1.34.0
+L["Options Window Scale"] = "Масштаб окна настроек"
+L["Resizes this Everything Quests options window only. It does not change the quest tracker or anything shown in the game world. The new size applies when you let go of the slider."] = "Изменяет размер только этого окна настроек Everything Quests. Это не влияет на трекер заданий и ни на что, отображаемое в игровом мире. Новый размер применяется, когда вы отпускаете ползунок."
+L["World Quest #"] = "Локальное задание №"
+L["Time Left: "] = "Осталось: "
+L["Expired"] = "Истекло"
+L["Gear"] = "Снаряжение"
+L["Reputation"] = "Репутация"
+L["Resources"] = "Ресурсы"
+L["Professions"] = "Профессии"
+L["Pet Battles"] = "Битвы питомцев"
+L["Completed: "] = "Выполнено: "
+L["(before tracking)"] = "(до отслеживания)"
+L["first time seeing |cffffffff%s|r - added %d past completion%s (no dates; future turn-ins are dated)."] = "первый раз вижу |cffffffff%1$s|r - добавлено %2$d прошлых выполнений (без дат; будущие сдачи будут датированы)."
+L["Quest history loaded empty; restored a backup from %s (%d entries)."] = "История заданий загрузилась пустой; восстановлена резервная копия от %s (%d записей)."
+L["Quest history for %s was missing; restored a backup from %s (%d entries)."] = "История заданий для %s отсутствовала; восстановлена резервная копия от %s (%d записей)."
+L[" for the many hours spent translating Everything Quests into Korean."] = " за многие часы, потраченные на перевод Everything Quests на корейский язык."

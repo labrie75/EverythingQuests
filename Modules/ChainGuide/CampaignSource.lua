@@ -22,22 +22,26 @@ end
 
 function CS:IsChapterQuestline(qlID)
     if self._chapterSet == nil then
-        local set = false
+        local set, gotAny, queried = false, false, 0
         if C_CampaignInfo and C_CampaignInfo.GetChapterIDs then
             local Database = ns:GetSubsystem("ChainGuideDatabase")
             if Database then
                 set = {}
                 for _, cat in pairs(Database.categories) do
                     if cat.campaignID then
+                        queried = queried + 1
                         local ch = C_CampaignInfo.GetChapterIDs(cat.campaignID)
                         if ch then
+                            gotAny = true
                             for _, id in ipairs(ch) do set[id] = true end
                         end
                     end
                 end
             end
         end
-        self._chapterSet = set
+        -- If every queried campaign returned nil the chapter data has not streamed
+        -- yet, so leave the cache nil and retry next call rather than latching empty.
+        if gotAny or queried == 0 then self._chapterSet = set end
     end
     return (self._chapterSet and self._chapterSet[qlID]) or false
 end

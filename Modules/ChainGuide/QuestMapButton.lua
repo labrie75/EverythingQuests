@@ -146,11 +146,8 @@ end
 function QMB:OnEnable()
     if ensureButton() then return end
     if WorldMapFrame and WorldMapFrame.HookScript then
-        local tried
-        WorldMapFrame:HookScript("OnShow", function()
-            if tried then return end
-            tried = true
-            ensureButton()
-        end)
+        -- ensureButton early-returns once the button exists and no-ops while
+        -- DetailsFrame is absent, so it can retry cheaply on every map open.
+        WorldMapFrame:HookScript("OnShow", ensureButton)
     end
 end

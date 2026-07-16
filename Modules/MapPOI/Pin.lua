@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 EQQuestPinMixin = CreateFromMixins(MapCanvasPinMixin)
 local Pin = EQQuestPinMixin
@@ -53,7 +54,7 @@ function Pin:OnMouseEnter()
                         1.0, 0.82, 0.0, 1, true)
     if q.zone   then tip:AddLine(q.zone, 0.7, 0.7, 0.7) end
     if q.isComplete then
-        tip:AddLine("Ready to turn in", 0.4, 0.85, 0.4)
+        tip:AddLine(L["Ready to turn in"], 0.4, 0.85, 0.4)
     else
         local objs = q.objectives
         if objs then

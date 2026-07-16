@@ -113,6 +113,26 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         L["Restores the waypoint arrow."])
     restore:SetPoint("TOPLEFT", autoTI, "BOTTOMLEFT", 0, -2)
 
+    local function owScaleGet()
+        local DB = ns:GetSubsystem("DB")
+        return (DB and DB.db.global.optionsWindowScale) or 1.0
+    end
+    local function owScaleSet(value)
+        local DB = ns:GetSubsystem("DB")
+        if DB and type(value) == "number" and value > 0 then
+            DB.db.global.optionsWindowScale = value
+        end
+    end
+    local owScale = Options:CreateSlider(content, L["Options Window Scale"], 0.7, 1.4, 0.05, owScaleGet, owScaleSet)
+    owScale:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -18)
+    owScale:SetWidth(280)
+    Options:AttachTooltip(owScale, L["Options Window Scale"],
+        L["Resizes this Everything Quests options window only. It does not change the quest tracker or anything shown in the game world. The new size applies when you let go of the slider."])
+    -- The slider sits inside the window it scales, so resizing mid-drag fights the drag and snaps to the ends. Preview the number live and apply the scale on release.
+    if owScale.slider then
+        owScale.slider:HookScript("OnMouseUp", function() Options:ApplyWindowScale() end)
+    end
+
     local WHATSNEW_MODES = {
         { value = "popup", label = L["Popup window"] },
         { value = "chat",  label = L["Chat link"] },
@@ -130,7 +150,7 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
         WHATSNEW_MODES, wnModeGet, wnModeSet, 320, 14,
         L["After an update"],
         L["How Everything Quests tells you about new features: a Popup window, a quiet clickable Chat link in your chat frame, or None. New features always ship off until you turn them on."])
-    wnMode:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -12)
+    wnMode:SetPoint("TOPLEFT", owScale, "BOTTOMLEFT", 0, -12)
 
     local function npLayoutSetting(key)
         return
@@ -211,7 +231,19 @@ ns:GetSubsystem("Options"):AddTab("general", L["General"], function(content)
             button2 = L["Cancel"],
             onAccept = function()
                 local DB = ns:GetSubsystem("DB")
-                if DB and DB.db and DB.db.ResetProfile then DB.db:ResetProfile() end
+                if DB and DB.db then
+                    if DB.db.ResetProfile then DB.db:ResetProfile() end
+                    -- ResetProfile clears only the profile scope. Restore the account-wide
+                    -- global and per-character settings the dialog also promises to reset.
+                    local g = DB.db.global
+                    if g then
+                        g.optionsWindowScale = DB.defaults.global.optionsWindowScale
+                        g.whatsNewMode       = DB.defaults.global.whatsNewMode
+                    end
+                    if DB.char and DB.char.minimap then
+                        DB.char.minimap.hide = DB.defaults.char.minimap.hide
+                    end
+                end
                 ReloadUI()
             end,
         })

@@ -137,7 +137,13 @@ end
 local function deferFn(questID)
     local f = deferFns[questID]
     if not f then
-        f = function() IB:_applySecure(questID) end
+        f = function()
+            IB:_applySecure(questID)
+            -- _applySecure only creates/positions the secure button. On the combat-end
+            -- flush it would otherwise show blank until an unrelated render repaints it.
+            local b = IB.buttons[questID]
+            if b and b:IsShown() then paint(b, questID) end
+        end
         deferFns[questID] = f
     end
     return f

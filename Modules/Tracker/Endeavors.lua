@@ -84,9 +84,11 @@ function E:Render(content, contentWidth, yStart, collapsed)
 
     local Media = ns:GetSubsystem("Media")
     local y = yStart
+    local shown = 0
     for i = 1, count do
         local info = C_PerksActivities and C_PerksActivities.GetPerksActivityInfo and C_PerksActivities.GetPerksActivityInfo(ids[i])
         if info then
+            shown = shown + 1
             local row = acquireHeader(content)
             row:SetWidth(contentWidth)
             row:ClearAllPoints()
@@ -118,7 +120,7 @@ function E:Render(content, contentWidth, yStart, collapsed)
         end
     end
 
-    return y - yStart, count
+    return y - yStart, shown
 end
 
 function E:OnEnable()

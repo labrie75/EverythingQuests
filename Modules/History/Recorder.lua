@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local R = ns:RegisterSubsystem("History", {})
 
@@ -152,7 +153,7 @@ function R:OnEnable()
         local added = self:Backfill()
         if added > 0 then
             self:RequestMissingTitles()
-            print(("|cffEBB706EQ History:|r first time seeing |cffffffff%s|r — added %d past completion%s (no dates; future turn-ins are dated)."):format(
+            print("|cffEBB706EQ History:|r " .. (L["first time seeing |cffffffff%s|r - added %d past completion%s (no dates; future turn-ins are dated)."]):format(
                 key, added, added == 1 and "" or "s"))
         end
     end)
@@ -176,6 +177,7 @@ local function applySnapshot(self, snap)
     self.sv.entries        = copyEntries(snap.entries)
     self.sv.charBackfilled = copySet(snap.charBackfilled)
     self._completion = {}
+    self._pendingTitles = nil
     local entries = self.sv.entries
     for i = 1, #entries do
         self:_updateCompletion(entries[i].q, entries[i].t or 0)
@@ -192,7 +194,7 @@ function R:_guardOnLoad()
 
     if (b.lastKnownCount or 0) > 0 and loaded == 0 then
         local n = applySnapshot(self, best)
-        return ("Quest history loaded empty; restored a backup from %s (%d entries)."):format(
+        return (L["Quest history loaded empty; restored a backup from %s (%d entries)."]):format(
             date("%Y-%m-%d %H:%M", best.ts or 0), n)
     end
 
@@ -202,7 +204,7 @@ function R:_guardOnLoad()
        and countForChar(entries, key) == 0
        and countForChar(best.entries, key) > 0 then
         local n = applySnapshot(self, best)
-        return ("Quest history for %s was missing; restored a backup from %s (%d entries)."):format(
+        return (L["Quest history for %s was missing; restored a backup from %s (%d entries)."]):format(
             key, date("%Y-%m-%d %H:%M", best.ts or 0), n)
     end
 
@@ -247,7 +249,24 @@ function R:BackupInfo()
     return { count = #best.entries, ts = best.ts or 0 }
 end
 
+-- Quest IDs with at least one entry still missing a title. Lets a
+-- QUEST_DATA_LOAD_RESULT for an unrelated quest skip the full-entries scan.
+-- Invalidated (set nil) on any entry mutation and rebuilt lazily here.
+local function ensurePendingTitles(self)
+    if self._pendingTitles then return self._pendingTitles end
+    local set = {}
+    local entries = self.sv.entries
+    for i = 1, #entries do
+        local e = entries[i]
+        if e.q and (not e.n or e.n == "") then set[e.q] = true end
+    end
+    self._pendingTitles = set
+    return set
+end
+
 function R:_fillTitle(questID)
+    local pending = ensurePendingTitles(self)
+    if not pending[questID] then return end
     local title = resolveTitle(questID)
     if not title then return end
     local touched = false
@@ -259,6 +278,7 @@ function R:_fillTitle(questID)
             touched = true
         end
     end
+    pending[questID] = nil
     if touched then
         local Events = ns:GetSubsystem("Events")
         if Events and Events.Debounce then
@@ -286,6 +306,7 @@ function R:SweepTitles()
         end
     end
     if touched then
+        self._pendingTitles = nil
         local HF = ns:GetSubsystem("HistoryFrame")
         if HF and HF.Render then HF:Render() end
     end
@@ -353,6 +374,7 @@ function R:Record(questID, xpReward, moneyReward)
 
     local entries = self.sv.entries
     entries[#entries + 1] = entry
+    self._pendingTitles = nil
     self:_updateCompletion(entry.q, entry.t)
     self:_enforceRetention()
 end
@@ -462,6 +484,7 @@ function R:Backfill()
         end
     end
     self.sv.charBackfilled[key] = true
+    self._pendingTitles = nil
     self:_enforceRetention()
     return added
 end
@@ -474,6 +497,9 @@ function R:Wipe()
     self.sv.entries        = {}
     self.sv.charBackfilled = {}
     self._completion       = {}
+    self._pendingTitles    = nil
+    self.sv.goldDaily      = {}
+    self._giveUp           = {}
     if self.backups then
         self.backups.snapshots      = {}
         self.backups.lastKnownCount = 0

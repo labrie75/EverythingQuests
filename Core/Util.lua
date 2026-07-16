@@ -15,20 +15,6 @@ Util.color = {
     dim           = { 0.50,  0.50,  0.50,  1.00 },
 }
 
-function Util.AbbrevNumber(n)
-    if not n then return "" end
-    if n >= 1000000 then return ("%.1fm"):format(n / 1000000) end
-    if n >= 10000   then return ("%.1fk"):format(n / 1000) end
-    return tostring(n)
-end
-
-function Util.FmtTimeShort(secs)
-    if not secs or secs <= 0 then return "" end
-    if secs < 3600  then return ("%dm"):format(secs / 60) end
-    if secs < 86400 then return ("%dh"):format(secs / 3600) end
-    return ("%dd"):format(secs / 86400)
-end
-
 function Util.FmtDuration(secs)
     secs = math.max(0, math.floor(secs or 0))
     local h = math.floor(secs / 3600)
@@ -54,19 +40,11 @@ function Util.WQTimeShort(mins)
 end
 
 function Util.WQTimeLong(mins)
-    if not mins or mins <= 0 then return "Expired" end
+    if not mins or mins <= 0 then return ns.L["Expired"] end
     local h = math.floor(mins / 60)
     local m = mins - h * 60
     if h > 0 then return ("%dh %dm"):format(h, m) end
     return ("%dm"):format(m)
-end
-
-function Util.HexToRGBA(hex, alpha)
-    hex = hex:gsub("^#", "")
-    local r = tonumber(hex:sub(1, 2), 16) / 255
-    local g = tonumber(hex:sub(3, 4), 16) / 255
-    local b = tonumber(hex:sub(5, 6), 16) / 255
-    return r, g, b, alpha or 1
 end
 
 local playerClassColor

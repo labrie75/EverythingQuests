@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local S = ns:RegisterSubsystem("WQSummary", {})
 
@@ -10,15 +11,15 @@ S.rowPool   = {}
 S.activeRows = {}
 
 local CATEGORY_DISPLAY = {
-    gold       = { label = "Gold",            icon = "Interface\\MoneyFrame\\UI-MoneyIcons", iconCoords = { 0, 0.25, 0, 1 } },
-    gear       = { label = "Gear",            icon = "Interface\\Icons\\INV_Helmet_06" },
-    rep        = { label = "Reputation",      icon = "Interface\\Icons\\Achievement_Reputation_01" },
-    resource   = { label = "Resources",       icon = "Interface\\Icons\\Trade_Mining" },
-    ap         = { label = "Artifact Power",  icon = "Interface\\Icons\\INV_7XP_Inscription_TalentTome01" },
-    profession = { label = "Professions",     icon = "Interface\\Icons\\Trade_Engineering" },
-    pvp        = { label = "PvP",             icon = "Interface\\Icons\\Achievement_Bg_TopDmg" },
-    pet        = { label = "Pet Battles",     icon = "Interface\\Icons\\INV_Pet_Achievement_CaptureAPet" },
-    other      = { label = "Other",           icon = "Interface\\Icons\\INV_Misc_Gift_01" },
+    gold       = { label = L["Gold"],           icon = "Interface\\MoneyFrame\\UI-MoneyIcons", iconCoords = { 0, 0.25, 0, 1 } },
+    gear       = { label = L["Gear"],           icon = "Interface\\Icons\\INV_Helmet_06" },
+    rep        = { label = L["Reputation"],     icon = "Interface\\Icons\\Achievement_Reputation_01" },
+    resource   = { label = L["Resources"],      icon = "Interface\\Icons\\Trade_Mining" },
+    ap         = { label = L["Artifact Power"], icon = "Interface\\Icons\\INV_7XP_Inscription_TalentTome01" },
+    profession = { label = L["Professions"],    icon = "Interface\\Icons\\Trade_Engineering" },
+    pvp        = { label = L["PvP"],            icon = "Interface\\Icons\\Achievement_Bg_TopDmg" },
+    pet        = { label = L["Pet Battles"],    icon = "Interface\\Icons\\INV_Pet_Achievement_CaptureAPet" },
+    other      = { label = L["Other"],          icon = "Interface\\Icons\\INV_Misc_Gift_01" },
 }
 
 local CATEGORY_ORDER = {
